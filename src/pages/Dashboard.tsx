@@ -1,16 +1,16 @@
-import React from 'react';
-import { VitalSignsCard } from '../components/dashboard/VitalSignsCard';
-import { AIInsightsCard } from '../components/dashboard/AIInsightsCard';
-import { KPIPillars } from '../components/dashboard/KPIPillars';
-import { PatientGrowthChart } from '../components/dashboard/PatientGrowthChart';
-import { NextBestAction } from '../components/dashboard/NextBestAction';
+import React from "react";
+import { VitalSignsCard } from "../components/dashboard/VitalSignsCard";
+import { AIInsightsCard } from "../components/dashboard/AIInsightsCard";
+import { KPIPillars } from "../components/dashboard/KPIPillars";
+import { PatientGrowthChart } from "../components/dashboard/PatientGrowthChart";
+import { NextBestAction } from "../components/dashboard/NextBestAction";
 
 export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Corey Rocks</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome, Dave</h1>
           <p className="text-gray-600">Your digital health at a glance</p>
         </div>
         <div className="text-right">
@@ -33,7 +33,6 @@ export const Dashboard: React.FC = () => {
 
       {/* 4 Key Pillars */}
       <KPIPillars />
-
     </div>
   );
 };

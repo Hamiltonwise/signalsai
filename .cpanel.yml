@@ -1,0 +1,29 @@
+---
+deployment:
+  tasks:
+    # 0) Make Node (nvm) available in cPanel's non-interactive shell
+    - /bin/bash -lc 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; node -v && npm -v'
+
+    # 1) Install deps (npm only)
+    - /bin/bash -lc 'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; npm ci'
+
+    # 2) Build (Vite outputs to ./dist)
+    - /bin/bash -lc 'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; NODE_ENV=production npm run build'
+
+    # 3) Publish to your subdomain docroot
+    - /bin/bash -lc 'TARGET="/home/hamiltonwise/public_html/signals.hamiltonwise.com"; \
+        if command -v rsync >/dev/null 2>&1; then rsync -a --delete dist/ "$TARGET/"; \
+        else rm -rf "$TARGET"/* && mkdir -p "$TARGET" && cp -a dist/. "$TARGET/"; fi'
+
+    # 4) (once) SPA rewrite so deep links hit index.html
+    - /bin/bash -lc 'HTACCESS="/home/hamiltonwise/public_html/signals.hamiltonwise.com/.htaccess"; \
+        if [ ! -f "$HTACCESS" ]; then cat > "$HTACCESS" << "EOF"
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+EOF
+        fi'

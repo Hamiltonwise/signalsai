@@ -1,0 +1,14 @@
+# React Router SPA fallback for Apache
+RewriteEngine On
+RewriteBase /
+
+# Avoid content-negotiation breaking routes like /users/1.json
+Options -Multiviews
+
+# Serve existing files/directories as-is (assets, index.html, etc.)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise, let React Router handle it
+RewriteRule ^ index.html [L]

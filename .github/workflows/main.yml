@@ -2,7 +2,7 @@ name: Build and Deploy to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-deploy:
@@ -41,6 +41,6 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           port: ${{ secrets.EC2_PORT }}
           key: ${{ secrets.EC2_KEY }}
-          source: "dist/*"
+          source: "dist/**" # <-- include dotfiles
           target: ${{ secrets.TARGET_DIR }}
           strip_components: 1

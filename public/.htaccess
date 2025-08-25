@@ -1,14 +1,17 @@
-# React Router SPA fallback for Apache
+# Enable Rewrite Engine
 RewriteEngine On
 RewriteBase /
 
-# Avoid content-negotiation breaking routes like /users/1.json
+# Don’t rewrite API calls
+RewriteCond %{REQUEST_URI} !^/api/
+
+# Avoid breaking routes like /users/1.json
 Options -Multiviews
 
-# Serve existing files/directories as-is (assets, index.html, etc.)
+# Serve existing files if they exist
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Otherwise, let React Router handle it
+# Fallback to index.html for React Router
 RewriteRule ^ index.html [L]

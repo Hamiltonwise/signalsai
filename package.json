@@ -6,18 +6,29 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "dep:check": "madge src --circular"
   },
   "dependencies": {
-    "lucide-react": "^0.537.0",
+    "@supabase/supabase-js": "^2.51.0",
+    "bcryptjs": "^3.0.2",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "googleapis": "^153.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.7.1",
-    "recharts": "^3.1.2"
+    "react-router-dom": "^7.7.0",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

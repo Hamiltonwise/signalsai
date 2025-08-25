@@ -1,0 +1,73 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Cache static assets aggressively
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/about:blank"
+  to = "/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "/api/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/settings"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/upload"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/team-tasks"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/reviews"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/signin"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/newsletter"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/register"
+  to = "/index.html"
+  status = 200

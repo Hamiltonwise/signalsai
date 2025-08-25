@@ -23,6 +23,17 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      'no-undef': 'error',
+      'no-duplicate-imports': 'error',
+      'no-redeclare': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportSpecifier[imported.name="default"]',
+          message: 'Avoid using import { default } directly. Use `import X from "..."` instead.',
+        },
+      ],
+      'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
     },
   }
 );

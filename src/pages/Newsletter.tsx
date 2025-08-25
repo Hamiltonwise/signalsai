@@ -39,7 +39,7 @@ interface BlogPost {
   engagement: number;
 }
 
-export const Newsletter: React.FC = () => {
+export default function Newsletter() {
   const [teamManaged, setTeamManaged] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -171,12 +171,12 @@ export const Newsletter: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">GP Newsletter</h1>
-          <p className="text-gray-600">AI-powered newsletters for your referring GP network</p>
+          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">GP Newsletter</h1>
+          <p className="text-gray-500 text-lg font-medium">AI-powered newsletters for your referring GP network</p>
         </div>
         <div className="flex items-center space-x-6">
           {/* Team Managed Toggle */}
@@ -464,4 +464,6 @@ export const Newsletter: React.FC = () => {
       )}
     </div>
   );
-};
+}
+
+export { Newsletter }

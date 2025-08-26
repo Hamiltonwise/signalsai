@@ -1,7 +1,7 @@
-import React, { useState } from "react";
 import { Mail, Lock, Building2 } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
+import { useState } from "react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");

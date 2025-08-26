@@ -1,8 +1,8 @@
 import axios, { type ResponseType } from "axios";
 import { getItem } from "../hooks/useLocalStorage";
 
-// const api = "http://localhost:3000";
-const api = "https://signals.hamilltonwise.com/api";
+const api = "http://localhost:3000/api";
+// const api = "https://signals.hamiltonwise.com/api";
 
 export async function apiGet({ path }: { path: string }) {
   try {

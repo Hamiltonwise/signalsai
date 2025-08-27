@@ -20,7 +20,6 @@ export const NextBestAction: React.FC<NextBestActionProps> = ({
   gscData,
   gbpData,
   clarityData,
-  pmsData,
   connectionStatus = { ga4: false, gbp: false, gsc: false, clarity: false },
 }) => {
   // Generate priority action based on real data

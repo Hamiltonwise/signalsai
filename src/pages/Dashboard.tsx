@@ -14,6 +14,13 @@ import {
   BarChart3,
 } from "lucide-react";
 
+// Import auth and GSC hooks for domain selection
+import { useAuth } from "../hooks/useAuth";
+import { useGSC } from "../hooks/useGSC";
+import { useGA4 } from "../hooks/useGA4";
+
+// Domain mapping interface is now in AuthContext
+
 /*
  * DASHBOARD INTEGRATION COMPLETE ✅
  *
@@ -67,7 +74,6 @@ import {
  */
 
 // Dashboard Components - Currently Used ✅
-import { VitalSignsCard } from "../components/VitalSignsCard";
 import { KPIPillars } from "../components/KPIPillars";
 import { NextBestAction } from "../components/NextBestAction";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
@@ -75,7 +81,39 @@ import { GrowthFocusedKPICard } from "../components/GrowthFocusedKPICard";
 import { EnhancedMetricCard } from "../components/EnhancedMetricCard";
 import { VitalSignsScore } from "../components/VitalSignsScore";
 
+// Integration Modal Components ✅
+import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
+import { GSCIntegrationModal } from "../components/GSCIntegrationModal";
+import { ClarityIntegrationModal } from "../components/ClarityIntegrationModal";
+import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
+import { PMSUploadModal } from "../components/PMSUploadModal";
+import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
+
 export default function Dashboard() {
+  // Domain selection and GSC data hooks
+  const { domains, selectedDomain, handleDomainChange } = useAuth();
+
+  const {
+    gscData,
+    fetchGscData,
+    fetchAIReadyGscData,
+    aiDataLoading,
+    aiError,
+    aiData,
+    isLoading: gscLoading,
+    error: gscError,
+  } = useGSC();
+  const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
+
+  // Fetch GSC data when requested (GA4 data is automatically fetched by GA4Context)
+  const fetchAllIntegrationData = async () => {
+    console.log(selectedDomain);
+    if (selectedDomain) {
+      // Fetch GSC data - GA4Context automatically handles GA4 data fetching
+      await fetchGscData();
+    }
+  };
+
   // Modal state management
   const [showGA4Modal, setShowGA4Modal] = useState(false);
   const [showGBPModal, setShowGBPModal] = useState(false);
@@ -91,19 +129,45 @@ export default function Dashboard() {
   const clientLoading = false;
   const clientError = null;
 
-  // Placeholder integration data
+  // Real integration data from hooks
   const ga4Integration = {
-    isConnected: true,
+    isConnected: !!selectedDomain?.ga4_propertyId && !ga4Error,
+    isLoading: ga4Loading,
+    error: ga4Error,
     metrics: {
-      totalUsers: 2847,
-      newUsers: 1523,
-      engagementRate: 68.5,
-      conversions: 142,
-      avgSessionDuration: 245,
-      calculatedScore: 85,
+      // Convert GA4 data structure to match component expectations
+      totalUsers: ga4Data.activeUsers.currMonth,
+      newUsers: Math.round(ga4Data.activeUsers.currMonth * 0.6), // Estimate 60% new users
+      engagementRate: ga4Data.engagementRate.currMonth * 100, // Convert to percentage
+      conversions: ga4Data.conversions.currMonth,
+      avgSessionDuration: 245, // Placeholder for now
+      calculatedScore: Math.min(
+        100,
+        Math.round(
+          ga4Data.activeUsers.currMonth / 100 +
+            ga4Data.engagementRate.currMonth * 50 +
+            ga4Data.conversions.currMonth / 5
+        )
+      ),
     },
   };
 
+  const gscIntegration = {
+    isConnected: !!selectedDomain?.gsc_domainkey && !gscError,
+    isLoading: gscLoading,
+    error: gscError,
+    metrics: {
+      // Convert GSC data structure to match component expectations
+      totalImpressions: gscData.impressions.currMonth,
+      totalClicks: gscData.clicks.currMonth,
+      averageCTR:
+        (gscData.clicks.currMonth / gscData.impressions.currMonth) * 100,
+      averagePosition: gscData.avgPosition.currMonth,
+      calculatedScore: gscData.trendScore,
+    },
+  };
+
+  // Placeholder integration data for components not yet implemented
   const gbpIntegration = {
     isConnected: true,
     metrics: {
@@ -113,17 +177,6 @@ export default function Dashboard() {
       averageRating: 4.7,
       totalReviews: 127,
       calculatedScore: 92,
-    },
-  };
-
-  const gscIntegration = {
-    isConnected: true,
-    metrics: {
-      totalImpressions: 45230,
-      totalClicks: 1876,
-      averageCTR: 4.1,
-      averagePosition: 12.3,
-      calculatedScore: 78,
     },
   };
 
@@ -286,6 +339,66 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Domain Selector Section */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+            <label
+              htmlFor="dashboard-domain-select"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Selected Domain:
+            </label>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <select
+                  id="dashboard-domain-select"
+                  value={selectedDomain?.domain || ""}
+                  onChange={handleDomainChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={domains.length === 0}
+                >
+                  {domains.length === 0 ? (
+                    <option value="">No domains available</option>
+                  ) : (
+                    domains.map((mapping) => (
+                      <option key={mapping.domain} value={mapping.domain}>
+                        {mapping.displayName}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <button
+                onClick={() => {
+                  fetchAIReadyGscData();
+                  fetchAllIntegrationData();
+                }}
+                disabled={
+                  !selectedDomain || aiDataLoading || ga4Loading || gscLoading
+                }
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+              >
+                <Brain className="w-4 h-4" />
+                {aiDataLoading || ga4Loading || gscLoading
+                  ? "Loading..."
+                  : "Get All Data"}
+              </button>
+            </div>
+            {(aiError || ga4Error || gscError) && (
+              <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                {aiError || ga4Error || gscError}
+              </div>
+            )}
+            {aiData !== null && !aiDataLoading && ga4Data && gscData && (
+              <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded-md">
+                ✅ All integration data fetched successfully! GSC:{" "}
+                {gscData.clicks.currMonth} clicks, GA4:{" "}
+                {ga4Data.activeUsers.currMonth} users
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -326,7 +439,7 @@ export default function Dashboard() {
 
         <div className="space-y-8">
           {/* Vital Signs Card with Patient Journey */}
-          <VitalSignsCard
+          {/* <VitalSignsCard
             ga4Data={ga4Integration.metrics}
             gbpData={gbpIntegration.metrics}
             gscData={gscIntegration.metrics}
@@ -340,7 +453,9 @@ export default function Dashboard() {
             }}
             aiAnalysis={vitalSignsAI.analysis}
             isLoadingAI={vitalSignsAI.isLoading}
-          />
+          /> */}
+
+          <VitalSignsCards selectedDomain={selectedDomain?.domain || ""} />
 
           {/* KPI Pillars */}
           <KPIPillars
@@ -543,14 +658,51 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* TODO: Replace with TaskTrackingPlaceholder component */}
+          {/* Integration Modals Test Section */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4">
-              Task Tracking (Placeholder)
+              Integration Management
             </h3>
-            <p className="text-gray-600">
-              TaskTrackingPlaceholder component will go here
+            <p className="text-gray-600 mb-4">
+              Connect and manage your practice integrations
             </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <button
+                onClick={() => setShowGA4Modal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Globe className="w-4 h-4" />
+                GA4 Setup
+              </button>
+              <button
+                onClick={() => setShowGBPModal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              >
+                <Building2 className="w-4 h-4" />
+                GBP Setup
+              </button>
+              <button
+                onClick={() => setShowGSCModal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              >
+                <Eye className="w-4 h-4" />
+                GSC Setup
+              </button>
+              <button
+                onClick={() => setShowClarityModal(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              >
+                <MousePointer className="w-4 h-4" />
+                Clarity Setup
+              </button>
+              <button
+                onClick={() => setShowPMSUpload(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+              >
+                <BarChart3 className="w-4 h-4" />
+                PMS Upload
+              </button>
+            </div>
           </div>
 
           {/* PMS Data Visuals - Side by Side */}
@@ -779,101 +931,59 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* TODO: Replace with Integration Modal components */}
-        {showGA4Modal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">
-                GA4 Integration Modal (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                GA4IntegrationModal component will go here
-              </p>
-              <button
-                onClick={() => setShowGA4Modal(false)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Integration Modal Components ✅ */}
+        <GA4IntegrationModal
+          isOpen={showGA4Modal}
+          onClose={() => setShowGA4Modal(false)}
+          onSuccess={() => {
+            console.log("GA4 integration successful!");
+            // Refresh data or show success message
+          }}
+        />
 
-        {showGBPModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">
-                GBP Integration Modal (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                GBPIntegrationModal component will go here
-              </p>
-              <button
-                onClick={() => setShowGBPModal(false)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        <GBPIntegrationModal
+          isOpen={showGBPModal}
+          onClose={() => setShowGBPModal(false)}
+          clientId={clientId}
+          ready={ready}
+          session={session}
+          onSuccess={() => {
+            console.log("GBP integration successful!");
+            // Refresh data or show success message
+          }}
+        />
 
-        {showGSCModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">
-                GSC Integration Modal (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                GSCIntegrationModal component will go here
-              </p>
-              <button
-                onClick={() => setShowGSCModal(false)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        <GSCIntegrationModal
+          isOpen={showGSCModal}
+          onClose={() => setShowGSCModal(false)}
+          clientId={clientId}
+          ready={ready}
+          session={session}
+          onSuccess={() => {
+            console.log("GSC integration successful!");
+            // Refresh data or show success message
+          }}
+        />
 
-        {showClarityModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">
-                Clarity Integration Modal (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                ClarityIntegrationModal component will go here
-              </p>
-              <button
-                onClick={() => setShowClarityModal(false)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        <ClarityIntegrationModal
+          isOpen={showClarityModal}
+          onClose={() => setShowClarityModal(false)}
+          clientId={clientId}
+          onSuccess={() => {
+            console.log("Clarity integration successful!");
+            // Refresh data or show success message
+          }}
+        />
 
-        {showPMSUpload && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">
-                PMS Upload Modal (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                PMSUploadModal component will go here
-              </p>
-              <button
-                onClick={() => setShowPMSUpload(false)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        <PMSUploadModal
+          isOpen={showPMSUpload}
+          onClose={() => setShowPMSUpload(false)}
+          clientId={clientId}
+          onSuccess={() => {
+            console.log("PMS upload successful!");
+            // Refresh data or show success message
+          }}
+        />
 
         {/* Connection Debug Panel */}
         <ConnectionDebugPanel

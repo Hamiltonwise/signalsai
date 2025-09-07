@@ -1,7 +1,7 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import gsc from "../api/gsc";
 import type { GSCData, GSCContextType } from "../hooks/useGSC";
-import { GSCContext } from "./gscContext";
+import { GSCContext } from "./GSCContext";
 import { useAuth } from "../hooks/useAuth";
 
 interface GSCProviderProps {

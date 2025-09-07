@@ -1,4 +1,3 @@
-import * as React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 type NavItem = {

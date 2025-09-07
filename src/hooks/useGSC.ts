@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { GSCContext } from "../contexts/gscContext";
+import { GSCContext } from "../contexts/GSCContext";
 
 export interface GSCData {
   avgPosition: {

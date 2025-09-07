@@ -37,10 +37,7 @@ interface AwarenessProps {
   selectedDomain: string;
 }
 
-export const Awareness: React.FC<AwarenessProps> = ({
-  className = "",
-  selectedDomain,
-}) => {
+export const Awareness: React.FC<AwarenessProps> = ({ className = "" }) => {
   const { gscData, isLoading, error } = useGSC();
 
   // Helper function to format numbers

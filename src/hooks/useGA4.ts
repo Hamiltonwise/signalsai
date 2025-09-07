@@ -14,6 +14,7 @@ export interface GA4Data {
     prevMonth: number;
     currMonth: number;
   };
+  trendScore: number;
 }
 
 export interface GA4Property {
@@ -31,6 +32,11 @@ export interface GA4ContextType {
   isLoading: boolean;
   error: string | null;
 
+  // AI Data State
+  aiDataLoading: boolean;
+  aiData: unknown;
+  aiError: string | null;
+
   // Properties State
   properties: GA4Property[];
   propertiesLoading: boolean;
@@ -38,6 +44,7 @@ export interface GA4ContextType {
 
   // Functions
   fetchGA4Data: (propertyId: string) => Promise<void>;
+  fetchAIReadyData: () => Promise<void>;
   fetchProperties: () => Promise<void>;
   fetchPropertiesDetails: () => Promise<void>;
 }

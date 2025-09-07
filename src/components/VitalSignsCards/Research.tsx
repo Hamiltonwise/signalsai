@@ -71,14 +71,9 @@ export const Research: React.FC<ResearchProps> = ({
     return "good";
   };
 
-  // Calculate trend from GA4 data
-  const calculateTrend = () => {
-    if (isLoading || ga4Data.activeUsers.prevMonth === 0) return 0;
-    return Math.round(
-      ((ga4Data.activeUsers.currMonth - ga4Data.activeUsers.prevMonth) /
-        ga4Data.activeUsers.prevMonth) *
-        100
-    );
+  // Use dynamic trend score from API
+  const getTrendScore = () => {
+    return isLoading ? 0 : ga4Data.trendScore;
   };
 
   // Dynamic research stage data with real GA4 data
@@ -89,7 +84,7 @@ export const Research: React.FC<ResearchProps> = ({
     bgGradient: "bg-gradient-to-br from-blue-50 via-cyan-25 to-sky-50",
     borderGradient: "border-blue-200/60",
     score: 75,
-    trend: calculateTrend(),
+    trend: getTrendScore(),
     dataSource: "Google Analytics 4",
     explainer:
       "When patients explore your services and evaluate your expertise",
@@ -186,9 +181,10 @@ export const Research: React.FC<ResearchProps> = ({
 
           <Tooltip
             align="center"
+            position="left"
             message={[
               "This is an aggregation of",
-              "users (40%), engagement (35%), conversions (25%)",
+              "conversion (70%), engagement rate (20%), active users (10%)",
             ]}
           >
             <div className="flex cursor-pointer items-center space-x-2">

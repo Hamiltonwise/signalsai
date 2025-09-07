@@ -19,61 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useGSC } from "../hooks/useGSC";
 import { useGA4 } from "../hooks/useGA4";
 
-// Domain mapping interface is now in AuthContext
-
-/*
- * DASHBOARD INTEGRATION COMPLETE ✅
- *
- * COMPLETED TASKS:
- * 1. ✅ Removed unused imports and replaced hooks with placeholder data
- * 2. ✅ Integrated all existing dashboard components with realistic data
- * 3. ✅ Added Enhanced Metrics Section with GrowthFocusedKPICard and EnhancedMetricCard
- * 4. ✅ All components now properly used - no eslint warnings
- *
- * COMPONENTS SUCCESSFULLY INTEGRATED:
- * ✅ VitalSignsCard - Interactive patient journey carousel (6 stages)
- * ✅ KPIPillars - Performance metrics grid (4 pillars)
- * ✅ NextBestAction - Priority action recommendations
- * ✅ ConnectionDebugPanel - Diagnostic modal for troubleshooting
- * ✅ GrowthFocusedKPICard - Growth-focused metrics with sparkline charts (2 cards)
- * ✅ EnhancedMetricCard - Enhanced metrics with sub-metrics and progress bars (4 cards)
- * ✅ VitalSignsScore - Animated radial progress score with monthly breakdown
- *
- * ENHANCED METRICS SECTION INCLUDES:
- * - VitalSignsScore (Animated 82/100 score with radial progress and monthly insights)
- * - Website Traffic (GrowthFocusedKPICard with 12-month trend)
- * - Google Business Views (GrowthFocusedKPICard with 12-month trend)
- * - Website Conversions (EnhancedMetricCard with conversion rate & session duration)
- * - Search Impressions (EnhancedMetricCard with CTR & average position)
- * - User Sessions (EnhancedMetricCard with bounce rate & dead clicks)
- * - Patient Production (EnhancedMetricCard with patient count & avg per patient)
- *
- * REMAINING COMPONENTS TO CREATE:
- *
- * Integration Components:
- * 📝 GA4IntegrationModal
- * 📝 GBPIntegrationModal
- * 📝 GSCIntegrationModal
- * 📝 ClarityIntegrationModal
- * 📝 PMSUploadModal
- *
- * Lazy-loaded Components:
- * 📝 TaskTrackingPlaceholder
- * 📝 ReferralSourcesMatrix
- * 📝 PMSMetricsChart
- * 📝 DataPipelineDebugger
- *
- * Utility Files:
- * 📝 src/utils/dateUtils.ts - getLastFullMonth function
- * 📝 src/utils/connectionTester.ts - ConnectionTester class
- *
- * CURRENT STATE:
- * Dashboard is fully functional with comprehensive metrics display using all available
- * components. Enhanced metrics section showcases both GrowthFocusedKPICard and
- * EnhancedMetricCard components with realistic placeholder data and proper styling.
- */
-
-// Dashboard Components - Currently Used ✅
+// Dashboard Components
 import { KPIPillars } from "../components/KPIPillars";
 import { NextBestAction } from "../components/NextBestAction";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
@@ -103,14 +49,37 @@ export default function Dashboard() {
     isLoading: gscLoading,
     error: gscError,
   } = useGSC();
-  const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
+  const {
+    ga4Data,
+    fetchGA4Data,
+    fetchAIReadyData: fetchAIReadyGA4Data,
+    aiDataLoading: ga4AiDataLoading,
+    aiData: ga4AiData,
+    aiError: ga4AiError,
+    isLoading: ga4Loading,
+    error: ga4Error,
+  } = useGA4();
 
-  // Fetch GSC data when requested (GA4 data is automatically fetched by GA4Context)
+  // Fetch all integration data for both GSC and GA4
   const fetchAllIntegrationData = async () => {
-    console.log(selectedDomain);
+    console.log("Refreshing dashboard data for:", selectedDomain);
     if (selectedDomain) {
-      // Fetch GSC data - GA4Context automatically handles GA4 data fetching
-      await fetchGscData();
+      // Fetch both GSC and GA4 data in parallel
+      await Promise.all([
+        fetchGscData(),
+        selectedDomain.ga4_propertyId
+          ? fetchGA4Data(selectedDomain.ga4_propertyId)
+          : Promise.resolve(),
+      ]);
+    }
+  };
+
+  // Fetch AI Ready Data for both GSC and GA4
+  const fetchAllAIReadyData = async () => {
+    console.log("Fetching AI Ready Data for:", selectedDomain);
+    if (selectedDomain) {
+      // Fetch both GSC and GA4 AI Ready Data in parallel
+      await Promise.all([fetchAIReadyGscData(), fetchAIReadyGA4Data()]);
     }
   };
 
@@ -368,32 +337,49 @@ export default function Dashboard() {
                   )}
                 </select>
               </div>
-              <button
-                onClick={() => {
-                  fetchAIReadyGscData();
-                  fetchAllIntegrationData();
-                }}
-                disabled={
-                  !selectedDomain || aiDataLoading || ga4Loading || gscLoading
-                }
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
-              >
-                <Brain className="w-4 h-4" />
-                {aiDataLoading || ga4Loading || gscLoading
-                  ? "Loading..."
-                  : "Get All Data"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={fetchAllIntegrationData}
+                  disabled={!selectedDomain || ga4Loading || gscLoading}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                >
+                  <Activity className="w-4 h-4" />
+                  {ga4Loading || gscLoading
+                    ? "Loading..."
+                    : "Refresh Dashboard"}
+                </button>
+                <button
+                  onClick={fetchAllAIReadyData}
+                  disabled={
+                    !selectedDomain || aiDataLoading || ga4AiDataLoading
+                  }
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                >
+                  <Brain className="w-4 h-4" />
+                  {aiDataLoading || ga4AiDataLoading
+                    ? "Loading AI..."
+                    : "Get AI Ready Data"}
+                </button>
+              </div>
             </div>
-            {(aiError || ga4Error || gscError) && (
+            {(aiError || ga4AiError || ga4Error || gscError) && (
               <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
-                {aiError || ga4Error || gscError}
+                {aiError || ga4AiError || ga4Error || gscError}
               </div>
             )}
-            {aiData !== null && !aiDataLoading && ga4Data && gscData && (
-              <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded-md">
-                ✅ All integration data fetched successfully! GSC:{" "}
-                {gscData.clicks.currMonth} clicks, GA4:{" "}
-                {ga4Data.activeUsers.currMonth} users
+            {aiData !== null &&
+              ga4AiData !== null &&
+              !aiDataLoading &&
+              !ga4AiDataLoading && (
+                <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded-md">
+                  ✅ AI Ready data fetched successfully! GSC AI data loaded, GA4
+                  AI data loaded
+                </div>
+              )}
+            {ga4Data && gscData && !ga4Loading && !gscLoading && (
+              <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
+                ✅ Dashboard data refreshed! GSC: {gscData.clicks.currMonth}{" "}
+                clicks, GA4: {ga4Data.activeUsers.currMonth} users
               </div>
             )}
           </div>

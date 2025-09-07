@@ -45,10 +45,26 @@ async function getPropertiesDetails() {
   }
 }
 
+async function getAIReadyData(propertyId: string) {
+  try {
+    return await apiPost({
+      path: baseurl + `/getAIReadyData`,
+      passedData: { propertyId },
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      successful: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
 const ga4 = {
   getKeyDataByPropertyId,
   getProperties,
   getPropertiesDetails,
+  getAIReadyData,
 };
 
 export default ga4;

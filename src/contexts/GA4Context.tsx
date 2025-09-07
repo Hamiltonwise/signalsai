@@ -1,6 +1,6 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import ga4 from "../api/ga4";
-import type { GA4Data, GA4Property, GA4ContextType } from "./ga4Context";
+import type { GA4Data, GA4Property, GA4ContextType } from "../hooks/useGA4";
 import { GA4Context } from "./ga4Context";
 import { useAuth } from "../hooks/useAuth";
 
@@ -13,9 +13,15 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
     activeUsers: { prevMonth: 0, currMonth: 0 },
     engagementRate: { prevMonth: 0, currMonth: 0 },
     conversions: { prevMonth: 0, currMonth: 0 },
+    trendScore: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // AI Data State
+  const [aiDataLoading, setAiDataLoading] = useState(false);
+  const [aiData, setAiData] = useState<unknown>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Properties state
   const [properties, setProperties] = useState<GA4Property[]>([]);
@@ -24,6 +30,29 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
 
   // Get domain/sites state from AuthContext
   const { selectedDomain } = useAuth();
+
+  const fetchAIReadyData = async () => {
+    const propertyIdToUse = selectedDomain?.ga4_propertyId;
+    if (!propertyIdToUse) return;
+
+    try {
+      setAiDataLoading(true);
+      setAiError(null);
+      const result = await ga4.getAIReadyData(propertyIdToUse);
+
+      if (result.successful !== false) {
+        setAiData(result);
+        console.log("GA4 AI Ready Data:", result);
+      } else {
+        setAiError(result.errorMessage || "Failed to fetch GA4 AI-ready data");
+      }
+    } catch (error) {
+      setAiError("Failed to fetch GA4 AI-ready data");
+      console.error("GA4 AI Ready Data fetch error:", error);
+    } finally {
+      setAiDataLoading(false);
+    }
+  };
 
   const fetchGA4Data = async (propertyId?: string) => {
     const propertyIdToUse = propertyId || selectedDomain?.ga4_propertyId;
@@ -42,6 +71,7 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
             currMonth: 0,
           },
           conversions: result.conversions || { prevMonth: 0, currMonth: 0 },
+          trendScore: result.trendScore || 0,
         });
       } else {
         setError(result.errorMessage || "Failed to fetch GA4 data");
@@ -120,10 +150,14 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
     ga4Data,
     isLoading,
     error,
+    aiDataLoading,
+    aiData,
+    aiError,
     properties,
     propertiesLoading,
     propertiesError,
     fetchGA4Data,
+    fetchAIReadyData,
     fetchProperties,
     fetchPropertiesDetails,
   };

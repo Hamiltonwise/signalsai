@@ -176,6 +176,7 @@ export const Awareness: React.FC<AwarenessProps> = ({ className = "" }) => {
           </div>
 
           <Tooltip
+            position="left"
             align="center"
             message={[
               "This is an aggregation of",

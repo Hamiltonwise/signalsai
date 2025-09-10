@@ -17,6 +17,61 @@ export interface GSCData {
   trendScore: number;
 }
 
+export interface GSCAIReadyData {
+  overview: {
+    totalClicks: number;
+    totalImpressions: number;
+    avgCTR: number;
+    avgPosition: number;
+    dateRange: { startDate: string; endDate: string };
+  };
+  topQueries: Array<{
+    keys: Array<string>;
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+  }>;
+  underperformingPages: Array<{
+    keys: Array<string>;
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+  }>;
+  deviceBreakdown: {
+    desktop: {
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    };
+    mobile: {
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    };
+    tablet: {
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+    };
+  };
+  geoPerformance: Array<{
+    keys: Array<string>;
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+  }>;
+  opportunities: Array<{
+    type: string;
+    [key: string]: unknown;
+  }>;
+}
+
 export interface GSCContextType {
   // GSC Data State
   gscData: GSCData;
@@ -25,7 +80,7 @@ export interface GSCContextType {
 
   // AI Data State
   aiDataLoading: boolean;
-  aiData: unknown;
+  aiData: GSCAIReadyData | null;
   aiError: string | null;
 
   // Functions

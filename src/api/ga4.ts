@@ -5,7 +5,7 @@ const baseurl = "/ga4";
 async function getKeyDataByPropertyId(propertyId: string) {
   try {
     return await apiPost({
-      path: baseurl + `/getKeyDataByPropertyId`,
+      path: baseurl + `/getKeyData`,
       passedData: { propertyId },
     });
   } catch (err) {

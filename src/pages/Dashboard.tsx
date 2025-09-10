@@ -14,10 +14,11 @@ import {
   BarChart3,
 } from "lucide-react";
 
-// Import auth and GSC hooks for domain selection
+// Import auth and integration hooks for domain selection
 import { useAuth } from "../hooks/useAuth";
 import { useGSC } from "../hooks/useGSC";
 import { useGA4 } from "../hooks/useGA4";
+import { useGBP } from "../hooks/useGBP";
 
 // Dashboard Components
 import { KPIPillars } from "../components/KPIPillars";
@@ -59,27 +60,57 @@ export default function Dashboard() {
     isLoading: ga4Loading,
     error: ga4Error,
   } = useGA4();
+  const {
+    gbpData,
+    fetchGBPData,
+    fetchAIReadyData: fetchAIReadyGBPData,
+    aiDataLoading: gbpAiDataLoading,
+    aiData: gbpAiData,
+    aiError: gbpAiError,
+    isLoading: gbpLoading,
+    error: gbpError,
+  } = useGBP();
 
-  // Fetch all integration data for both GSC and GA4
+  // Fetch all integration data for GSC, GA4, and GBP
   const fetchAllIntegrationData = async () => {
     console.log("Refreshing dashboard data for:", selectedDomain);
     if (selectedDomain) {
-      // Fetch both GSC and GA4 data in parallel
-      await Promise.all([
-        fetchGscData(),
-        selectedDomain.ga4_propertyId
-          ? fetchGA4Data(selectedDomain.ga4_propertyId)
-          : Promise.resolve(),
-      ]);
+      // Fetch GSC, GA4, and GBP data in parallel
+      const promises = [fetchGscData()];
+
+      if (selectedDomain.ga4_propertyId) {
+        promises.push(fetchGA4Data(selectedDomain.ga4_propertyId));
+      }
+
+      if (selectedDomain.gbp_accountId && selectedDomain.gbp_locationId) {
+        promises.push(
+          fetchGBPData(
+            selectedDomain.gbp_accountId,
+            selectedDomain.gbp_locationId
+          )
+        );
+      }
+
+      await Promise.all(promises);
     }
   };
 
-  // Fetch AI Ready Data for both GSC and GA4
+  // Fetch AI Ready Data for GSC, GA4, and GBP
   const fetchAllAIReadyData = async () => {
     console.log("Fetching AI Ready Data for:", selectedDomain);
     if (selectedDomain) {
-      // Fetch both GSC and GA4 AI Ready Data in parallel
-      await Promise.all([fetchAIReadyGscData(), fetchAIReadyGA4Data()]);
+      const promises = [fetchAIReadyGscData(), fetchAIReadyGA4Data()];
+
+      if (selectedDomain.gbp_accountId && selectedDomain.gbp_locationId) {
+        promises.push(
+          fetchAIReadyGBPData(
+            selectedDomain.gbp_accountId,
+            selectedDomain.gbp_locationId
+          )
+        );
+      }
+
+      await Promise.all(promises);
     }
   };
 
@@ -136,16 +167,21 @@ export default function Dashboard() {
     },
   };
 
-  // Placeholder integration data for components not yet implemented
+  // Real GBP integration data from hooks
   const gbpIntegration = {
-    isConnected: true,
+    isConnected:
+      !!(selectedDomain?.gbp_accountId && selectedDomain?.gbp_locationId) &&
+      !gbpError,
+    isLoading: gbpLoading,
+    error: gbpError,
     metrics: {
-      totalViews: 15420,
-      phoneCallsTotal: 89,
-      websiteClicksTotal: 234,
-      averageRating: 4.7,
-      totalReviews: 127,
-      calculatedScore: 92,
+      // Convert GBP data structure to match component expectations
+      totalViews: 15420, // Placeholder - not in current GBP data structure
+      phoneCallsTotal: gbpData.callClicks.currMonth,
+      websiteClicksTotal: 234, // Placeholder - not in current GBP data structure
+      averageRating: gbpData.avgRating.currMonth,
+      totalReviews: gbpData.newReviews.currMonth,
+      calculatedScore: gbpData.trendScore,
     },
   };
 
@@ -340,48 +376,70 @@ export default function Dashboard() {
               <div className="flex gap-2">
                 <button
                   onClick={fetchAllIntegrationData}
-                  disabled={!selectedDomain || ga4Loading || gscLoading}
+                  disabled={
+                    !selectedDomain || ga4Loading || gscLoading || gbpLoading
+                  }
                   className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                 >
                   <Activity className="w-4 h-4" />
-                  {ga4Loading || gscLoading
+                  {ga4Loading || gscLoading || gbpLoading
                     ? "Loading..."
                     : "Refresh Dashboard"}
                 </button>
                 <button
                   onClick={fetchAllAIReadyData}
                   disabled={
-                    !selectedDomain || aiDataLoading || ga4AiDataLoading
+                    !selectedDomain ||
+                    aiDataLoading ||
+                    ga4AiDataLoading ||
+                    gbpAiDataLoading
                   }
                   className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                 >
                   <Brain className="w-4 h-4" />
-                  {aiDataLoading || ga4AiDataLoading
+                  {aiDataLoading || ga4AiDataLoading || gbpAiDataLoading
                     ? "Loading AI..."
                     : "Get AI Ready Data"}
                 </button>
               </div>
             </div>
-            {(aiError || ga4AiError || ga4Error || gscError) && (
+            {(aiError ||
+              ga4AiError ||
+              gbpAiError ||
+              ga4Error ||
+              gscError ||
+              gbpError) && (
               <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
-                {aiError || ga4AiError || ga4Error || gscError}
+                {aiError ||
+                  ga4AiError ||
+                  gbpAiError ||
+                  ga4Error ||
+                  gscError ||
+                  gbpError}
               </div>
             )}
             {aiData !== null &&
               ga4AiData !== null &&
+              gbpAiData !== null &&
               !aiDataLoading &&
-              !ga4AiDataLoading && (
+              !ga4AiDataLoading &&
+              !gbpAiDataLoading && (
                 <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded-md">
-                  ✅ AI Ready data fetched successfully! GSC AI data loaded, GA4
-                  AI data loaded
+                  ✅ AI Ready data fetched successfully! GSC, GA4, and GBP AI
+                  data loaded
                 </div>
               )}
-            {ga4Data && gscData && !ga4Loading && !gscLoading && (
-              <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
-                ✅ Dashboard data refreshed! GSC: {gscData.clicks.currMonth}{" "}
-                clicks, GA4: {ga4Data.activeUsers.currMonth} users
-              </div>
-            )}
+            {ga4Data &&
+              gscData &&
+              !ga4Loading &&
+              !gscLoading &&
+              !gbpLoading && (
+                <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
+                  ✅ Dashboard data refreshed! GSC: {gscData.clicks.currMonth}{" "}
+                  clicks, GA4: {ga4Data.activeUsers.currMonth} users, GBP:{" "}
+                  {gbpData.callClicks.currMonth} calls
+                </div>
+              )}
           </div>
         </div>
 
@@ -389,7 +447,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Practice Performance Dashboard
+                {selectedDomain?.displayName} Dashboard
               </h1>
               <p className="text-gray-600">
                 {vitalSignsAI.analysis

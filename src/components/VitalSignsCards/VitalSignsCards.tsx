@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Activity, Brain } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Awareness } from "./Awareness";
 import { Research } from "./Research";
+import { Consideration } from "./Consideration";
 
 interface VitalSignsCardsProps {
   className?: string;
@@ -21,6 +22,12 @@ const cards = [
     title: "Research",
     component: Research,
     description: "Website Analytics & Engagement",
+  },
+  {
+    id: "consideration",
+    title: "Consideration",
+    component: Consideration,
+    description: "Reviews & Reputation Management",
   },
 ];
 

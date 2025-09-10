@@ -12,18 +12,13 @@ interface AuthProviderProps {
 // Domain mappings array - single source of truth for domain selection
 const domainMappings: DomainMapping[] = [
   {
-    domain: "popupsmiles.com",
-    displayName: "PopUp Smiles",
-    gsc_domainkey: "sc-domain:popupsmiles.com",
-    ga4_propertyId: "properties/493224130",
+    domain: "artfulorthodontics.com",
+    displayName: "Artful Orthodontics",
+    gbp_accountId: "114810842911950437772",
+    gbp_locationId: "10282052848626216313",
+    gsc_domainkey: "sc-domain:artfulorthodontics.com",
+    ga4_propertyId: "381278947",
   },
-  {
-    domain: "hamiltonwise.com",
-    displayName: "HamiltonWise & Associates",
-    gsc_domainkey: "sc-domain:hamiltonwise.com",
-    ga4_propertyId: "properties/348149125",
-  },
-  // Add more domain mappings as needed
 ];
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {

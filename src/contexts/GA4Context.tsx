@@ -1,6 +1,11 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import ga4 from "../api/ga4";
-import type { GA4Data, GA4Property, GA4ContextType } from "../hooks/useGA4";
+import type {
+  GA4Data,
+  GA4Property,
+  GA4ContextType,
+  GA4AIReadyData,
+} from "../hooks/useGA4";
 import { GA4Context } from "./ga4Context";
 import { useAuth } from "../hooks/useAuth";
 
@@ -20,7 +25,7 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
 
   // AI Data State
   const [aiDataLoading, setAiDataLoading] = useState(false);
-  const [aiData, setAiData] = useState<unknown>(null);
+  const [aiData, setAiData] = useState<GA4AIReadyData | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
   // Properties state
@@ -41,7 +46,7 @@ export const GA4Provider: React.FC<GA4ProviderProps> = ({ children }) => {
       const result = await ga4.getAIReadyData(propertyIdToUse);
 
       if (result.successful !== false) {
-        setAiData(result);
+        setAiData(result as GA4AIReadyData);
         console.log("GA4 AI Ready Data:", result);
       } else {
         setAiError(result.errorMessage || "Failed to fetch GA4 AI-ready data");

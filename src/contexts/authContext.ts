@@ -6,9 +6,11 @@ export interface DomainMapping {
   displayName: string;
   gsc_domainkey: string;
   ga4_propertyId: string;
+  // GBP integration properties
+  gbp_accountId?: string;
+  gbp_locationId?: string;
   // Future integrations can be added here:
   // clarity_siteId?: string;
-  // gbp_locationId?: string;
 }
 
 export interface AuthContextType {

@@ -26,6 +26,79 @@ export interface GA4Property {
   accountDisplayName: string;
 }
 
+export interface GA4AIReadyData {
+  overview: {
+    sessions: number;
+    users: number;
+    pageviews: number;
+    engagementRate: number;
+    avgSessionDuration: number;
+    bounceRate: number;
+    dateRange: { startDate: string; endDate: string };
+  };
+  acquisition: {
+    bySource: Array<{
+      source: string;
+      medium: string;
+      users: number;
+      sessions: number;
+      engagementRate: number;
+      conversions: number;
+    }>;
+  };
+  audience: {
+    geographic: Array<{
+      country: string;
+      users: number;
+      sessions: number;
+      engagementRate: number;
+    }>;
+    technology: Array<{
+      deviceCategory: string;
+      users: number;
+      sessions: number;
+      engagementRate: number;
+    }>;
+  };
+  behavior: {
+    topPages: Array<{
+      page: string;
+      views: number;
+      users: number;
+      avgEngagementTime: number;
+      bounceRate: number;
+    }>;
+    topEvents: Array<{
+      eventName: string;
+      eventCount: number;
+      users: number;
+    }>;
+  };
+  ecommerce: {
+    revenue: {
+      total: number;
+      transactions: number;
+      avgOrderValue: number;
+    };
+    products: Array<{
+      itemName: string;
+      revenue: number;
+      quantity: number;
+    }>;
+  };
+  realTime: {
+    activeUsers: number;
+    popularPages: Array<{
+      page: string;
+      activeUsers: number;
+    }>;
+  };
+  opportunities: Array<{
+    type: string;
+    [key: string]: unknown;
+  }>;
+}
+
 export interface GA4ContextType {
   // GA4 Data State
   ga4Data: GA4Data;
@@ -34,7 +107,7 @@ export interface GA4ContextType {
 
   // AI Data State
   aiDataLoading: boolean;
-  aiData: unknown;
+  aiData: GA4AIReadyData | null;
   aiError: string | null;
 
   // Properties State

@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GSCProvider } from "./contexts/GSCContext.tsx";
 import { GA4Provider } from "./contexts/GA4Context.tsx";
+import { GBPProvider } from "./contexts/GBPContext.tsx";
 
 function App() {
   return (
@@ -18,7 +19,9 @@ function App() {
             element={
               <GSCProvider>
                 <GA4Provider>
-                  <Dashboard />
+                  <GBPProvider>
+                    <Dashboard />
+                  </GBPProvider>
                 </GA4Provider>
               </GSCProvider>
             }

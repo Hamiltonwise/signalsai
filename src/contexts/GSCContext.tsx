@@ -1,6 +1,6 @@
 import React, { useState, useEffect, type ReactNode } from "react";
 import gsc from "../api/gsc";
-import type { GSCData, GSCContextType } from "../hooks/useGSC";
+import type { GSCData, GSCContextType, GSCAIReadyData } from "../hooks/useGSC";
 import { GSCContext } from "./GSCContext";
 import { useAuth } from "../hooks/useAuth";
 
@@ -18,7 +18,7 @@ export const GSCProvider: React.FC<GSCProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aiDataLoading, setAiDataLoading] = useState(false);
-  const [aiData, setAiData] = useState<unknown>(null);
+  const [aiData, setAiData] = useState<GSCAIReadyData | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
   // Get domain/sites state from AuthContext
@@ -33,10 +33,10 @@ export const GSCProvider: React.FC<GSCProviderProps> = ({ children }) => {
       const result = await gsc.getAIReadyData(selectedDomain.gsc_domainkey);
 
       if (result.successful !== false) {
-        setAiData(result);
-        console.log("AI Ready Data:", result);
+        setAiData(result as GSCAIReadyData);
+        console.log("GSC AI Ready Data:", result);
       } else {
-        setAiError(result.errorMessage || "Failed to fetch AI-ready data");
+        setAiError(result.errorMessage || "Failed to fetch GSC AI-ready data");
       }
     } catch (error) {
       setAiError("Failed to fetch AI-ready data");

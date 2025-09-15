@@ -36,6 +36,7 @@ import { ClarityIntegrationModal } from "../components/ClarityIntegrationModal";
 import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
 import { PMSUploadModal } from "../components/PMSUploadModal";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
+import { MondayTasks } from "../components/Monday/MondayTasks";
 
 export default function Dashboard() {
   // Domain selection and GSC data hooks
@@ -361,8 +362,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-slate-100 overflow-y-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-full">
         {/* Domain Selector Section */}
         <div className="mb-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
@@ -565,6 +566,11 @@ export default function Dashboard() {
               clarity: clarityIntegration.isConnected,
             }}
           />
+
+          {/* Monday.com Support Tasks - Moved outside space-y-8 to prevent modal overlay spacing issues */}
+          <div className="mb-8">
+            <MondayTasks />
+          </div>
 
           {/* Enhanced Metrics Section */}
           <div className="space-y-6">

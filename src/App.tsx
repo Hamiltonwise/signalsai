@@ -7,6 +7,7 @@ import { GSCProvider } from "./contexts/GSCContext.tsx";
 import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
+import { MondayProvider } from "./contexts/MondayContext.tsx";
 
 function App() {
   return (
@@ -22,7 +23,9 @@ function App() {
                 <GA4Provider>
                   <GBPProvider>
                     <ClarityProvider>
-                      <Dashboard />
+                      <MondayProvider>
+                        <Dashboard />
+                      </MondayProvider>
                     </ClarityProvider>
                   </GBPProvider>
                 </GA4Provider>

@@ -19,6 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useGSC } from "../hooks/useGSC";
 import { useGA4 } from "../hooks/useGA4";
 import { useGBP } from "../hooks/useGBP";
+import { useClarity } from "../hooks/useClarity";
 
 // Dashboard Components
 import { KPIPillars } from "../components/KPIPillars";
@@ -70,13 +71,23 @@ export default function Dashboard() {
     isLoading: gbpLoading,
     error: gbpError,
   } = useGBP();
+  const {
+    clarityData,
+    fetchClarityData,
+    fetchAIReadyClarityData,
+    aiDataLoading: clarityAiDataLoading,
+    aiData: clarityAiData,
+    aiError: clarityAiError,
+    isLoading: clarityLoading,
+    error: clarityError,
+  } = useClarity();
 
-  // Fetch all integration data for GSC, GA4, and GBP
+  // Fetch all integration data for GSC, GA4, GBP, and Clarity
   const fetchAllIntegrationData = async () => {
     console.log("Refreshing dashboard data for:", selectedDomain);
     if (selectedDomain) {
-      // Fetch GSC, GA4, and GBP data in parallel
-      const promises = [fetchGscData()];
+      // Fetch GSC, GA4, GBP, and Clarity data in parallel
+      const promises = [fetchGscData(), fetchClarityData()];
 
       if (selectedDomain.ga4_propertyId) {
         promises.push(fetchGA4Data(selectedDomain.ga4_propertyId));
@@ -95,11 +106,15 @@ export default function Dashboard() {
     }
   };
 
-  // Fetch AI Ready Data for GSC, GA4, and GBP
+  // Fetch AI Ready Data for GSC, GA4, GBP, and Clarity
   const fetchAllAIReadyData = async () => {
     console.log("Fetching AI Ready Data for:", selectedDomain);
     if (selectedDomain) {
-      const promises = [fetchAIReadyGscData(), fetchAIReadyGA4Data()];
+      const promises = [
+        fetchAIReadyGscData(),
+        fetchAIReadyGA4Data(),
+        fetchAIReadyClarityData(),
+      ];
 
       if (selectedDomain.gbp_accountId && selectedDomain.gbp_locationId) {
         promises.push(
@@ -185,13 +200,17 @@ export default function Dashboard() {
     },
   };
 
+  // Real Clarity integration data from hooks
   const clarityIntegration = {
-    isConnected: true,
+    isConnected: !clarityError, // Consider connected if no error
+    isLoading: clarityLoading,
+    error: clarityError,
     metrics: {
-      totalSessions: 3421,
-      bounceRate: 32.1,
-      deadClicks: 45,
-      calculatedScore: 81,
+      // Convert Clarity data structure to match component expectations
+      totalSessions: clarityData.sessions.currMonth,
+      bounceRate: clarityData.bounceRate.currMonth * 100, // Convert to percentage
+      deadClicks: clarityData.deadClicks.currMonth,
+      calculatedScore: Math.min(100, Math.max(0, 100 + clarityData.trendScore)), // Convert trend to score
     },
   };
 
@@ -377,12 +396,16 @@ export default function Dashboard() {
                 <button
                   onClick={fetchAllIntegrationData}
                   disabled={
-                    !selectedDomain || ga4Loading || gscLoading || gbpLoading
+                    !selectedDomain ||
+                    ga4Loading ||
+                    gscLoading ||
+                    gbpLoading ||
+                    clarityLoading
                   }
                   className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                 >
                   <Activity className="w-4 h-4" />
-                  {ga4Loading || gscLoading || gbpLoading
+                  {ga4Loading || gscLoading || gbpLoading || clarityLoading
                     ? "Loading..."
                     : "Refresh Dashboard"}
                 </button>
@@ -392,12 +415,16 @@ export default function Dashboard() {
                     !selectedDomain ||
                     aiDataLoading ||
                     ga4AiDataLoading ||
-                    gbpAiDataLoading
+                    gbpAiDataLoading ||
+                    clarityAiDataLoading
                   }
                   className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-md shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
                 >
                   <Brain className="w-4 h-4" />
-                  {aiDataLoading || ga4AiDataLoading || gbpAiDataLoading
+                  {aiDataLoading ||
+                  ga4AiDataLoading ||
+                  gbpAiDataLoading ||
+                  clarityAiDataLoading
                     ? "Loading AI..."
                     : "Get AI Ready Data"}
                 </button>
@@ -406,38 +433,47 @@ export default function Dashboard() {
             {(aiError ||
               ga4AiError ||
               gbpAiError ||
+              clarityAiError ||
               ga4Error ||
               gscError ||
-              gbpError) && (
+              gbpError ||
+              clarityError) && (
               <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
                 {aiError ||
                   ga4AiError ||
                   gbpAiError ||
+                  clarityAiError ||
                   ga4Error ||
                   gscError ||
-                  gbpError}
+                  gbpError ||
+                  clarityError}
               </div>
             )}
             {aiData !== null &&
               ga4AiData !== null &&
               gbpAiData !== null &&
+              clarityAiData !== null &&
               !aiDataLoading &&
               !ga4AiDataLoading &&
-              !gbpAiDataLoading && (
+              !gbpAiDataLoading &&
+              !clarityAiDataLoading && (
                 <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded-md">
-                  ✅ AI Ready data fetched successfully! GSC, GA4, and GBP AI
-                  data loaded
+                  ✅ AI Ready data fetched successfully! GSC, GA4, GBP, and
+                  Clarity AI data loaded
                 </div>
               )}
             {ga4Data &&
               gscData &&
+              clarityData &&
               !ga4Loading &&
               !gscLoading &&
-              !gbpLoading && (
+              !gbpLoading &&
+              !clarityLoading && (
                 <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
                   ✅ Dashboard data refreshed! GSC: {gscData.clicks.currMonth}{" "}
                   clicks, GA4: {ga4Data.activeUsers.currMonth} users, GBP:{" "}
-                  {gbpData.callClicks.currMonth} calls
+                  {gbpData.callClicks.currMonth} calls, Clarity:{" "}
+                  {clarityData.sessions.currMonth} sessions
                 </div>
               )}
           </div>

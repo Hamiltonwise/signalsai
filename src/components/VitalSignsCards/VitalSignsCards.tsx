@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Awareness } from "./Awareness";
 import { Research } from "./Research";
 import { Consideration } from "./Consideration";
+import { Decision } from "./Decision";
 
 interface VitalSignsCardsProps {
   className?: string;
@@ -28,6 +29,12 @@ const cards = [
     title: "Consideration",
     component: Consideration,
     description: "Reviews & Reputation Management",
+  },
+  {
+    id: "decision",
+    title: "Decision",
+    component: Decision,
+    description: "User Experience & Conversion",
   },
 ];
 

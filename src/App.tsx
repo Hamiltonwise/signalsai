@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GSCProvider } from "./contexts/GSCContext.tsx";
 import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
+import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 
 function App() {
   return (
@@ -20,7 +21,9 @@ function App() {
               <GSCProvider>
                 <GA4Provider>
                   <GBPProvider>
-                    <Dashboard />
+                    <ClarityProvider>
+                      <Dashboard />
+                    </ClarityProvider>
                   </GBPProvider>
                 </GA4Provider>
               </GSCProvider>

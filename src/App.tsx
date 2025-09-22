@@ -8,6 +8,7 @@ import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { MondayProvider } from "./contexts/MondayContext.tsx";
+import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
 
 function App() {
   return (
@@ -19,17 +20,19 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <GSCProvider>
-                <GA4Provider>
-                  <GBPProvider>
-                    <ClarityProvider>
-                      <MondayProvider>
-                        <Dashboard />
-                      </MondayProvider>
-                    </ClarityProvider>
-                  </GBPProvider>
-                </GA4Provider>
-              </GSCProvider>
+              <GoogleAuthProvider>
+                <GSCProvider>
+                  <GA4Provider>
+                    <GBPProvider>
+                      <ClarityProvider>
+                        <MondayProvider>
+                          <Dashboard />
+                        </MondayProvider>
+                      </ClarityProvider>
+                    </GBPProvider>
+                  </GA4Provider>
+                </GSCProvider>
+              </GoogleAuthProvider>
             }
           />
         </Routes>

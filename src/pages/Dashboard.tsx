@@ -37,6 +37,8 @@ import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
 import { PMSUploadModal } from "../components/PMSUploadModal";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { MondayTasks } from "../components/Monday/MondayTasks";
+import { GoogleConnectButton } from "../components/GoogleConnectButton";
+import { GoogleAccountStatus } from "../components/GoogleAccountStatus";
 
 export default function Dashboard() {
   // Domain selection and GSC data hooks
@@ -788,6 +790,19 @@ export default function Dashboard() {
                 <BarChart3 className="w-4 h-4" />
                 PMS Upload
               </button>
+            </div>
+
+            {/* Google OAuth Testing Section */}
+            <div className="mt-6 space-y-4">
+              <h4 className="text-md font-semibold text-gray-900">
+                Google OAuth (Testing)
+              </h4>
+              <GoogleAccountStatus />
+              <GoogleConnectButton
+                variant="outline"
+                size="md"
+                className="w-full max-w-xs"
+              />
             </div>
           </div>
 

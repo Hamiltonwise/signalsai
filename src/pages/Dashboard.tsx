@@ -34,7 +34,8 @@ import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
 import { GSCIntegrationModal } from "../components/GSCIntegrationModal";
 import { ClarityIntegrationModal } from "../components/ClarityIntegrationModal";
 import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
-import { PMSUploadModal } from "../components/PMSUploadModal";
+import { PMSUploadModal } from "../components/PMS/PMSUploadModal";
+import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { MondayTasks } from "../components/Monday/MondayTasks";
 import { GoogleConnectButton } from "../components/GoogleConnectButton";
@@ -431,6 +432,13 @@ export default function Dashboard() {
                     ? "Loading AI..."
                     : "Get AI Ready Data"}
                 </button>
+                <button
+                  onClick={() => setShowPMSUpload(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-md shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  PMS Data
+                </button>
               </div>
             </div>
             {(aiError ||
@@ -553,6 +561,9 @@ export default function Dashboard() {
               clarity: clarityIntegration.isConnected,
             }}
           />
+
+          {/* PMS Visual Pillars */}
+          <PMSVisualPillars />
 
           {/* Next Best Action */}
           <NextBestAction

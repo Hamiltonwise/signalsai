@@ -1,17 +1,12 @@
 import { useState, useCallback, useRef } from "react";
 import googleAuth from "../api/google-auth";
-import type {
-  AuthState,
-  AuthResponse,
-  User,
-  GoogleAccount,
-} from "../types/google-auth";
+import type { AuthState, AuthResponse } from "../types/google-auth";
 
 const POPUP_WIDTH = 500;
 const POPUP_HEIGHT = 600;
 const POPUP_TIMEOUT = 300000; // 5 minutes
 
-export const useGoogleAuth = (apiBaseUrl: string = "/api") => {
+export const useGoogleAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     isLoading: false,

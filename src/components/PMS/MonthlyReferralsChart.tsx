@@ -52,14 +52,14 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
     ? Math.max(...normalizedData.map((item) => item.total ?? 0), 0)
     : 0;
 
-  const latestTotal =
-    normalizedData[normalizedData.length - 1]?.total ?? 0;
-  const previousTotal =
-    normalizedData[normalizedData.length - 2]?.total ?? 0;
+  const latestTotal = normalizedData[normalizedData.length - 1]?.total ?? 0;
+  const previousTotal = normalizedData[normalizedData.length - 2]?.total ?? 0;
 
   const changePercent =
     previousTotal > 0
-      ? Number((((latestTotal - previousTotal) / previousTotal) * 100).toFixed(1))
+      ? Number(
+          (((latestTotal - previousTotal) / previousTotal) * 100).toFixed(1)
+        )
       : 0;
 
   const changeIsPositive = changePercent >= 0;
@@ -69,7 +69,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white rounded-xl border border-gray-200 p-6"
+      className="bg-white/30 border-white border-1 group glass-card p-5 md:p-6 overflow-hidden transition-transform duration-200 hover:scale-[1.01]"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -78,24 +78,28 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
             <Users className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">
+            <h3 className="font-[200] text-gray-900">
               Monthly Patient Referrals
             </h3>
-            <p className="text-sm text-gray-600">{periodLabel}</p>
+            <p className="text-xs font-[400] text-gray-600">{periodLabel}</p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-3xl font-light text-gray-900">
             {Math.round(totals.total).toLocaleString()}
           </div>
-          <div className="text-sm text-gray-600">Total Referral Events</div>
+          <div className="text-xs font-[400] text-gray-600">
+            Total Referral Events
+          </div>
           <div
-            className={`flex items-center gap-1 text-sm mt-1 ${
+            className={`flex items-center font-[400] gap-1 text-xs mt-1 ${
               changeIsPositive ? "text-green-600" : "text-red-600"
             }`}
           >
             <TrendingDown
-              className={`w-4 h-4 ${changeIsPositive ? "rotate-180 transform" : ""}`}
+              className={`w-4 h-4 ${
+                changeIsPositive ? "rotate-180 transform" : ""
+              }`}
             />
             {changePercent}% vs prev month
           </div>
@@ -106,13 +110,13 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
       <div className="flex items-center gap-6 mb-6">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
-          <span className="text-sm text-gray-700">
+          <span className="text-xs font-[400] text-gray-700">
             Self-Referrals ({Math.round(totals.self)})
           </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
-          <span className="text-sm text-gray-700">
+          <span className="text-xs font-[400] text-gray-700">
             Doctor Referrals ({Math.round(totals.doctor)})
           </span>
         </div>
@@ -129,7 +133,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
             className="space-y-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 w-16">
+              <span className="text-xs font-[400] text-gray-700 w-16">
                 {item.month}
               </span>
               <div className="flex-1 mx-4 space-y-1">
@@ -186,7 +190,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
                   </motion.div>
                 </div>
               </div>
-              <div className="text-right text-sm text-gray-600 w-24">
+              <div className="text-right text-xs font-[400] text-gray-600 w-24">
                 <div>Self: {Math.round(item.selfReferrals)}</div>
                 <div>Dr: {Math.round(item.doctorReferrals)}</div>
                 <div className="font-medium">

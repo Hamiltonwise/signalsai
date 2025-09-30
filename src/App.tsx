@@ -44,6 +44,30 @@ function App() {
             }
           />
           <Route
+            path="/patientJourneyInsights"
+            element={
+              <AppProviders>
+                <Dashboard />
+              </AppProviders>
+            }
+          />
+          <Route
+            path="/pmsStatistics"
+            element={
+              <AppProviders>
+                <Dashboard />
+              </AppProviders>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <AppProviders>
+                <Dashboard />
+              </AppProviders>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <AppProviders>

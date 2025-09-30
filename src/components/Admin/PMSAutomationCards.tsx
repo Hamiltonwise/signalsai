@@ -601,7 +601,6 @@ export function PMSAutomationCards() {
               STATUS_STYLES[job.status] ||
               "bg-gray-100 text-gray-700 border-gray-200";
             const approvalLabel = job.is_approved ? "locked" : "pending";
-            const editorState = editorStates[job.id];
             const isDeleting = deletingJobId === job.id;
 
             const isPending = job.status === "pending";

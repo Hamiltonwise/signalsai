@@ -17,6 +17,7 @@ import {
 import {
   fetchPmsKeyData,
   updatePmsJobClientApproval,
+  uploadPMSData,
   type PmsKeyDataResponse,
   type PmsKeyDataSource,
 } from "../../api/pms";
@@ -49,11 +50,20 @@ const formatMonthLabel = (value: string): string => {
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain = DEFAULT_DOMAIN,
 }) => {
+  const [inlineFile, setInlineFile] = useState<File | null>(null);
+  const [inlineIsUploading, setInlineIsUploading] = useState(false);
+  const [inlineMessage, setInlineMessage] = useState<string>("");
+  const [inlineStatus, setInlineStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+  const [inlineIsDragOver, setInlineIsDragOver] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
-  const [keyData, setKeyData] =
-    useState<PmsKeyDataResponse["data"] | null>(null);
+  const [keyData, setKeyData] = useState<PmsKeyDataResponse["data"] | null>(
+    null
+  );
   const [localProcessing, setLocalProcessing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -142,10 +152,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
     window.addEventListener("pms:job-uploaded", handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "pms:job-uploaded",
-        handler as EventListener
-      );
+      window.removeEventListener("pms:job-uploaded", handler as EventListener);
     };
   }, [domain, loadKeyData]);
 
@@ -268,18 +275,64 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     await loadKeyData();
   }, [loadKeyData]);
 
+  const handleInlineFile = (file: File | null) => {
+    setInlineFile(file);
+    setInlineStatus("idle");
+    setInlineMessage("");
+    if (file) {
+      // auto-upload immediately after selection/drop
+      void doInlineUpload(file);
+    }
+  };
+
+  const doInlineUpload = async (fileOverride?: File) => {
+    const fileToUpload = fileOverride ?? inlineFile;
+    if (!fileToUpload) return;
+    setInlineIsUploading(true);
+    setInlineStatus("idle");
+    try {
+      const json = await uploadPMSData({ clientId: domain, file: fileToUpload });
+      if (json?.success) {
+        // Clear input and let the processing banner handle UX
+        setInlineStatus("idle");
+        setInlineMessage("");
+        setInlineFile(null);
+        try {
+          if (inlineInputRef.current) inlineInputRef.current.value = "";
+        } catch {}
+        try {
+          window.localStorage.setItem(
+            `pmsProcessing:${domain}`,
+            String(Date.now())
+          );
+          window.dispatchEvent(
+            new CustomEvent("pms:job-uploaded", {
+              detail: { clientId: domain },
+            })
+          );
+        } catch {}
+        await loadKeyData({ silent: true });
+      } else {
+        setInlineStatus("error");
+        setInlineMessage(json?.error || "Upload failed");
+      }
+    } catch (e) {
+      setInlineStatus("error");
+      setInlineMessage(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setInlineIsUploading(false);
+    }
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-            PMS Visual Pillars
-          </span>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-3xl font-thin text-gray-900 mb-1">
             Referral Performance Overview
           </h2>
-          <p className="text-sm text-gray-600">
-            Domain: {keyData?.domain || domain}
+          <p className="text-sm font-light text-slate-600">
+            See how your practice is performing with Alloro AI.
           </p>
         </div>
         <div className="text-right text-xs text-gray-500 space-y-1">
@@ -312,11 +365,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             <div>
               Review the latest results and confirm once everything looks good.
             </div>
-            {latestJobStatus && (
-              <div className="text-xs text-blue-600">
-                Latest job status: {latestJobStatus}
-              </div>
-            )}
             {bannerError && (
               <div className="flex items-center gap-2 text-xs text-red-600">
                 <AlertCircle className="h-4 w-4" />
@@ -352,9 +400,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       )}
 
       {isLoading && (
-        <div className="flex items-center justify-center gap-3 rounded-xl border border-dashed border-emerald-200 bg-white p-10 text-sm text-gray-600">
+        <div className="flex items-center justify-center gap-3 rounded-xl border border-dashed border-emerald-200 bg-white/60 border-white border-1 group glass-card p-5 md:p-6 overflow-hidden text-sm text-gray-600">
           <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-          Loading PMS metrics...
+          <p className="font-[200]">Loading PMS metrics...</p>
         </div>
       )}
 
@@ -381,6 +429,81 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           />
         </div>
       )}
+
+      {/* Inline Upload Panel */}
+      <div className="mt-8">
+        <h3 className="text-lg font-[200] text-slate-900 tracking-tight">
+          PMS Data Upload
+        </h3>
+        <p className="text-xs font-[400] text-slate-600 mb-3">
+          Upload your PMS data below and we'll take care of the rest for you
+        </p>
+
+        <div
+          className={`mt-5 border-2 border-dashed rounded-xl p-6 bg-white/40 backdrop-blur-md transition-all duration-300 ${
+            inlineIsDragOver
+              ? "border-emerald-400 bg-emerald-50/60"
+              : inlineFile
+              ? "border-emerald-300"
+              : "border-white/60 hover:border-emerald-400"
+          }`}
+          role="button"
+          onClick={() => inlineInputRef.current?.click()}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setInlineIsDragOver(false);
+            const f = e.dataTransfer?.files?.[0];
+            if (f) handleInlineFile(f);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setInlineIsDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setInlineIsDragOver(false);
+          }}
+        >
+          <input
+            ref={inlineInputRef}
+            type="file"
+            accept=".csv,.txt,.xlsx,.xls"
+            onChange={(e) => handleInlineFile(e.target.files?.[0] || null)}
+            className="hidden"
+          />
+          <div className="text-center">
+            <div className="text-sm text-slate-700 mb-1">
+              {inlineFile ? inlineFile.name : "Drop your file here or browse"}
+            </div>
+            <div className="text-xs font-[400] text-slate-500 mb-3">
+              CSV, Excel, or Text files supported
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <button
+                type="button"
+                onClick={() => inlineInputRef.current?.click()}
+                className="px-4 py-2 rounded-lg text-xs bg-white/70 border border-white/60 hover:bg-white/90 transition"
+              >
+                {inlineFile ? "Choose Different File" : "Browse Files"}
+              </button>
+              {inlineIsUploading && (
+                <div className="px-4 py-2 rounded-lg text-xs text-emerald-800 bg-emerald-50 border border-emerald-200">
+                  Uploading...
+                </div>
+              )}
+            </div>
+            {/* Success message intentionally suppressed; processing banner will show */}
+            {inlineStatus === "error" && (
+              <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {inlineMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {latestJobId && hasLatestJobRaw && (
         <PMSLatestJobEditor

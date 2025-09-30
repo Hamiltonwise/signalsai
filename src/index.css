@@ -3,6 +3,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html, body {
+  background: url('/bg.jpg') ;
+  background-size: cover;
+  background-attachment: fixed !important; ;
+}
+
+/* Reusable glassmorphism helpers */
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl bg-white/60 dark:bg-white/10 border border-white/20 dark:border-white/10 shadow-xl;
+  }
+  .glass-card {
+    @apply rounded-2xl p-4;
+  }
+  .glass-hover {
+    @apply transition-colors hover:bg-white/70 dark:hover:bg-white/15;
+  }
+}
+
 @keyframes pms-shimmer {
   0% {
     transform: translateX(-100%);
@@ -10,6 +29,88 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+/* OrbitViz animations */
+@keyframes node-float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes orbit-ring-pulse {
+  0%, 100% { stroke-opacity: .35; }
+  50% { stroke-opacity: .6; }
+}
+
+.orbit-float {
+  animation: node-float 6s ease-in-out infinite;
+}
+
+.bubble {
+  transition: transform .25s ease, filter .25s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.bubble:hover { transform: scale(1.06); filter: brightness(1.02); }
+.bubble:hover .glare { opacity: .28; transition: opacity .25s ease; }
+.bubble circle[data-core] {
+  stroke: rgba(59,130,246,0);
+  stroke-width: 1px;
+  transition: stroke .25s ease, stroke-width .25s ease;
+}
+.bubble:hover circle[data-core] { stroke: #3b82f6 !important; stroke-width: 1.5px; }
+
+/* Animated hover ring that draws around the orb */
+.hover-outline {
+  opacity: 0;
+  stroke: #3b82f6;
+  stroke-width: 1.5px;
+  fill: none;
+  pointer-events: none;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: opacity .12s ease;
+  stroke-linecap: round;
+}
+.bubble:hover .hover-outline {
+  opacity: 1;
+  animation: orbit-ring-draw 300ms cubic-bezier(.22,.9,.22,1) forwards;
+}
+
+@keyframes orbit-ring-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Tooltip animation */
+.orbit-tooltip { animation: tooltip-fade 160ms ease-out; }
+@keyframes tooltip-fade {
+  0% { opacity: 0; transform: translateY(4px) scale(.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Glass glare spot for cards */
+.glare-spot {
+  background: radial-gradient(ellipse at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,.25) 45%, rgba(255,255,255,0) 70%);
+  filter: blur(10px);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.group:hover .glare-spot { opacity: .9; }
+
+.orbit-ring { animation: orbit-ring-pulse 9s ease-in-out infinite; }
+
+/* Link styling and highlight */
+.orbit-link {
+  stroke: rgba(148,163,184,0.45);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  transition: stroke .2s ease, stroke-width .2s ease, filter .2s ease;
+}
+.orbit-link.active {
+  stroke: #3b82f6;
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 4px rgba(59,130,246,.35));
 }
 
 @theme inline {
@@ -129,5 +230,5 @@
 }
 
 *, * *{
-  font-family: "Atkinson Hyperlegible Next";
+  font-family: "Poppins", sans-serif;
 }

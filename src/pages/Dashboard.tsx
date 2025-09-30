@@ -1,17 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  TrendingUp,
   AlertTriangle,
-  Brain,
-  Target,
-  Lightbulb,
   Building2,
-  Users,
-  Eye,
-  MousePointer,
-  Globe,
   Activity,
   BarChart3,
+  LayoutGrid,
+  CheckSquare,
+  Bell,
+  Settings,
 } from "lucide-react";
 
 // Import auth and integration hooks for domain selection
@@ -23,11 +19,7 @@ import { useClarity } from "../hooks/useClarity";
 
 // Dashboard Components
 import { KPIPillars } from "../components/KPIPillars";
-import { NextBestAction } from "../components/NextBestAction";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
-import { GrowthFocusedKPICard } from "../components/GrowthFocusedKPICard";
-import { EnhancedMetricCard } from "../components/EnhancedMetricCard";
-import { VitalSignsScore } from "../components/VitalSignsScore";
 
 // Integration Modal Components ✅
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
@@ -38,100 +30,21 @@ import { PMSUploadModal } from "../components/PMS/PMSUploadModal";
 import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { MondayTasks } from "../components/Monday/MondayTasks";
-import { GoogleConnectButton } from "../components/GoogleConnectButton";
-import { GoogleAccountStatus } from "../components/GoogleAccountStatus";
+import { AnimatePresence, motion } from "framer-motion";
+import OrbitVizD3 from "../components/OrbitViz/OrbitVizD3";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   // Domain selection and GSC data hooks
-  const { domains, selectedDomain, handleDomainChange } = useAuth();
+  const { selectedDomain } = useAuth();
 
-  const {
-    gscData,
-    fetchGscData,
-    fetchAIReadyGscData,
-    aiDataLoading,
-    aiError,
-    aiData,
-    isLoading: gscLoading,
-    error: gscError,
-  } = useGSC();
-  const {
-    ga4Data,
-    fetchGA4Data,
-    fetchAIReadyData: fetchAIReadyGA4Data,
-    aiDataLoading: ga4AiDataLoading,
-    aiData: ga4AiData,
-    aiError: ga4AiError,
-    isLoading: ga4Loading,
-    error: ga4Error,
-  } = useGA4();
-  const {
-    gbpData,
-    fetchGBPData,
-    fetchAIReadyData: fetchAIReadyGBPData,
-    aiDataLoading: gbpAiDataLoading,
-    aiData: gbpAiData,
-    aiError: gbpAiError,
-    isLoading: gbpLoading,
-    error: gbpError,
-  } = useGBP();
-  const {
-    clarityData,
-    fetchClarityData,
-    fetchAIReadyClarityData,
-    aiDataLoading: clarityAiDataLoading,
-    aiData: clarityAiData,
-    aiError: clarityAiError,
-    isLoading: clarityLoading,
-    error: clarityError,
-  } = useClarity();
+  const { gscData, isLoading: gscLoading, error: gscError } = useGSC();
+  const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
+  const { gbpData, isLoading: gbpLoading, error: gbpError } = useGBP();
+  const { clarityData, isLoading: clarityLoading, error: clarityError } =
+    useClarity();
 
-  // Fetch all integration data for GSC, GA4, GBP, and Clarity
-  const fetchAllIntegrationData = async () => {
-    console.log("Refreshing dashboard data for:", selectedDomain);
-    if (selectedDomain) {
-      // Fetch GSC, GA4, GBP, and Clarity data in parallel
-      const promises = [fetchGscData(), fetchClarityData()];
-
-      if (selectedDomain.ga4_propertyId) {
-        promises.push(fetchGA4Data(selectedDomain.ga4_propertyId));
-      }
-
-      if (selectedDomain.gbp_accountId && selectedDomain.gbp_locationId) {
-        promises.push(
-          fetchGBPData(
-            selectedDomain.gbp_accountId,
-            selectedDomain.gbp_locationId
-          )
-        );
-      }
-
-      await Promise.all(promises);
-    }
-  };
-
-  // Fetch AI Ready Data for GSC, GA4, GBP, and Clarity
-  const fetchAllAIReadyData = async () => {
-    console.log("Fetching AI Ready Data for:", selectedDomain);
-    if (selectedDomain) {
-      const promises = [
-        fetchAIReadyGscData(),
-        fetchAIReadyGA4Data(),
-        fetchAIReadyClarityData(),
-      ];
-
-      if (selectedDomain.gbp_accountId && selectedDomain.gbp_locationId) {
-        promises.push(
-          fetchAIReadyGBPData(
-            selectedDomain.gbp_accountId,
-            selectedDomain.gbp_locationId
-          )
-        );
-      }
-
-      await Promise.all(promises);
-    }
-  };
+  // Removed unused fetchAllIntegrationData and fetchAllAIReadyData helpers
 
   // Modal state management
   const [showGA4Modal, setShowGA4Modal] = useState(false);
@@ -140,6 +53,45 @@ export default function Dashboard() {
   const [showClarityModal, setShowClarityModal] = useState(false);
   const [showPMSUpload, setShowPMSUpload] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<
+    "Dashboard" | "Patient Journey Insights" | "PMS Statistics" | "Tasks"
+  >("Dashboard");
+
+  // Map between tabs and routes
+  const pathForTab = (tab: typeof activeTab) => {
+    switch (tab) {
+      case "Patient Journey Insights":
+        return "/patientJourneyInsights";
+      case "PMS Statistics":
+        return "/pmsStatistics";
+      case "Tasks":
+        return "/tasks";
+      default:
+        return "/dashboard";
+    }
+  };
+  const tabFromPath = (path: string): typeof activeTab => {
+    if (path.startsWith("/patientJourneyInsights"))
+      return "Patient Journey Insights";
+    if (path.startsWith("/pmsStatistics")) return "PMS Statistics";
+    if (path.startsWith("/tasks")) return "Tasks";
+    return "Dashboard";
+  };
+
+  // Initialize/keep activeTab in sync with path
+  useEffect(() => {
+    setActiveTab(tabFromPath(location.pathname));
+  }, [location.pathname]);
+
+  const handleTabChange = (
+    tab: "Dashboard" | "Patient Journey Insights" | "PMS Statistics" | "Tasks"
+  ) => {
+    setActiveTab(tab);
+    const path = pathForTab(tab);
+    if (location.pathname !== path) navigate(path, { replace: false });
+  };
 
   // Placeholder data - replace with actual hook data later
   const ready = true;
@@ -218,69 +170,9 @@ export default function Dashboard() {
     },
   };
 
-  const pmsData = {
-    isLoading: false,
-    metrics: {
-      totalPatients: 1247,
-      selfReferred: 423,
-      drReferred: 824,
-      totalProduction: 2847500,
-      averageProductionPerPatient: 2284,
-      monthlyData: [
-        { month: "Jan", patients: 98, production: 224000 },
-        { month: "Feb", patients: 112, production: 256000 },
-        { month: "Mar", patients: 105, production: 238000 },
-      ],
-      trend: "up" as const,
-      changePercent: "+12.5%",
-    },
-  };
+  // Removed local PMS demo data; PMS visuals remain via dedicated components
 
-  const vitalSignsAI = {
-    isLoading: false,
-    analysis: {
-      grade: "B+",
-      priorityOpportunities: [
-        {
-          title: "Improve Website Conversion Rate",
-          description: "Current conversion rate is below industry average",
-          estimatedImpact: "15-20% revenue increase",
-          timeframe: "2-3 months",
-        },
-        {
-          title: "Optimize Google Business Profile",
-          description: "Increase review response rate and photo uploads",
-          estimatedImpact: "10-15% more calls",
-          timeframe: "1 month",
-        },
-      ],
-      recentWins: [
-        {
-          title: "Increased Organic Traffic",
-          description: "SEO improvements led to 25% more organic visitors",
-          improvement: "+25% organic traffic",
-          timeframe: "Last 30 days",
-        },
-      ],
-      recommendations: [
-        {
-          title: "Add Online Booking System",
-          description:
-            "Reduce phone call volume and improve patient experience",
-          estimatedImpact: "20% more bookings",
-          difficulty: "medium" as const,
-        },
-        {
-          title: "Implement Live Chat",
-          description: "Capture more leads from website visitors",
-          estimatedImpact: "10% more leads",
-          difficulty: "easy" as const,
-        },
-      ],
-    },
-    refreshAnalysis: () => console.log("Refreshing AI analysis..."),
-    getAnalysisAge: () => "2 hours ago",
-  };
+  // Removed unused vitalSignsAI mock
   // Fast loading - only show spinner for auth, not initial load
   if (!ready) {
     return (
@@ -365,10 +257,82 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-slate-100 overflow-y-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-full">
-        {/* Domain Selector Section */}
-        <div className="mb-6">
+    <div className="min-h-screen p-3 md:p-6 lg:p-8">
+      <div className="mx-auto max-w-[1400px] flex gap-6">
+        {/* Detached Glass Sidebar */}
+        <aside className="hidden lg:flex w-72 shrink-0 flex-col gap-4 glass rounded-3xl p-4 sticky top-6 h-[calc(100vh-3rem)]">
+          {/* Brand / Profile quick area */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-white/30 flex items-center justify-center">
+                <span className="text-blue-700 font-bold">S</span>
+              </div>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold">
+                  {selectedDomain?.displayName || "Signals AI"}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  {selectedDomain?.domain || ""}
+                </p>
+              </div>
+            </div>
+            <Settings className="h-5 w-5 text-gray-500" />
+          </div>
+
+          <div className="h-px bg-white/30 dark:bg-white/10 my-2" />
+
+          {/* Primary nav */}
+          <nav className="space-y-1">
+            {[
+              { label: "Dashboard", icon: LayoutGrid },
+              { label: "Patient Journey Insights", icon: Activity },
+              { label: "PMS Statistics", icon: BarChart3 },
+              { label: "Tasks", icon: CheckSquare },
+            ].map(({ label, icon: Icon }) => {
+              const isActive = activeTab === (label as typeof activeTab);
+              return (
+                <button
+                  key={label}
+                  onClick={() => handleTabChange(label as typeof activeTab)}
+                  className="relative w-full rounded-xl px-3 py-2 text-sm"
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="sidebarActive"
+                      className="absolute inset-0 rounded-xl bg-white/70 dark:bg-white/15 border border-white/30 dark:border-white/10"
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-gray-700 dark:text-gray-200" />
+                    <span className="truncate">{label}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto space-y-3">
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+              <Bell className="h-4 w-4" />
+              <span>Notifications</span>
+            </div>
+            <div className="text-[10px] text-gray-500">
+              {selectedDomain?.domain}
+            </div>
+          </div>
+        </aside>
+
+        {/* Main glass content area */}
+        <main className="flex-1 glass rounded-3xl overflow-hidden">
+          <div className="px-4 sm:px-6 lg:px-8 py-6">
+            {/* Domain Selector Section */}
+            {/* <div className="mb-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
             <label
               htmlFor="dashboard-domain-select"
@@ -488,620 +452,135 @@ export default function Dashboard() {
                 </div>
               )}
           </div>
-        </div>
+        </div> */}
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {selectedDomain?.displayName} Dashboard
-              </h1>
-              <p className="text-gray-600">
-                {vitalSignsAI.analysis
-                  ? `AI Analysis: Grade ${vitalSignsAI.analysis.grade} • ${
-                      vitalSignsAI.analysis.priorityOpportunities?.length || 0
-                    } opportunities identified`
-                  : "Comprehensive practice analytics and AI-powered insights"}
-              </p>
-            </div>
-            {vitalSignsAI.analysis && (
-              <div className="text-right">
-                <button
-                  onClick={vitalSignsAI.refreshAnalysis}
-                  disabled={vitalSignsAI.isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                >
-                  <Brain
-                    className={`w-4 h-4 ${
-                      vitalSignsAI.isLoading ? "animate-pulse" : ""
-                    }`}
-                  />
-                  {vitalSignsAI.isLoading
-                    ? "Analyzing..."
-                    : "Refresh AI Analysis"}
-                </button>
-                <p className="text-xs text-gray-500 mt-1">
-                  Last updated: {vitalSignsAI.getAnalysisAge()}
-                </p>
+            {activeTab === "Dashboard" && (
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h1 className="text-3xl font-thin text-gray-900 mb-1">
+                    Good{" "}
+                    {new Date().getHours() < 12
+                      ? "morning"
+                      : new Date().getHours() < 18
+                      ? "afternoon"
+                      : "evening"}
+                    , Dr. Pawlak
+                  </h1>
+                  <p className="text-sm font-light text-slate-600">
+                    Artful Orthodontics at a glance.
+                  </p>
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        <div className="space-y-8">
-          {/* Vital Signs Card with Patient Journey */}
-          {/* <VitalSignsCard
-            ga4Data={ga4Integration.metrics}
-            gbpData={gbpIntegration.metrics}
-            gscData={gscIntegration.metrics}
-            clarityData={clarityIntegration.metrics}
-            pmsData={pmsData.metrics}
-            connectionStatus={{
-              ga4: ga4Integration.isConnected,
-              gbp: gbpIntegration.isConnected,
-              gsc: gscIntegration.isConnected,
-              clarity: clarityIntegration.isConnected,
-            }}
-            aiAnalysis={vitalSignsAI.analysis}
-            isLoadingAI={vitalSignsAI.isLoading}
-          /> */}
+            <div className="space-y-8">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                >
+                  {activeTab === "Dashboard" && (
+                    <>
+                      <OrbitVizD3
+                        className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
+                        onNavigate={(tab) => handleTabChange(tab)}
+                      />
+                      <KPIPillars
+                        ga4Data={ga4Integration.metrics}
+                        gbpData={gbpIntegration.metrics}
+                        gscData={gscIntegration.metrics}
+                        clarityData={clarityIntegration.metrics}
+                        connectionStatus={{
+                          ga4: ga4Integration.isConnected,
+                          gbp: gbpIntegration.isConnected,
+                          gsc: gscIntegration.isConnected,
+                          clarity: clarityIntegration.isConnected,
+                        }}
+                      />
+                    </>
+                  )}
 
-          <VitalSignsCards selectedDomain={selectedDomain?.domain || ""} />
+                  {activeTab === "Patient Journey Insights" && (
+                    <VitalSignsCards
+                      selectedDomain={selectedDomain?.domain || ""}
+                    />
+                  )}
 
-          {/* KPI Pillars */}
-          <KPIPillars
-            ga4Data={ga4Integration.metrics}
-            gbpData={gbpIntegration.metrics}
-            gscData={gscIntegration.metrics}
-            clarityData={clarityIntegration.metrics}
-            connectionStatus={{
-              ga4: ga4Integration.isConnected,
-              gbp: gbpIntegration.isConnected,
-              gsc: gscIntegration.isConnected,
-              clarity: clarityIntegration.isConnected,
-            }}
-          />
+                  {activeTab === "PMS Statistics" && <PMSVisualPillars />}
 
-          {/* PMS Visual Pillars */}
-          <PMSVisualPillars />
-
-          {/* Next Best Action */}
-          <NextBestAction
-            ga4Data={ga4Integration.metrics}
-            gbpData={gbpIntegration.metrics}
-            gscData={gscIntegration.metrics}
-            clarityData={clarityIntegration.metrics}
-            pmsData={pmsData.metrics}
-            connectionStatus={{
-              ga4: ga4Integration.isConnected,
-              gbp: gbpIntegration.isConnected,
-              gsc: gscIntegration.isConnected,
-              clarity: clarityIntegration.isConnected,
-            }}
-          />
-
-          {/* Monday.com Support Tasks - Moved outside space-y-8 to prevent modal overlay spacing issues */}
-          <div className="mb-8">
-            <MondayTasks />
-          </div>
-
-          {/* Enhanced Metrics Section */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Key Performance Metrics
-              </h2>
-              <p className="text-sm text-gray-600">
-                Detailed analytics with growth insights
-              </p>
+                  {activeTab === "Tasks" && (
+                    <div className="mb-8">
+                      <MondayTasks />
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
-            {/* Vital Signs Score - Overall Practice Health */}
-            <VitalSignsScore
-              score={82}
-              monthlyChange={8.5}
-              trend="up"
-              lastMonthData={{
-                month: "November",
-                score: 76,
-                breakdown: {
-                  ga4Score: ga4Integration.metrics.calculatedScore,
-                  gbpScore: gbpIntegration.metrics.calculatedScore,
-                  gscScore: gscIntegration.metrics.calculatedScore,
-                  clarityScore: clarityIntegration.metrics.calculatedScore,
-                  pmsScore: 88,
-                },
+            {/* Integration Modal Components ✅ */}
+            <GA4IntegrationModal
+              isOpen={showGA4Modal}
+              onClose={() => setShowGA4Modal(false)}
+              onSuccess={() => {
+                console.log("GA4 integration successful!");
+                // Refresh data or show success message
               }}
             />
 
-            {/* Growth-Focused KPI Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <GrowthFocusedKPICard
-                title="Website Traffic"
-                description="Total users visiting your website"
-                value={ga4Integration.metrics.totalUsers.toLocaleString()}
-                trend="up"
-                changePercent={15.2}
-                icon={Users}
-                isConnected={ga4Integration.isConnected}
-                color="bg-blue-500"
-                last12MonthsData={[
-                  2100, 2250, 2400, 2300, 2500, 2650, 2800, 2750, 2900, 2850,
-                  2847, 3000,
-                ]}
-              />
+            <GBPIntegrationModal
+              isOpen={showGBPModal}
+              onClose={() => setShowGBPModal(false)}
+              clientId={clientId}
+              ready={ready}
+              session={session}
+              onSuccess={() => {
+                console.log("GBP integration successful!");
+                // Refresh data or show success message
+              }}
+            />
 
-              <GrowthFocusedKPICard
-                title="Google Business Views"
-                description="Profile views on Google Business"
-                value={gbpIntegration.metrics.totalViews.toLocaleString()}
-                trend="up"
-                changePercent={8.7}
-                icon={Eye}
-                isConnected={gbpIntegration.isConnected}
-                color="bg-green-500"
-                last12MonthsData={[
-                  12000, 12500, 13200, 13800, 14100, 14600, 14900, 15100, 15200,
-                  15300, 15420, 15800,
-                ]}
-              />
-            </div>
+            <GSCIntegrationModal
+              isOpen={showGSCModal}
+              onClose={() => setShowGSCModal(false)}
+              clientId={clientId}
+              ready={ready}
+              session={session}
+              onSuccess={() => {
+                console.log("GSC integration successful!");
+                // Refresh data or show success message
+              }}
+            />
 
-            {/* Enhanced Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <EnhancedMetricCard
-                title="Website Conversions"
-                value={ga4Integration.metrics.conversions.toString()}
-                change="+12.3%"
-                trend="up"
-                icon={MousePointer}
-                color="bg-indigo-500"
-                dataSource="GA4"
-                description="Goal completions this month"
-                showSubMetrics={true}
-                subMetrics={[
-                  {
-                    label: "Conversion Rate",
-                    value: "4.98%",
-                    previousValue: "4.44%",
-                    change: 12.2,
-                  },
-                  {
-                    label: "Avg. Session Duration",
-                    value: "4:05",
-                    description: "Time spent on site",
-                  },
-                ]}
-              />
+            <ClarityIntegrationModal
+              isOpen={showClarityModal}
+              onClose={() => setShowClarityModal(false)}
+              clientId={clientId}
+              onSuccess={() => {
+                console.log("Clarity integration successful!");
+                // Refresh data or show success message
+              }}
+            />
 
-              <EnhancedMetricCard
-                title="Search Impressions"
-                value={
-                  (gscIntegration.metrics.totalImpressions / 1000).toFixed(1) +
-                  "K"
-                }
-                change="+5.8%"
-                trend="up"
-                icon={Globe}
-                color="bg-red-500"
-                dataSource="GSC"
-                description="Times your site appeared in search"
-                showSubMetrics={true}
-                subMetrics={[
-                  {
-                    label: "Click-through Rate",
-                    value: gscIntegration.metrics.averageCTR.toFixed(1) + "%",
-                    change: 2.1,
-                  },
-                  {
-                    label: "Avg. Position",
-                    value: gscIntegration.metrics.averagePosition.toFixed(1),
-                    description: "Average ranking position",
-                  },
-                ]}
-              />
+            <PMSUploadModal
+              isOpen={showPMSUpload}
+              onClose={() => setShowPMSUpload(false)}
+              clientId={clientId}
+              onSuccess={() => {
+                console.log("PMS upload successful!");
+                // Refresh data or show success message
+              }}
+            />
 
-              <EnhancedMetricCard
-                title="User Sessions"
-                value={clarityIntegration.metrics.totalSessions.toLocaleString()}
-                change="+18.5%"
-                trend="up"
-                icon={Activity}
-                color="bg-purple-500"
-                dataSource="Clarity"
-                description="User behavior sessions tracked"
-                showSubMetrics={true}
-                subMetrics={[
-                  {
-                    label: "Bounce Rate",
-                    value:
-                      clarityIntegration.metrics.bounceRate.toFixed(1) + "%",
-                    change: -3.2,
-                  },
-                  {
-                    label: "Dead Clicks",
-                    value: clarityIntegration.metrics.deadClicks.toString(),
-                    description: "Non-functional clicks detected",
-                  },
-                ]}
-              />
-
-              <EnhancedMetricCard
-                title="Patient Production"
-                value={
-                  "$" +
-                  (pmsData.metrics.totalProduction / 1000).toFixed(0) +
-                  "K"
-                }
-                change={pmsData.metrics.changePercent}
-                trend="up"
-                icon={BarChart3}
-                color="bg-emerald-500"
-                description="Total practice revenue"
-                showSubMetrics={true}
-                subMetrics={[
-                  {
-                    label: "Total Patients",
-                    value: pmsData.metrics.totalPatients.toLocaleString(),
-                    change: 8.3,
-                  },
-                  {
-                    label: "Avg. per Patient",
-                    value:
-                      "$" +
-                      pmsData.metrics.averageProductionPerPatient.toLocaleString(),
-                    description: "Revenue per patient",
-                  },
-                ]}
-              />
-            </div>
+            {/* Connection Debug Panel */}
+            <ConnectionDebugPanel
+              isVisible={showDebugPanel}
+              onClose={() => setShowDebugPanel(false)}
+            />
           </div>
-
-          {/* Integration Modals Test Section */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Integration Management
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Connect and manage your practice integrations
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              <button
-                onClick={() => setShowGA4Modal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                <Globe className="w-4 h-4" />
-                GA4 Setup
-              </button>
-              <button
-                onClick={() => setShowGBPModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-              >
-                <Building2 className="w-4 h-4" />
-                GBP Setup
-              </button>
-              <button
-                onClick={() => setShowGSCModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-              >
-                <Eye className="w-4 h-4" />
-                GSC Setup
-              </button>
-              <button
-                onClick={() => setShowClarityModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-              >
-                <MousePointer className="w-4 h-4" />
-                Clarity Setup
-              </button>
-              <button
-                onClick={() => setShowPMSUpload(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-              >
-                <BarChart3 className="w-4 h-4" />
-                PMS Upload
-              </button>
-            </div>
-
-            {/* Google OAuth Testing Section */}
-            <div className="mt-6 space-y-4">
-              <h4 className="text-md font-semibold text-gray-900">
-                Google OAuth (Testing)
-              </h4>
-              <GoogleAccountStatus />
-              <GoogleConnectButton
-                variant="outline"
-                size="md"
-                className="w-full max-w-xs"
-              />
-            </div>
-          </div>
-
-          {/* PMS Data Visuals - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* TODO: Replace with PMSMetricsChart component */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                PMS Metrics Chart (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                PMSMetricsChart component will display patient metrics here
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Patients:</span>
-                  <span className="font-medium">
-                    {pmsData.metrics.totalPatients.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">
-                    Total Production:
-                  </span>
-                  <span className="font-medium">
-                    ${pmsData.metrics.totalProduction.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Trend:</span>
-                  <span className="font-medium text-green-600">
-                    {pmsData.metrics.changePercent}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* TODO: Replace with ReferralSourcesMatrix component */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Referral Sources Matrix (Placeholder)
-              </h3>
-              <p className="text-gray-600 mb-4">
-                ReferralSourcesMatrix component will display referral data here
-              </p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Self Referred:</span>
-                  <span className="font-medium">
-                    {pmsData.metrics.selfReferred.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">
-                    Doctor Referred:
-                  </span>
-                  <span className="font-medium">
-                    {pmsData.metrics.drReferred.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Insights Summary */}
-          {vitalSignsAI.analysis && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Brain className="w-6 h-6 text-indigo-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    AI Practice Insights
-                    {vitalSignsAI.isLoading && (
-                      <span className="ml-2 text-sm text-blue-600">
-                        Updating...
-                      </span>
-                    )}
-                  </h2>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Overall Grade:</span>
-                  <span className="text-2xl font-bold text-indigo-600">
-                    {vitalSignsAI.analysis.grade}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Priority Opportunities */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-red-600" />
-                    Priority Opportunities (
-                    {(vitalSignsAI.analysis.priorityOpportunities || []).length}
-                    )
-                  </h3>
-                  <div className="space-y-3">
-                    {(vitalSignsAI.analysis.priorityOpportunities || []).map(
-                      (opportunity, index) => (
-                        <div
-                          key={index}
-                          className="bg-red-50 border border-red-200 rounded-lg p-4"
-                        >
-                          <h4 className="font-medium text-red-900 mb-1">
-                            {opportunity.title}
-                          </h4>
-                          <p className="text-sm text-red-800 mb-2">
-                            {opportunity.description}
-                          </p>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-red-700 font-medium">
-                              {opportunity.estimatedImpact}
-                            </span>
-                            <span className="text-red-600">
-                              {opportunity.timeframe}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    )}
-                    {(vitalSignsAI.analysis.priorityOpportunities || [])
-                      .length === 0 && (
-                      <div className="text-center py-4 text-gray-500">
-                        <p className="text-sm">
-                          No priority opportunities identified
-                        </p>
-                        <p className="text-xs">
-                          AI analysis may still be processing
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recent Wins */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                    Recent Wins (
-                    {(vitalSignsAI.analysis.recentWins || []).length})
-                  </h3>
-                  <div className="space-y-3">
-                    {(vitalSignsAI.analysis.recentWins || []).map(
-                      (win, index) => (
-                        <div
-                          key={index}
-                          className="bg-green-50 border border-green-200 rounded-lg p-4"
-                        >
-                          <h4 className="font-medium text-green-900 mb-1">
-                            {win.title}
-                          </h4>
-                          <p className="text-sm text-green-800 mb-2">
-                            {win.description}
-                          </p>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-green-700 font-medium">
-                              {win.improvement}
-                            </span>
-                            <span className="text-green-600">
-                              {win.timeframe}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    )}
-                    {(vitalSignsAI.analysis.recentWins || []).length === 0 && (
-                      <div className="text-center py-4 text-gray-500">
-                        <p className="text-sm">No recent wins identified</p>
-                        <p className="text-xs">
-                          Connect more integrations for insights
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recommendations */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-blue-600" />
-                    AI Recommendations (
-                    {(vitalSignsAI.analysis.recommendations || []).length})
-                  </h3>
-                  <div className="space-y-3">
-                    {(vitalSignsAI.analysis.recommendations || []).map(
-                      (rec, index) => (
-                        <div
-                          key={index}
-                          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
-                        >
-                          <h4 className="font-medium text-blue-900 mb-1">
-                            {rec.title}
-                          </h4>
-                          <p className="text-sm text-blue-800 mb-2">
-                            {rec.description}
-                          </p>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-blue-700 font-medium">
-                              {rec.estimatedImpact}
-                            </span>
-                            <span
-                              className={`px-2 py-1 rounded-full ${
-                                rec.difficulty === "easy"
-                                  ? "bg-green-100 text-green-700"
-                                  : rec.difficulty === "medium"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {rec.difficulty}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    )}
-                    {(vitalSignsAI.analysis.recommendations || []).length ===
-                      0 && (
-                      <div className="text-center py-4 text-gray-500">
-                        <p className="text-sm">No recommendations available</p>
-                        <p className="text-xs">AI is analyzing your data</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Integration Modal Components ✅ */}
-        <GA4IntegrationModal
-          isOpen={showGA4Modal}
-          onClose={() => setShowGA4Modal(false)}
-          onSuccess={() => {
-            console.log("GA4 integration successful!");
-            // Refresh data or show success message
-          }}
-        />
-
-        <GBPIntegrationModal
-          isOpen={showGBPModal}
-          onClose={() => setShowGBPModal(false)}
-          clientId={clientId}
-          ready={ready}
-          session={session}
-          onSuccess={() => {
-            console.log("GBP integration successful!");
-            // Refresh data or show success message
-          }}
-        />
-
-        <GSCIntegrationModal
-          isOpen={showGSCModal}
-          onClose={() => setShowGSCModal(false)}
-          clientId={clientId}
-          ready={ready}
-          session={session}
-          onSuccess={() => {
-            console.log("GSC integration successful!");
-            // Refresh data or show success message
-          }}
-        />
-
-        <ClarityIntegrationModal
-          isOpen={showClarityModal}
-          onClose={() => setShowClarityModal(false)}
-          clientId={clientId}
-          onSuccess={() => {
-            console.log("Clarity integration successful!");
-            // Refresh data or show success message
-          }}
-        />
-
-        <PMSUploadModal
-          isOpen={showPMSUpload}
-          onClose={() => setShowPMSUpload(false)}
-          clientId={clientId}
-          onSuccess={() => {
-            console.log("PMS upload successful!");
-            // Refresh data or show success message
-          }}
-        />
-
-        {/* Connection Debug Panel */}
-        <ConnectionDebugPanel
-          isVisible={showDebugPanel}
-          onClose={() => setShowDebugPanel(false)}
-        />
+        </main>
       </div>
     </div>
   );

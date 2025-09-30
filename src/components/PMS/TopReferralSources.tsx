@@ -57,7 +57,7 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6"
+      className=" bg-white/30 border-white border-1 group glass-card p-5 md:p-6 overflow-hidden transition-transform duration-200 hover:scale-[1.01]"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -65,10 +65,8 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
             <BarChart3 className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">
-              Top Referral Sources
-            </h3>
-            <p className="text-sm text-gray-600">{subtitle}</p>
+            <h3 className="font-[200] text-gray-900">Top Referral Sources</h3>
+            <p className="text-xs font-[400] text-gray-600">{subtitle}</p>
           </div>
         </div>
       </div>
@@ -84,21 +82,21 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-600">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-[11px] font-[500] text-purple-600">
                   {source.rank}
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">{source.name}</h4>
-                  <p className="text-xs text-gray-500">
+                  <h4 className="font-[400] text-gray-900 leading-tight">{source.name}</h4>
+                  <p className="text-xs font-[400] text-gray-500">
                     {source.percentage}% of total referrals
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-semibold text-gray-900">
+                <div className="text-lg font-light text-gray-900">
                   {Math.round(source.referrals).toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-500">referrals</p>
+                <p className="text-xs font-[400] text-gray-500">referrals</p>
               </div>
             </div>
             <div className="space-y-1">
@@ -119,7 +117,7 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.1 + 0.4, duration: 0.3 }}
-                className="text-xs text-gray-500"
+                className="text-xs font-[400] text-gray-500"
               >
                 Production: $
                 {source.production.toLocaleString(undefined, {

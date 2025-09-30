@@ -41,8 +41,11 @@ export default function Dashboard() {
   const { gscData, isLoading: gscLoading, error: gscError } = useGSC();
   const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
   const { gbpData, isLoading: gbpLoading, error: gbpError } = useGBP();
-  const { clarityData, isLoading: clarityLoading, error: clarityError } =
-    useClarity();
+  const {
+    clarityData,
+    isLoading: clarityLoading,
+    error: clarityError,
+  } = useClarity();
 
   // Removed unused fetchAllIntegrationData and fetchAllAIReadyData helpers
 
@@ -473,7 +476,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="space-y-8">
+            <div className="space-y-8 ">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -484,10 +487,12 @@ export default function Dashboard() {
                 >
                   {activeTab === "Dashboard" && (
                     <>
-                      <OrbitVizD3
-                        className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
-                        onNavigate={(tab) => handleTabChange(tab)}
-                      />
+                      <div className="-mt-[80px] -ml-[80px]">
+                        <OrbitVizD3
+                          className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
+                          onNavigate={(tab) => handleTabChange(tab)}
+                        />
+                      </div>
                       <KPIPillars
                         ga4Data={ga4Integration.metrics}
                         gbpData={gbpIntegration.metrics}

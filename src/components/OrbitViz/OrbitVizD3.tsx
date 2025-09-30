@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Globe, ClipboardList } from "lucide-react";
 import {
   forceSimulation,
   forceLink,
@@ -57,7 +58,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   onNavigate,
 }) => {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState({ w: 900, h: 520 });
+  const [size, setSize] = useState({ w: 900, h: 560 });
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number }>
   >({});
@@ -73,7 +74,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
     if (!wrapperRef.current) return;
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
-      setSize({ w: width, h: Math.max(420, height) });
+      setSize({ w: width, h: Math.max(560, height) });
     });
     ro.observe(wrapperRef.current);
     return () => ro.disconnect();
@@ -89,6 +90,13 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
         { id: "clar_sessions", label: "Sessions", value: "6.9k" },
         { id: "clar_bounce", label: "Bounce", value: "38%" },
       ],
+      website:
+        (ga4 as MetricNode[] | undefined) ??
+        ([
+          { id: "web_forms", label: "Form Submissions", value: 57 },
+          { id: "web_visitors", label: "Visitors", value: "8.3k" },
+          { id: "web_perf", label: "Site Performance", value: 92 },
+        ] as MetricNode[]),
       tasks: tasksOpen ?? 12,
       tasksPending: 7,
       tasksCompleted: 18,
@@ -98,15 +106,24 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   // build layout numbers
   const cx = size.w / 2;
   const cy = size.h / 2;
-  const radiusMax = Math.max(180, Math.min(size.w, size.h) / 2 - 12);
+  const outerPadding = 72; // ensure space for outer hubs/children and shadows
+  const radiusMax = Math.max(180, Math.min(size.w, size.h) / 2 - outerPadding);
   const rings = [radiusMax * 0.5, radiusMax * 0.78, radiusMax * 0.97];
   const centerR = Math.max(100, Math.min(120, radiusMax * 0.34));
 
   const angles = {
     google: 25,
+    website: 115,
     clarity: 205,
     tasks: 332,
   } as const;
+
+  // Radius for the small AI intermediary orbs
+  const AI_R = 22;
+  // Responsive scale to better fit laptop screens; scales entire viz around center
+  const targetW = 1100;
+  const targetH = 760;
+  const visScale = Math.min(1, Math.max(0.8, Math.min(size.w / targetW, size.h / targetH)));
 
   const toXY = (r: number, a: number) => {
     const rad = (a * Math.PI) / 180;
@@ -144,8 +161,15 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       label: "Tasks",
       value: data.tasks,
     };
+    const websiteHub: SimNode = {
+      id: "hub_website",
+      type: "hub",
+      r: 44,
+      label: "Website",
+    };
 
     const googleAnchor = toXY(rings[1], angles.google);
+    const websiteAnchor = toXY(rings[1], angles.website);
     const clarityAnchor = toXY(rings[1] * 0.85, angles.clarity);
     const tasksAnchor = toXY(rings[2], angles.tasks);
 
@@ -153,6 +177,10 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
     googleHub.y = googleAnchor.y;
     googleHub.fx = googleAnchor.x;
     googleHub.fy = googleAnchor.y;
+    websiteHub.x = websiteAnchor.x;
+    websiteHub.y = websiteAnchor.y;
+    websiteHub.fx = websiteAnchor.x;
+    websiteHub.fy = websiteAnchor.y;
     clarityHub.x = clarityAnchor.x;
     clarityHub.y = clarityAnchor.y;
     clarityHub.fx = clarityAnchor.x;
@@ -162,15 +190,71 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
     tasksHub.fx = tasksAnchor.x;
     tasksHub.fy = tasksAnchor.y;
 
-    nodes.push(googleHub, clarityHub, tasksHub);
+    nodes.push(googleHub, clarityHub, tasksHub, websiteHub);
 
-    links.push({ source: centerNode, target: googleHub, distance: rings[1] });
-    links.push({
-      source: centerNode,
-      target: clarityHub,
-      distance: rings[1] * 0.85,
-    });
-    links.push({ source: centerNode, target: tasksHub, distance: rings[2] });
+    // AI intermediary orbs (one per hub), very close to center
+    const AI_STICK_OVERLAP = 6; // pixels to overlap into the center orb
+    const AI_DIST = centerR + AI_R - AI_STICK_OVERLAP; // slightly overlapping
+    const aiGooglePos = toXY(AI_DIST, angles.google);
+    const aiWebsitePos = toXY(AI_DIST, angles.website);
+    const aiClarityPos = toXY(AI_DIST, angles.clarity);
+    const aiTasksPos = toXY(AI_DIST, angles.tasks);
+
+    const aiGoogle: SimNode = {
+      id: "ai_google",
+      type: "hub",
+      r: AI_R,
+      label: "AI",
+    };
+    aiGoogle.x = aiGooglePos.x;
+    aiGoogle.y = aiGooglePos.y;
+    aiGoogle.fx = aiGooglePos.x;
+    aiGoogle.fy = aiGooglePos.y;
+
+    const aiWebsite: SimNode = {
+      id: "ai_website",
+      type: "hub",
+      r: AI_R,
+      label: "AI",
+    };
+    aiWebsite.x = aiWebsitePos.x;
+    aiWebsite.y = aiWebsitePos.y;
+    aiWebsite.fx = aiWebsitePos.x;
+    aiWebsite.fy = aiWebsitePos.y;
+
+    const aiClarity: SimNode = {
+      id: "ai_clarity",
+      type: "hub",
+      r: AI_R,
+      label: "AI",
+    };
+    aiClarity.x = aiClarityPos.x;
+    aiClarity.y = aiClarityPos.y;
+    aiClarity.fx = aiClarityPos.x;
+    aiClarity.fy = aiClarityPos.y;
+
+    const aiTasks: SimNode = {
+      id: "ai_tasks",
+      type: "hub",
+      r: AI_R,
+      label: "AI",
+    };
+    aiTasks.x = aiTasksPos.x;
+    aiTasks.y = aiTasksPos.y;
+    aiTasks.fx = aiTasksPos.x;
+    aiTasks.fy = aiTasksPos.y;
+
+    nodes.push(aiGoogle, aiWebsite, aiClarity, aiTasks);
+
+    // Route links via AI intermediary orbs
+    links.push({ source: centerNode, target: aiGoogle, distance: AI_DIST });
+    links.push({ source: aiGoogle, target: googleHub, distance: rings[1] - AI_DIST });
+    links.push({ source: centerNode, target: aiWebsite, distance: AI_DIST });
+    links.push({ source: aiWebsite, target: websiteHub, distance: rings[1] - AI_DIST });
+    links.push({ source: centerNode, target: aiClarity, distance: AI_DIST });
+    links.push({ source: aiClarity, target: clarityHub, distance: rings[1] * 0.85 - AI_DIST });
+    links.push({ source: centerNode, target: aiTasks, distance: AI_DIST });
+    links.push({ source: aiTasks, target: tasksHub, distance: rings[2] - AI_DIST });
 
     // Google metrics (3 children around hub)
     const gChildren = [data.ga4[0], data.gsc[0], data.gbp[0]].filter(Boolean);
@@ -247,6 +331,25 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       links.push({ source: tasksHub, target: node, distance: mondayDist });
     });
 
+    // Website metrics (3 children around website hub)
+    const wChildren = data.website.slice(0, 3);
+    const wAngles = [-24, 0, 24];
+    wChildren.forEach((m, i) => {
+      const a = angles.website + wAngles[i]!;
+      const pos = toXY(rings[1], a);
+      const node: SimNode = {
+        id: m.id,
+        type: "metric",
+        r: 34,
+        label: m.label,
+        value: m.value,
+      };
+      node.x = pos.x;
+      node.y = pos.y;
+      nodes.push(node);
+      links.push({ source: websiteHub, target: node, distance: childDist });
+    });
+
     // simulation
     const sim = forceSimulation(nodes)
       .alpha(0.9)
@@ -290,14 +393,19 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
 
   // helpers to read pos
   const P = (id: string) => positions[id] ?? { x: cx, y: cy };
+  const toScreen = (p: { x: number; y: number }) => ({
+    x: cx + visScale * (p.x - cx),
+    y: cy + visScale * (p.y - cy),
+  });
   const tooltip = useMemo(() => {
     if (!hovered) return null;
-    const p = P(hovered.id);
+    const p = toScreen(P(hovered.id));
+    const r = hovered.r * visScale;
     return {
-      x: p.x + hovered.r + 12,
-      y: p.y - hovered.r - 12,
+      x: p.x + r + 12,
+      y: p.y - r - 12,
     };
-  }, [hovered, positions]);
+  }, [hovered, positions, visScale, cx, cy]);
 
   // Link highlight logic: determine if a link is on the hovered path
   const googleChildIds = useMemo(
@@ -312,35 +420,76 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       [data.clarity[0]?.id, data.clarity[1]?.id].filter(Boolean) as string[],
     [data]
   );
+  const websiteChildIds = useMemo(
+    () =>
+      [data.website[0]?.id, data.website[1]?.id, data.website[2]?.id].filter(
+        Boolean
+      ) as string[],
+    [data]
+  );
   const mondayChildIds = ["monday_pending", "monday_completed"];
 
   const isActiveLink = (a: string, b: string) => {
     if (!hovered) return false;
     const id = hovered.id;
-    if (id === "hub_google") return a === "center" && b === "hub_google";
-    if (id === "hub_clarity") return a === "center" && b === "hub_clarity";
-    if (id === "hub_tasks") return a === "center" && b === "hub_tasks";
+    const hubToAi: Record<string, string> = {
+      hub_google: "ai_google",
+      hub_clarity: "ai_clarity",
+      hub_tasks: "ai_tasks",
+      hub_website: "ai_website",
+    };
+    const aiToHub: Record<string, string> = {
+      ai_google: "hub_google",
+      ai_clarity: "hub_clarity",
+      ai_tasks: "hub_tasks",
+      ai_website: "hub_website",
+    };
+
+    if (id in hubToAi)
+      return (
+        (a === "center" && b === hubToAi[id]) ||
+        (a === hubToAi[id] && b === id)
+      );
+    if (id in aiToHub)
+      return (
+        (a === "center" && b === id) || (a === id && b === aiToHub[id])
+      );
     if (googleChildIds.includes(id))
       return (
         (a === "hub_google" && b === id) ||
-        (a === "center" && b === "hub_google")
+        (a === "center" && b === "ai_google") ||
+        (a === "ai_google" && b === "hub_google")
       );
     if (clarityChildIds.includes(id))
       return (
         (a === "hub_clarity" && b === id) ||
-        (a === "center" && b === "hub_clarity")
+        (a === "center" && b === "ai_clarity") ||
+        (a === "ai_clarity" && b === "hub_clarity")
       );
     if (mondayChildIds.includes(id))
       return (
-        (a === "hub_tasks" && b === id) || (a === "center" && b === "hub_tasks")
+        (a === "hub_tasks" && b === id) ||
+        (a === "center" && b === "ai_tasks") ||
+        (a === "ai_tasks" && b === "hub_tasks")
+      );
+    if (websiteChildIds.includes(id))
+      return (
+        (a === "hub_website" && b === id) ||
+        (a === "center" && b === "ai_website") ||
+        (a === "ai_website" && b === "hub_website")
       );
     return false;
   };
   const linkPairs = useMemo(() => {
     return [
-      ["center", "hub_google"],
-      ["center", "hub_clarity"],
-      ["center", "hub_tasks"],
+      ["center", "ai_google"],
+      ["ai_google", "hub_google"],
+      ["center", "ai_clarity"],
+      ["ai_clarity", "hub_clarity"],
+      ["center", "ai_tasks"],
+      ["ai_tasks", "hub_tasks"],
+      ["center", "ai_website"],
+      ["ai_website", "hub_website"],
       ["hub_google", data.ga4[0]?.id ?? "ga4_users"],
       ["hub_google", data.gsc[0]?.id ?? "gsc_clicks"],
       ["hub_google", data.gbp[0]?.id ?? "gbp_calls"],
@@ -348,6 +497,9 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       ["hub_clarity", data.clarity[1]?.id ?? "clar_bounce"],
       ["hub_tasks", "monday_pending"],
       ["hub_tasks", "monday_completed"],
+      ["hub_website", data.website[0]?.id ?? "web_forms"],
+      ["hub_website", data.website[1]?.id ?? "web_visitors"],
+      ["hub_website", data.website[2]?.id ?? "web_perf"],
     ];
   }, [data]);
 
@@ -355,7 +507,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
     <div
       ref={wrapperRef}
       className={
-        "relative w-full min-h-[420px] md:min-h-[500px] lg:min-h-[560px] overflow-hidden rounded-3xl " +
+        "relative w-full min-h-[560px] md:min-h-[640px] lg:min-h-[720px] overflow-hidden rounded-3xl " +
         className
       }
     >
@@ -393,36 +545,38 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
           stroke="rgba(255,255,255,0.6)"
         />
 
-        {/* rings */}
-        {rings.map((r, i) => (
-          <circle
-            key={i}
-            cx={cx}
-            cy={cy}
-            r={r}
-            className="orbit-ring"
-            fill="none"
-            stroke="rgba(148,163,184,0.45)"
-            style={{ animationDelay: `${i * 0.8}s` }}
-          />
-        ))}
-
-        {/* links */}
-        {linkPairs.map(([a, b], i) => {
-          const active = isActiveLink(a, b);
-          return (
-            <line
+        {/* content scale wrapper */}
+        <g transform={`translate(${cx}, ${cy}) scale(${visScale}) translate(${-cx}, ${-cy})`}>
+          {/* rings */}
+          {rings.map((r, i) => (
+            <circle
               key={i}
-              x1={P(a).x}
-              y1={P(a).y}
-              x2={P(b).x}
-              y2={P(b).y}
-              className={`orbit-link${active ? " active" : ""}`}
+              cx={cx}
+              cy={cy}
+              r={r}
+              className="orbit-ring"
+              fill="none"
+              stroke="rgba(148,163,184,0.45)"
+              style={{ animationDelay: `${i * 0.8}s` }}
             />
-          );
-        })}
+          ))}
 
-        {/* nodes */}
+          {/* links */}
+          {linkPairs.map(([a, b], i) => {
+            const active = isActiveLink(a, b);
+            return (
+              <line
+                key={i}
+                x1={P(a).x}
+                y1={P(a).y}
+                x2={P(b).x}
+                y2={P(b).y}
+                className={`orbit-link${active ? " active" : ""}`}
+              />
+            );
+          })}
+
+          {/* nodes */}
         {/* center */}
         <g transform={`translate(${P("center").x}, ${P("center").y})`}>
           <g
@@ -498,6 +652,54 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
             </text>
           </g>
         </g>
+
+        {/* AI intermediary orbs */}
+        {(["ai_google", "ai_clarity", "ai_tasks", "ai_website"] as const).map(
+          (id, idx) => (
+            <g key={id} transform={`translate(${P(id).x}, ${P(id).y})`}>
+              <g
+                className="bubble orbit-float"
+                style={{ animationDelay: `${0.25 + idx * 0.05}s`, cursor: "default" }}
+                onMouseEnter={() =>
+                  setHovered({
+                    id,
+                    title: "AI Integration",
+                    desc: "Powering integrations with Alloro AI",
+                    r: AI_R,
+                  })
+                }
+                onMouseLeave={() => setHovered(null)}
+              >
+                <circle
+                  r={AI_R}
+                  fill="rgba(255,255,255,0.7)"
+                  stroke="rgba(59,130,246,0)"
+                  filter="url(#softShadow)"
+                  data-core
+                />
+                <circle className="hover-outline" r={AI_R} pathLength={100} />
+                <g transform={`translate(${-AI_R + 3}, ${-AI_R + 3})`}>
+                  <image
+                    href="/ai-logo.png"
+                    width={AI_R * 2 - 6}
+                    height={AI_R * 2 - 6}
+                    preserveAspectRatio="xMidYMid meet"
+                  />
+                </g>
+                <ellipse
+                  className="glare"
+                  rx={AI_R * 0.6}
+                  ry={AI_R * 0.36}
+                  cx={-AI_R * 0.28}
+                  cy={-AI_R * 0.52}
+                  fill="white"
+                  opacity={0.22}
+                  filter="url(#glareBlur)"
+                />
+              </g>
+            </g>
+          )
+        )}
 
         {/* hubs and metrics */}
         {/* Google hub (logo) */}
@@ -610,6 +812,108 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
                   textAnchor="middle"
                   y={14}
                   fontSize={16}
+                  fontWeight={800}
+                  fill="#0f172a"
+                >
+                  {n.value as any}
+                </text>
+              </g>
+            </g>
+          ) : null
+        )}
+
+        {/* Website hub (icon) */}
+        <g
+          transform={`translate(${P("hub_website").x}, ${P("hub_website").y})`}
+          aria-label="Website metrics"
+        >
+          <g
+            className="bubble orbit-float"
+            style={{ animationDelay: "0.32s", cursor: "pointer" }}
+            onClick={() => onNavigate?.("Patient Journey Insights")}
+            onMouseEnter={() =>
+              setHovered({
+                id: "hub_website",
+                title: "Website",
+                desc: "Your website performance powered by Alloro AI.",
+                r: 44,
+              })
+            }
+            onMouseLeave={() => setHovered(null)}
+          >
+            <circle
+              r={44}
+              fill="rgba(255,255,255,0.68)"
+              stroke="rgba(59,130,246,0)"
+              filter="url(#softShadow)"
+              data-core
+            />
+            <circle className="hover-outline" r={44} pathLength={100} />
+            <g transform="translate(-17,-17)">
+              <Globe width={34} height={34} className="text-slate-700" />
+            </g>
+            <ellipse
+              className="glare"
+              rx={44 * 0.6}
+              ry={44 * 0.36}
+              cx={-44 * 0.28}
+              cy={-44 * 0.52}
+              fill="white"
+              opacity={0.22}
+              filter="url(#glareBlur)"
+            />
+          </g>
+        </g>
+
+        {/* Website children */}
+        {[data.website[0], data.website[1], data.website[2]].map((n, idx) =>
+          n ? (
+            <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
+              <g
+                className="bubble orbit-float"
+                style={{ animationDelay: `${0.4 + idx * 0.05}s`, cursor: "pointer" }}
+                onClick={() => onNavigate?.("Patient Journey Insights")}
+                onMouseEnter={() =>
+                  setHovered({
+                    id: n.id,
+                    title: n.label,
+                    value: undefined,
+                    desc:
+                      n.id === "web_forms"
+                        ? "Leads captured via website forms."
+                        : n.id === "web_visitors"
+                        ? "Unique visitors to your website."
+                        : "Composite site performance score.",
+                    r: 32,
+                  })
+                }
+                onMouseLeave={() => setHovered(null)}
+              >
+                <circle
+                  r={32}
+                  fill="rgba(255,255,255,0.7)"
+                  stroke="rgba(59,130,246,0)"
+                  filter="url(#softShadow)"
+                  data-core
+                />
+                <circle className="hover-outline" r={32} pathLength={100} />
+                <ellipse
+                  className="glare"
+                  rx={32 * 0.6}
+                  ry={32 * 0.36}
+                  cx={-32 * 0.28}
+                  cy={-32 * 0.52}
+                  fill="white"
+                  opacity={0.22}
+                  filter="url(#glareBlur)"
+                />
+                <text textAnchor="middle" y={-3} fontSize={10} fill="#64748b">
+                  {n.label}
+                </text>
+                <text
+                  textAnchor="middle"
+                  y={14}
+                  fontSize={15}
                   fontWeight={800}
                   fill="#0f172a"
                 >
@@ -759,14 +1063,9 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
               data-core
             />
             <circle className="hover-outline" r={50} pathLength={100} />
-            <image
-              href="/monday-logo.png"
-              width={34}
-              height={34}
-              x={-17}
-              y={-17}
-              preserveAspectRatio="xMidYMid meet"
-            />
+            <g transform="translate(-17,-17)">
+              <ClipboardList width={34} height={34} className="text-slate-700" />
+            </g>
             <ellipse
               className="glare"
               rx={50 * 0.6}
@@ -844,6 +1143,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
             </g>
           </g>
         ))}
+        </g>
       </svg>
       {tooltip && hovered && (
         <div

@@ -26,6 +26,7 @@ export interface AuthResponse {
   message: string;
   accessToken?: string;
   expiresAt?: Date;
+  googleAccountId?: number; // Added for multi-tenant token refresh
 }
 
 export interface AuthState {

@@ -11,6 +11,12 @@ import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { MondayProvider } from "./contexts/MondayContext.tsx";
 import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PublicRoute } from "./components/PublicRoute";
+
+function AuthOnlyProviders({ children }: { children: ReactNode }) {
+  return <GoogleAuthProvider>{children}</GoogleAuthProvider>;
+}
 
 function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -34,45 +40,64 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/signin" replace />} />
-          <Route path="/signin" element={<SignIn />} />
+          <Route
+            path="/signin"
+            element={
+              <PublicRoute>
+                <AuthOnlyProviders>
+                  <SignIn />
+                </AuthOnlyProviders>
+              </PublicRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
-              <AppProviders>
-                <Dashboard />
-              </AppProviders>
+              <ProtectedRoute>
+                <AppProviders>
+                  <Dashboard />
+                </AppProviders>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/patientJourneyInsights"
             element={
-              <AppProviders>
-                <Dashboard />
-              </AppProviders>
+              <ProtectedRoute>
+                <AppProviders>
+                  <Dashboard />
+                </AppProviders>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/pmsStatistics"
             element={
-              <AppProviders>
-                <Dashboard />
-              </AppProviders>
+              <ProtectedRoute>
+                <AppProviders>
+                  <Dashboard />
+                </AppProviders>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/tasks"
             element={
-              <AppProviders>
-                <Dashboard />
-              </AppProviders>
+              <ProtectedRoute>
+                <AppProviders>
+                  <Dashboard />
+                </AppProviders>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/admin"
             element={
-              <AppProviders>
-                <Admin />
-              </AppProviders>
+              <ProtectedRoute>
+                <AppProviders>
+                  <Admin />
+                </AppProviders>
+              </ProtectedRoute>
             }
           />
         </Routes>

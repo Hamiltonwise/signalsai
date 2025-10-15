@@ -17,11 +17,11 @@ async function getKeyData(domain: string) {
   }
 }
 
-async function getAIReadyData(domainProperty: string) {
+async function getAIReadyData(clientId: string) {
   try {
     return await apiPost({
       path: baseurl + `/getAIReadyData`,
-      passedData: { domainProperty },
+      passedData: { clientId },
     });
   } catch (err) {
     console.log(err);

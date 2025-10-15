@@ -16,6 +16,7 @@ import { useGSC } from "../hooks/useGSC";
 import { useGA4 } from "../hooks/useGA4";
 import { useGBP } from "../hooks/useGBP";
 import { useClarity } from "../hooks/useClarity";
+import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 
 // Dashboard Components
 import { KPIPillars } from "../components/KPIPillars";
@@ -34,9 +35,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import OrbitVizD3 from "../components/OrbitViz/OrbitVizD3";
 import { useLocation, useNavigate } from "react-router-dom";
 
+// Onboarding Components
+import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
+import { LogoutButton } from "../components/LogoutButton";
+import onboarding from "../api/onboarding";
+
 export default function Dashboard() {
   // Domain selection and GSC data hooks
-  const { selectedDomain } = useAuth();
+  const { selectedDomain, userProfile, refreshUserProperties } = useAuth();
+  const { disconnect } = useGoogleAuthContext();
 
   const { gscData, isLoading: gscLoading, error: gscError } = useGSC();
   const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
@@ -61,6 +68,12 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<
     "Dashboard" | "Patient Journey Insights" | "PMS Statistics" | "Tasks"
   >("Dashboard");
+
+  // Onboarding state
+  const [onboardingCompleted, setOnboardingCompleted] = useState<
+    boolean | null
+  >(null);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   // Map between tabs and routes
   const pathForTab = (tab: typeof activeTab) => {
@@ -87,6 +100,69 @@ export default function Dashboard() {
   useEffect(() => {
     setActiveTab(tabFromPath(location.pathname));
   }, [location.pathname]);
+
+  // Check onboarding status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const response = await onboarding.getOnboardingStatus();
+        console.log("[Dashboard] Onboarding status response:", response);
+
+        // Backend returns { success: true, onboardingCompleted: boolean } at root level
+        if (response.success || response.successful) {
+          setOnboardingCompleted(response.onboardingCompleted === true);
+          console.log(
+            "[Dashboard] Onboarding completed:",
+            response.onboardingCompleted
+          );
+        } else {
+          // If check fails, assume onboarding is needed
+          setOnboardingCompleted(false);
+        }
+      } catch (error) {
+        console.error("Failed to check onboarding status:", error);
+        // Assume onboarding is needed if check fails
+        setOnboardingCompleted(false);
+      } finally {
+        setCheckingOnboarding(false);
+      }
+    };
+
+    checkStatus();
+  }, []);
+
+  // Handler for when onboarding is completed
+  const handleOnboardingComplete = async () => {
+    console.log("[Dashboard] Onboarding completed, showing loading screen");
+    // Set to null to show loading screen
+    setOnboardingCompleted(null);
+    setCheckingOnboarding(true);
+
+    // Wait a moment for the backend to fully complete
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Refresh user properties from database
+    try {
+      await refreshUserProperties();
+      console.log("[Dashboard] User properties refreshed from database");
+    } catch (error) {
+      console.error("Failed to refresh user properties:", error);
+    }
+
+    // Re-check status to get fresh data
+    try {
+      const response = await onboarding.getOnboardingStatus();
+      console.log("[Dashboard] Re-checked status after completion:", response);
+      setOnboardingCompleted(
+        response.onboardingCompleted === true || response.success === true
+      );
+    } catch (error) {
+      console.error("Failed to re-check status:", error);
+      setOnboardingCompleted(true); // Assume success
+    } finally {
+      setCheckingOnboarding(false);
+    }
+  };
 
   const handleTabChange = (
     tab: "Dashboard" | "Patient Journey Insights" | "PMS Statistics" | "Tasks"
@@ -176,13 +252,17 @@ export default function Dashboard() {
   // Removed local PMS demo data; PMS visuals remain via dedicated components
 
   // Removed unused vitalSignsAI mock
-  // Fast loading - only show spinner for auth, not initial load
-  if (!ready) {
+  // Show loading state while checking onboarding
+  if (!ready || checkingOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">
+            {checkingOnboarding
+              ? "Checking your setup..."
+              : "Loading dashboard..."}
+          </p>
         </div>
       </div>
     );
@@ -268,18 +348,35 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-white/30 flex items-center justify-center">
-                <span className="text-blue-700 font-bold">S</span>
+                <span className="text-blue-700 font-bold">
+                  {onboardingCompleted
+                    ? userProfile?.practiceName?.charAt(0)?.toUpperCase() || "S"
+                    : "A"}
+                </span>
               </div>
-              <div className="leading-tight">
-                <p className="text-sm font-semibold">
-                  {selectedDomain?.displayName || "Signals AI"}
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-300">
-                  {selectedDomain?.domain || ""}
-                </p>
-              </div>
+              {onboardingCompleted ? (
+                <div className="leading-tight">
+                  <p className="text-sm font-semibold">
+                    {userProfile?.practiceName ||
+                      selectedDomain?.displayName ||
+                      "Signals AI"}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    {userProfile?.domainName || selectedDomain?.domain || ""}
+                  </p>
+                </div>
+              ) : (
+                <div className="leading-tight">
+                  <p className="text-sm font-semibold">Alloro</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Setup in progress
+                  </p>
+                </div>
+              )}
             </div>
-            <Settings className="h-5 w-5 text-gray-500" />
+            {onboardingCompleted && (
+              <Settings className="h-5 w-5 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors" />
+            )}
           </div>
 
           <div className="h-px bg-white/30 dark:bg-white/10 my-2" />
@@ -321,21 +418,38 @@ export default function Dashboard() {
           </nav>
 
           <div className="mt-auto space-y-3">
-            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-              <Bell className="h-4 w-4" />
-              <span>Notifications</span>
-            </div>
-            <div className="text-[10px] text-gray-500">
-              {selectedDomain?.domain}
-            </div>
+            {onboardingCompleted && (
+              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
+              </div>
+            )}
+
+            {/* Logout Button with Animated Confirmation */}
+            <LogoutButton
+              onLogout={() => {
+                disconnect();
+                navigate("/signin");
+              }}
+            />
+
+            {onboardingCompleted && (
+              <div className="text-[10px] text-gray-500 text-center">
+                {userProfile?.domainName || selectedDomain?.domain}
+              </div>
+            )}
           </div>
         </aside>
 
         {/* Main glass content area */}
         <main className="flex-1 glass rounded-3xl overflow-hidden">
-          <div className="px-4 sm:px-6 lg:px-8 py-6">
-            {/* Domain Selector Section */}
-            {/* <div className="mb-6">
+          {/* Show onboarding if not completed, otherwise show dashboard */}
+          {onboardingCompleted === false ? (
+            <OnboardingContainer onComplete={handleOnboardingComplete} />
+          ) : onboardingCompleted === true ? (
+            <div className="px-4 sm:px-6 lg:px-8 py-6">
+              {/* Domain Selector Section */}
+              {/* <div className="mb-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
             <label
               htmlFor="dashboard-domain-select"
@@ -457,134 +571,170 @@ export default function Dashboard() {
           </div>
         </div> */}
 
-            {activeTab === "Dashboard" && (
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h1 className="text-3xl font-thin text-gray-900 mb-1">
-                    Good{" "}
-                    {new Date().getHours() < 12
-                      ? "morning"
-                      : new Date().getHours() < 18
-                      ? "afternoon"
-                      : "evening"}
-                    , Dr. Pawlak
-                  </h1>
-                  <p className="text-sm font-light text-slate-600">
-                    Artful Orthodontics at a glance.
-                  </p>
+              {activeTab === "Dashboard" && (
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h1 className="text-3xl font-thin text-gray-900 mb-1">
+                      Good{" "}
+                      {new Date().getHours() < 12
+                        ? "morning"
+                        : new Date().getHours() < 18
+                        ? "afternoon"
+                        : "evening"}
+                      , Dr. {userProfile?.lastName || "Doe"}
+                    </h1>
+                    <p className="text-sm font-light text-slate-600">
+                      {userProfile?.practiceName ||
+                        selectedDomain?.displayName ||
+                        "Best Dental Practice"}{" "}
+                      at a glance.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="space-y-8 ">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.22, ease: "easeOut" }}
-                >
-                  {activeTab === "Dashboard" && (
-                    <>
-                      <div className="-mt-[80px] -ml-[80px]">
-                        <OrbitVizD3
-                          className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
-                          onNavigate={(tab) => handleTabChange(tab)}
+              <div className="space-y-8 ">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                  >
+                    {activeTab === "Dashboard" && (
+                      <>
+                        <div className="-mt-[80px] -ml-[80px]">
+                          <OrbitVizD3
+                            className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
+                            onNavigate={(tab) => handleTabChange(tab)}
+                          />
+                        </div>
+                        <KPIPillars
+                          ga4Data={ga4Integration.metrics}
+                          gbpData={gbpIntegration.metrics}
+                          gscData={gscIntegration.metrics}
+                          clarityData={clarityIntegration.metrics}
+                          connectionStatus={{
+                            ga4: ga4Integration.isConnected,
+                            gbp: gbpIntegration.isConnected,
+                            gsc: gscIntegration.isConnected,
+                            clarity: clarityIntegration.isConnected,
+                          }}
                         />
-                      </div>
-                      <KPIPillars
-                        ga4Data={ga4Integration.metrics}
-                        gbpData={gbpIntegration.metrics}
-                        gscData={gscIntegration.metrics}
-                        clarityData={clarityIntegration.metrics}
-                        connectionStatus={{
-                          ga4: ga4Integration.isConnected,
-                          gbp: gbpIntegration.isConnected,
-                          gsc: gscIntegration.isConnected,
-                          clarity: clarityIntegration.isConnected,
-                        }}
+                      </>
+                    )}
+
+                    {activeTab === "Patient Journey Insights" && (
+                      <VitalSignsCards
+                        selectedDomain={selectedDomain?.domain || ""}
                       />
-                    </>
-                  )}
+                    )}
 
-                  {activeTab === "Patient Journey Insights" && (
-                    <VitalSignsCards
-                      selectedDomain={selectedDomain?.domain || ""}
-                    />
-                  )}
+                    {activeTab === "PMS Statistics" && <PMSVisualPillars />}
 
-                  {activeTab === "PMS Statistics" && <PMSVisualPillars />}
+                    {activeTab === "Tasks" && (
+                      <div className="mb-8">
+                        <MondayTasks />
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
 
-                  {activeTab === "Tasks" && (
-                    <div className="mb-8">
-                      <MondayTasks />
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+              {/* Integration Modal Components ✅ */}
+              <GA4IntegrationModal
+                isOpen={showGA4Modal}
+                onClose={() => setShowGA4Modal(false)}
+                onSuccess={() => {
+                  console.log("GA4 integration successful!");
+                  // Refresh data or show success message
+                }}
+              />
+
+              <GBPIntegrationModal
+                isOpen={showGBPModal}
+                onClose={() => setShowGBPModal(false)}
+                clientId={clientId}
+                ready={ready}
+                session={session}
+                onSuccess={() => {
+                  console.log("GBP integration successful!");
+                  // Refresh data or show success message
+                }}
+              />
+
+              <GSCIntegrationModal
+                isOpen={showGSCModal}
+                onClose={() => setShowGSCModal(false)}
+                clientId={clientId}
+                ready={ready}
+                session={session}
+                onSuccess={() => {
+                  console.log("GSC integration successful!");
+                  // Refresh data or show success message
+                }}
+              />
+
+              <ClarityIntegrationModal
+                isOpen={showClarityModal}
+                onClose={() => setShowClarityModal(false)}
+                clientId={clientId}
+                onSuccess={() => {
+                  console.log("Clarity integration successful!");
+                  // Refresh data or show success message
+                }}
+              />
+
+              <PMSUploadModal
+                isOpen={showPMSUpload}
+                onClose={() => setShowPMSUpload(false)}
+                clientId={clientId}
+                onSuccess={() => {
+                  console.log("PMS upload successful!");
+                  // Refresh data or show success message
+                }}
+              />
+
+              {/* Connection Debug Panel */}
+              <ConnectionDebugPanel
+                isVisible={showDebugPanel}
+                onClose={() => setShowDebugPanel(false)}
+              />
             </div>
-
-            {/* Integration Modal Components ✅ */}
-            <GA4IntegrationModal
-              isOpen={showGA4Modal}
-              onClose={() => setShowGA4Modal(false)}
-              onSuccess={() => {
-                console.log("GA4 integration successful!");
-                // Refresh data or show success message
-              }}
-            />
-
-            <GBPIntegrationModal
-              isOpen={showGBPModal}
-              onClose={() => setShowGBPModal(false)}
-              clientId={clientId}
-              ready={ready}
-              session={session}
-              onSuccess={() => {
-                console.log("GBP integration successful!");
-                // Refresh data or show success message
-              }}
-            />
-
-            <GSCIntegrationModal
-              isOpen={showGSCModal}
-              onClose={() => setShowGSCModal(false)}
-              clientId={clientId}
-              ready={ready}
-              session={session}
-              onSuccess={() => {
-                console.log("GSC integration successful!");
-                // Refresh data or show success message
-              }}
-            />
-
-            <ClarityIntegrationModal
-              isOpen={showClarityModal}
-              onClose={() => setShowClarityModal(false)}
-              clientId={clientId}
-              onSuccess={() => {
-                console.log("Clarity integration successful!");
-                // Refresh data or show success message
-              }}
-            />
-
-            <PMSUploadModal
-              isOpen={showPMSUpload}
-              onClose={() => setShowPMSUpload(false)}
-              clientId={clientId}
-              onSuccess={() => {
-                console.log("PMS upload successful!");
-                // Refresh data or show success message
-              }}
-            />
-
-            {/* Connection Debug Panel */}
-            <ConnectionDebugPanel
-              isVisible={showDebugPanel}
-              onClose={() => setShowDebugPanel(false)}
-            />
-          </div>
+          ) : (
+            // Loading state while preparing dashboard after onboarding
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4]">
+              <div className="text-center space-y-8">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-6"
+                >
+                  <div className="w-32 h-32 mx-auto overflow-visible">
+                    <motion.img
+                      src="/alloro-running.png"
+                      alt="Alloro Running"
+                      className="w-full h-full object-contain drop-shadow-2xl"
+                      animate={{ x: [0, 20, 0] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-thin text-gray-800">
+                    Alloro is preparing your dashboard
+                  </h1>
+                  <p className="text-gray-800 font-light text-lg">
+                    Please wait while we fetch your initial data...
+                  </p>
+                </motion.div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

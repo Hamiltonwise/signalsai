@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Activity, Brain } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Activity,
+  Brain,
+  Download,
+  Loader2,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Awareness } from "./Awareness";
 import { Research } from "./Research";
 import { Consideration } from "./Consideration";
 import { Decision } from "./Decision";
+import { useGA4 } from "../../hooks/useGA4";
+import { useGBP } from "../../hooks/useGBP";
+import { useGSC } from "../../hooks/useGSC";
+import { useClarity } from "../../hooks/useClarity";
+import { useAuth } from "../../hooks/useAuth";
 
 interface VitalSignsCardsProps {
   className?: string;
@@ -45,6 +59,27 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
+  // AI Ready Data State
+  const [isFetchingAIData, setIsFetchingAIData] = useState(false);
+  const [aiDataStatus, setAiDataStatus] = useState<{
+    ga4: "idle" | "loading" | "success" | "error";
+    gbp: "idle" | "loading" | "success" | "error";
+    gsc: "idle" | "loading" | "success" | "error";
+    clarity: "idle" | "loading" | "success" | "error";
+  }>({
+    ga4: "idle",
+    gbp: "idle",
+    gsc: "idle",
+    clarity: "idle",
+  });
+
+  // Hooks
+  const { fetchAIReadyData: fetchGA4AIData } = useGA4();
+  const { fetchAIReadyData: fetchGBPAIData } = useGBP();
+  const { fetchAIReadyGscData: fetchGSCAIData } = useGSC();
+  const { fetchAIReadyClarityData: fetchClarityAIData } = useClarity();
+  const { selectedDomain: authDomain } = useAuth();
+
   const goToCard = (index: number) => {
     const newDirection = index > activeIndex ? 1 : -1;
     setDirection(newDirection);
@@ -76,6 +111,79 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
       document.removeEventListener("keydown", handleKeyPress);
     };
   }, [activeIndex]);
+
+  // Handler for fetching all AI Ready Data
+  const handleFetchAIReadyData = async () => {
+    setIsFetchingAIData(true);
+    setAiDataStatus({
+      ga4: "loading",
+      gbp: "loading",
+      gsc: "loading",
+      clarity: "loading",
+    });
+
+    try {
+      // Fetch all 4 endpoints concurrently
+      const results = await Promise.allSettled([
+        // GA4
+        (async () => {
+          try {
+            await fetchGA4AIData();
+            setAiDataStatus((prev) => ({ ...prev, ga4: "success" }));
+          } catch (error) {
+            console.error("GA4 AI Data Error:", error);
+            setAiDataStatus((prev) => ({ ...prev, ga4: "error" }));
+          }
+        })(),
+
+        // GBP
+        (async () => {
+          try {
+            if (authDomain?.gbp_accountId && authDomain?.gbp_locationId) {
+              await fetchGBPAIData(
+                authDomain.gbp_accountId,
+                authDomain.gbp_locationId
+              );
+              setAiDataStatus((prev) => ({ ...prev, gbp: "success" }));
+            } else {
+              setAiDataStatus((prev) => ({ ...prev, gbp: "error" }));
+            }
+          } catch (error) {
+            console.error("GBP AI Data Error:", error);
+            setAiDataStatus((prev) => ({ ...prev, gbp: "error" }));
+          }
+        })(),
+
+        // GSC
+        (async () => {
+          try {
+            await fetchGSCAIData();
+            setAiDataStatus((prev) => ({ ...prev, gsc: "success" }));
+          } catch (error) {
+            console.error("GSC AI Data Error:", error);
+            setAiDataStatus((prev) => ({ ...prev, gsc: "error" }));
+          }
+        })(),
+
+        // Clarity
+        (async () => {
+          try {
+            await fetchClarityAIData();
+            setAiDataStatus((prev) => ({ ...prev, clarity: "success" }));
+          } catch (error) {
+            console.error("Clarity AI Data Error:", error);
+            setAiDataStatus((prev) => ({ ...prev, clarity: "error" }));
+          }
+        })(),
+      ]);
+
+      console.log("All AI Ready Data fetched:", results);
+    } catch (error) {
+      console.error("Error fetching AI Ready Data:", error);
+    } finally {
+      setIsFetchingAIData(false);
+    }
+  };
 
   const ActiveComponent = cards[activeIndex].component;
 
@@ -126,6 +234,29 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
             </div>
           </div>
 
+          {/* Get AI Ready Data Button */}
+          <button
+            onClick={handleFetchAIReadyData}
+            disabled={isFetchingAIData}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+              isFetchingAIData
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg hover:scale-105"
+            }`}
+          >
+            {isFetchingAIData ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Fetching...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                <span>Get AI Ready Data</span>
+              </>
+            )}
+          </button>
+
           {/* Card Navigation Indicators */}
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-gray-200/50 shadow-sm">
@@ -148,6 +279,97 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* AI Data Status Indicators */}
+        {(aiDataStatus.ga4 !== "idle" ||
+          aiDataStatus.gbp !== "idle" ||
+          aiDataStatus.gsc !== "idle" ||
+          aiDataStatus.clarity !== "idle") && (
+          <div className="flex items-center justify-center space-x-4 mb-4 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50">
+            <span className="text-sm text-gray-600 font-medium">Status:</span>
+            <div className="flex items-center space-x-3">
+              {/* GA4 Status */}
+              {aiDataStatus.ga4 === "loading" && (
+                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>GA4</span>
+                </div>
+              )}
+              {aiDataStatus.ga4 === "success" && (
+                <div className="flex items-center space-x-1 text-xs text-green-600">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>GA4</span>
+                </div>
+              )}
+              {aiDataStatus.ga4 === "error" && (
+                <div className="flex items-center space-x-1 text-xs text-red-600">
+                  <XCircle className="w-3 h-3" />
+                  <span>GA4</span>
+                </div>
+              )}
+
+              {/* GBP Status */}
+              {aiDataStatus.gbp === "loading" && (
+                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>GBP</span>
+                </div>
+              )}
+              {aiDataStatus.gbp === "success" && (
+                <div className="flex items-center space-x-1 text-xs text-green-600">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>GBP</span>
+                </div>
+              )}
+              {aiDataStatus.gbp === "error" && (
+                <div className="flex items-center space-x-1 text-xs text-red-600">
+                  <XCircle className="w-3 h-3" />
+                  <span>GBP</span>
+                </div>
+              )}
+
+              {/* GSC Status */}
+              {aiDataStatus.gsc === "loading" && (
+                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>GSC</span>
+                </div>
+              )}
+              {aiDataStatus.gsc === "success" && (
+                <div className="flex items-center space-x-1 text-xs text-green-600">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>GSC</span>
+                </div>
+              )}
+              {aiDataStatus.gsc === "error" && (
+                <div className="flex items-center space-x-1 text-xs text-red-600">
+                  <XCircle className="w-3 h-3" />
+                  <span>GSC</span>
+                </div>
+              )}
+
+              {/* Clarity Status */}
+              {aiDataStatus.clarity === "loading" && (
+                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Clarity</span>
+                </div>
+              )}
+              {aiDataStatus.clarity === "success" && (
+                <div className="flex items-center space-x-1 text-xs text-green-600">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>Clarity</span>
+                </div>
+              )}
+              {aiDataStatus.clarity === "error" && (
+                <div className="flex items-center space-x-1 text-xs text-red-600">
+                  <XCircle className="w-3 h-3" />
+                  <span>Clarity</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Active Card Title and Description */}
         <div className="text-center mb-6">

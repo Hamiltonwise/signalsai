@@ -1,9 +1,11 @@
-import React, { useState, type ReactNode } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import {
   AuthContext,
   type AuthContextType,
   type DomainMapping,
+  type UserProfile,
 } from "./authContext";
+import onboarding from "../api/onboarding";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -23,8 +25,63 @@ const domainMappings: DomainMapping[] = [
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [selectedDomain, setSelectedDomain] = useState<DomainMapping | null>(
-    domainMappings.length > 0 ? domainMappings[0] : null
+    null
   );
+  const [isLoadingUserProperties, setIsLoadingUserProperties] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // Function to load user properties (can be called on mount or manually)
+  const loadUserProperties = async () => {
+    setIsLoadingUserProperties(true);
+    try {
+      const status = await onboarding.getOnboardingStatus();
+
+      if (status.success && status.onboardingCompleted && status.propertyIds) {
+        // Load user profile
+        if (status.profile) {
+          setUserProfile({
+            firstName: status.profile.firstName,
+            lastName: status.profile.lastName,
+            practiceName: status.profile.practiceName,
+            domainName: status.profile.domainName,
+          });
+        }
+
+        // Transform onboarding data to DomainMapping format
+        const userMapping: DomainMapping = {
+          domain:
+            status.profile?.domainName ||
+            status.propertyIds.ga4?.displayName ||
+            "Your Practice",
+          displayName:
+            status.profile?.practiceName ||
+            status.propertyIds.ga4?.displayName ||
+            "Your Practice",
+          ga4_propertyId:
+            status.propertyIds.ga4?.propertyId?.replace("properties/", "") ||
+            "",
+          gsc_domainkey: status.propertyIds.gsc?.siteUrl || "",
+          gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
+          gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
+        };
+        setSelectedDomain(userMapping);
+      } else {
+        // Fallback to hardcoded mappings if onboarding not completed
+        setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
+      }
+    } catch (error) {
+      console.error("Failed to load user properties:", error);
+      // Fallback to hardcoded mappings on error
+      setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
+    } finally {
+      setIsLoadingUserProperties(false);
+    }
+  };
+
+  // Load user's onboarding selections on mount
+  useEffect(() => {
+    loadUserProperties();
+  }, []);
 
   const handleDomainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const domainValue = event.target.value;
@@ -39,6 +96,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     selectedDomain,
     handleDomainChange,
     setSelectedDomain,
+    isLoadingUserProperties,
+    userProfile,
+    refreshUserProperties: loadUserProperties,
   };
 
   return (

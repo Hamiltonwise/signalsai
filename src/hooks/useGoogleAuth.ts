@@ -17,6 +17,7 @@ export const useGoogleAuth = () => {
 
   const popupRef = useRef<Window | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isConnectingRef = useRef<boolean>(false);
 
   const clearError = useCallback(() => {
     setAuthState((prev) => ({ ...prev, error: null }));
@@ -48,9 +49,26 @@ export const useGoogleAuth = () => {
       localStorage.setItem("google_access_token", authResponse.accessToken);
     }
     if (authResponse.expiresAt) {
+      // Store as timestamp (milliseconds) for easy comparison
+      const expiryTimestamp =
+        authResponse.expiresAt instanceof Date
+          ? authResponse.expiresAt.getTime()
+          : new Date(authResponse.expiresAt).getTime();
+      localStorage.setItem("google_token_expiry", expiryTimestamp.toString());
+      console.log(
+        "[OAuth] Stored token expiry:",
+        new Date(expiryTimestamp).toISOString()
+      );
+    }
+    // Store googleAccountId for multi-tenant API requests
+    if (authResponse.googleAccountId) {
       localStorage.setItem(
-        "google_token_expiry",
-        authResponse.expiresAt.toString()
+        "google_account_id",
+        authResponse.googleAccountId.toString()
+      );
+      console.log(
+        "[OAuth] Stored google account ID:",
+        authResponse.googleAccountId
       );
     }
   }, []);
@@ -64,14 +82,20 @@ export const useGoogleAuth = () => {
       error: null,
     });
 
-    // Clear stored tokens
+    // Clear stored tokens and account ID
     localStorage.removeItem("google_access_token");
     localStorage.removeItem("google_token_expiry");
+    localStorage.removeItem("google_account_id");
   }, []);
 
   const closePopup = useCallback(() => {
-    if (popupRef.current && !popupRef.current.closed) {
-      popupRef.current.close();
+    try {
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+      }
+    } catch {
+      // COOP policy may block access to .closed property - ignore
+      console.log("[OAuth] Popup close check blocked by COOP policy");
     }
     popupRef.current = null;
 
@@ -79,6 +103,9 @@ export const useGoogleAuth = () => {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+
+    // Reset the connection lock
+    isConnectingRef.current = false;
   }, []);
 
   const centerPopup = (width: number, height: number) => {
@@ -88,6 +115,21 @@ export const useGoogleAuth = () => {
   };
 
   const connectGoogle = useCallback(async () => {
+    // IMMEDIATE GUARD: Use ref for synchronous blocking
+    if (isConnectingRef.current) {
+      console.log("[OAuth] Already connecting (ref check), aborting");
+      return;
+    }
+
+    // GUARD: Also check state
+    if (authState.isLoading) {
+      console.log("[OAuth] Already loading (state check), aborting");
+      return;
+    }
+
+    // Set BOTH locks immediately
+    isConnectingRef.current = true;
+
     clearError();
     setLoading(true);
 
@@ -124,11 +166,17 @@ export const useGoogleAuth = () => {
 
       // Step 3: Monitor popup for completion
       const checkClosed = () => {
-        if (popupRef.current?.closed) {
-          setError("Authentication was cancelled");
-          setLoading(false);
-          closePopup();
-          return;
+        try {
+          if (popupRef.current?.closed) {
+            setError("Authentication was cancelled");
+            setLoading(false);
+            closePopup();
+            return;
+          }
+        } catch {
+          // COOP policy may block access to .closed property
+          // This is expected after OAuth redirect - popup is likely still open
+          // Continue checking via postMessage which is COOP-safe
         }
 
         // Check for completion by looking at popup URL
@@ -157,17 +205,33 @@ export const useGoogleAuth = () => {
 
       // Step 5: Listen for messages from popup
       const handleMessage = (event: MessageEvent) => {
-        // Verify origin for security
-        if (event.origin !== window.location.origin) {
+        // Verify origin for security - accept from frontend or backend
+        const allowedOrigins = [
+          window.location.origin, // Frontend (e.g., http://localhost:5174)
+          "http://localhost:3000", // Backend
+          "http://localhost:5173", // Vite default
+        ];
+
+        if (!allowedOrigins.includes(event.origin)) {
+          console.log("[OAuth] Rejected message from origin:", event.origin);
           return;
         }
 
+        console.log("[OAuth] Received message:", event.data.type);
+
         if (event.data.type === "GOOGLE_OAUTH_SUCCESS") {
+          console.log(
+            "[OAuth] Success! User:",
+            event.data.payload?.user?.email
+          );
           setAuthenticated(event.data.payload);
+          isConnectingRef.current = false;
           closePopup();
           window.removeEventListener("message", handleMessage);
         } else if (event.data.type === "GOOGLE_OAUTH_ERROR") {
+          console.log("[OAuth] Error:", event.data.error);
           setError(event.data.error || "Authentication failed");
+          isConnectingRef.current = false;
           closePopup();
           window.removeEventListener("message", handleMessage);
         }
@@ -179,6 +243,7 @@ export const useGoogleAuth = () => {
       setError(
         error instanceof Error ? error.message : "Authentication failed"
       );
+      isConnectingRef.current = false;
       closePopup();
     }
   }, [clearError, setLoading, setError, setAuthenticated, closePopup]);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import agents from "../api/agents";
 
 interface AgentData {
   success: boolean;
@@ -32,15 +33,12 @@ export function useAgentData(googleAccountId: number | null) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `http://localhost:3000/api/agents/latest/${googleAccountId}`
-      );
+      const json = await agents.getLatestAgentData(googleAccountId);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch agent data");
+      if (json.successful === false) {
+        throw new Error(json.errorMessage || "Failed to fetch agent data");
       }
 
-      const json = await response.json();
       setData(json);
       setError(null);
     } catch (err: unknown) {

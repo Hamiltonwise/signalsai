@@ -1,8 +1,9 @@
 import axios, { type ResponseType } from "axios";
 import { getItem } from "../hooks/useLocalStorage";
 
-// const api = "http://localhost:3000/api";
-const api = "https://app.getalloro.com/api";
+// Prefer environment-configured API base; default to relative "/api" so Vite dev proxy handles CORS in development.
+// Define VITE_API_URL in .env for deployments that need an absolute URL.
+const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
 
 /**
  * Helper function to get common headers for API requests

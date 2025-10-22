@@ -3,6 +3,7 @@ import {
   AdminLayout,
   type AdminNavKey,
   PMSAutomationCards,
+  AgentInsights,
 } from "../components/Admin";
 
 function renderContent(activeNav: AdminNavKey) {
@@ -19,14 +20,7 @@ function renderContent(activeNav: AdminNavKey) {
         </div>
       );
     case "ai-data-insight":
-      return (
-        <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
-          <p className="text-lg font-semibold text-gray-700">AI Data Insight</p>
-          <p className="mt-2 max-w-md text-sm text-gray-500">
-            Configure AI insights and reporting automations from this panel soon.
-          </p>
-        </div>
-      );
+      return <AgentInsights />;
     case "webdev-engine":
       return (
         <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
@@ -34,8 +28,8 @@ function renderContent(activeNav: AdminNavKey) {
             Alloro WebDev Engine
           </p>
           <p className="mt-2 max-w-md text-sm text-gray-500">
-            Websites, landing pages, and deployment automations will live in this
-            workspace.
+            Websites, landing pages, and deployment automations will live in
+            this workspace.
           </p>
         </div>
       );

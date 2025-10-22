@@ -4,3 +4,7 @@ export { AdminSidebar } from "./AdminSidebar";
 export type { AdminSidebarProps, AdminNavKey } from "./AdminSidebar";
 export { AdminTopBar } from "./AdminTopBar";
 export { PMSAutomationCards } from "./PMSAutomationCards";
+export { AgentInsights } from "./AgentInsights";
+export { ProoflineAgentEditor } from "./ProoflineAgentEditor";
+export { SummaryAgentEditor } from "./SummaryAgentEditor";
+export { OpportunityAgentEditor } from "./OpportunityAgentEditor";

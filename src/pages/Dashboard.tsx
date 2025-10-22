@@ -12,15 +12,11 @@ import {
 
 // Import auth and integration hooks for domain selection
 import { useAuth } from "../hooks/useAuth";
-import { useGSC } from "../hooks/useGSC";
-import { useGA4 } from "../hooks/useGA4";
-import { useGBP } from "../hooks/useGBP";
-import { useClarity } from "../hooks/useClarity";
 import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 
 // Dashboard Components
-import { KPIPillars } from "../components/KPIPillars";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
+import { DashboardOverview } from "../components/dashboard/DashboardOverview";
 
 // Integration Modal Components ✅
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
@@ -32,7 +28,6 @@ import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { MondayTasks } from "../components/Monday/MondayTasks";
 import { AnimatePresence, motion } from "framer-motion";
-import OrbitVizD3 from "../components/OrbitViz/OrbitVizD3";
 import { useLocation, useNavigate } from "react-router-dom";
 
 // Onboarding Components
@@ -41,20 +36,9 @@ import { LogoutButton } from "../components/LogoutButton";
 import onboarding from "../api/onboarding";
 
 export default function Dashboard() {
-  // Domain selection and GSC data hooks
+  // Domain selection and auth hooks
   const { selectedDomain, userProfile, refreshUserProperties } = useAuth();
   const { disconnect } = useGoogleAuthContext();
-
-  const { gscData, isLoading: gscLoading, error: gscError } = useGSC();
-  const { ga4Data, isLoading: ga4Loading, error: ga4Error } = useGA4();
-  const { gbpData, isLoading: gbpLoading, error: gbpError } = useGBP();
-  const {
-    clarityData,
-    isLoading: clarityLoading,
-    error: clarityError,
-  } = useClarity();
-
-  // Removed unused fetchAllIntegrationData and fetchAllAIReadyData helpers
 
   // Modal state management
   const [showGA4Modal, setShowGA4Modal] = useState(false);
@@ -178,80 +162,6 @@ export default function Dashboard() {
   const clientId = "demo-client-123";
   const clientLoading = false;
   const clientError = null;
-
-  // Real integration data from hooks
-  const ga4Integration = {
-    isConnected: !!selectedDomain?.ga4_propertyId && !ga4Error,
-    isLoading: ga4Loading,
-    error: ga4Error,
-    metrics: {
-      // Convert GA4 data structure to match component expectations
-      totalUsers: ga4Data.activeUsers.currMonth,
-      newUsers: Math.round(ga4Data.activeUsers.currMonth * 0.6), // Estimate 60% new users
-      engagementRate: ga4Data.engagementRate.currMonth * 100, // Convert to percentage
-      conversions: ga4Data.conversions.currMonth,
-      avgSessionDuration: 245, // Placeholder for now
-      calculatedScore: Math.min(
-        100,
-        Math.round(
-          ga4Data.activeUsers.currMonth / 100 +
-            ga4Data.engagementRate.currMonth * 50 +
-            ga4Data.conversions.currMonth / 5
-        )
-      ),
-    },
-  };
-
-  const gscIntegration = {
-    isConnected: !!selectedDomain?.gsc_domainkey && !gscError,
-    isLoading: gscLoading,
-    error: gscError,
-    metrics: {
-      // Convert GSC data structure to match component expectations
-      totalImpressions: gscData.impressions.currMonth,
-      totalClicks: gscData.clicks.currMonth,
-      averageCTR:
-        (gscData.clicks.currMonth / gscData.impressions.currMonth) * 100,
-      averagePosition: gscData.avgPosition.currMonth,
-      calculatedScore: gscData.trendScore,
-    },
-  };
-
-  // Real GBP integration data from hooks
-  const gbpIntegration = {
-    isConnected:
-      !!(selectedDomain?.gbp_accountId && selectedDomain?.gbp_locationId) &&
-      !gbpError,
-    isLoading: gbpLoading,
-    error: gbpError,
-    metrics: {
-      // Convert GBP data structure to match component expectations
-      totalViews: 15420, // Placeholder - not in current GBP data structure
-      phoneCallsTotal: gbpData.callClicks.currMonth,
-      websiteClicksTotal: 234, // Placeholder - not in current GBP data structure
-      averageRating: gbpData.avgRating.currMonth,
-      totalReviews: gbpData.newReviews.currMonth,
-      calculatedScore: gbpData.trendScore,
-    },
-  };
-
-  // Real Clarity integration data from hooks
-  const clarityIntegration = {
-    isConnected: !clarityError, // Consider connected if no error
-    isLoading: clarityLoading,
-    error: clarityError,
-    metrics: {
-      // Convert Clarity data structure to match component expectations
-      totalSessions: clarityData.sessions.currMonth,
-      bounceRate: clarityData.bounceRate.currMonth * 100, // Convert to percentage
-      deadClicks: clarityData.deadClicks.currMonth,
-      calculatedScore: Math.min(100, Math.max(0, 100 + clarityData.trendScore)), // Convert trend to score
-    },
-  };
-
-  // Removed local PMS demo data; PMS visuals remain via dedicated components
-
-  // Removed unused vitalSignsAI mock
   // Show loading state while checking onboarding
   if (!ready || checkingOnboarding) {
     return (
@@ -571,29 +481,7 @@ export default function Dashboard() {
           </div>
         </div> */}
 
-              {activeTab === "Dashboard" && (
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h1 className="text-3xl font-thin text-gray-900 mb-1">
-                      Good{" "}
-                      {new Date().getHours() < 12
-                        ? "morning"
-                        : new Date().getHours() < 18
-                        ? "afternoon"
-                        : "evening"}
-                      , Dr. {userProfile?.lastName || "Doe"}
-                    </h1>
-                    <p className="text-sm font-light text-slate-600">
-                      {userProfile?.practiceName ||
-                        selectedDomain?.displayName ||
-                        "Best Dental Practice"}{" "}
-                      at a glance.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-8 ">
+              <div className="space-y-8">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -602,28 +490,7 @@ export default function Dashboard() {
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
                   >
-                    {activeTab === "Dashboard" && (
-                      <>
-                        <div className="-mt-[80px] -ml-[80px]">
-                          <OrbitVizD3
-                            className="mb-6 md:mb-8 min-h-[560px] md:min-h-[640px] lg:min-h-[720px]"
-                            onNavigate={(tab) => handleTabChange(tab)}
-                          />
-                        </div>
-                        <KPIPillars
-                          ga4Data={ga4Integration.metrics}
-                          gbpData={gbpIntegration.metrics}
-                          gscData={gscIntegration.metrics}
-                          clarityData={clarityIntegration.metrics}
-                          connectionStatus={{
-                            ga4: ga4Integration.isConnected,
-                            gbp: gbpIntegration.isConnected,
-                            gsc: gscIntegration.isConnected,
-                            clarity: clarityIntegration.isConnected,
-                          }}
-                        />
-                      </>
-                    )}
+                    {activeTab === "Dashboard" && <DashboardOverview />}
 
                     {activeTab === "Patient Journey Insights" && (
                       <VitalSignsCards

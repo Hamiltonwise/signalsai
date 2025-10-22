@@ -1,8 +1,8 @@
 import axios, { type ResponseType } from "axios";
 import { getItem } from "../hooks/useLocalStorage";
 
-// const api = "http://localhost:3000/api";
-const api = "https://app.getalloro.com/api";
+const api = "http://localhost:3000/api";
+// const api = "https://app.getalloro.com/api";
 
 /**
  * Helper function to get common headers for API requests
@@ -117,6 +117,46 @@ export async function apiPatch({
     }
 
     const { data } = await axios.patch(api + path, passedData, {
+      headers,
+    });
+    return data;
+  } catch (err) {
+    console.log(err);
+    return {
+      successful: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+export async function apiPut({
+  path,
+  passedData = {},
+  additionalHeaders,
+}: {
+  path: string;
+  passedData?: object;
+  additionalHeaders?: {
+    Accept?: string;
+    [key: string]: string | undefined;
+  };
+}) {
+  try {
+    // Start with common headers (includes google-account-id)
+    const headers: Record<string, string> = {
+      ...getCommonHeaders(),
+      "Content-Type": "application/json",
+    };
+
+    if (additionalHeaders) {
+      Object.entries(additionalHeaders).forEach(([key, value]) => {
+        if (value) {
+          headers[key] = value;
+        }
+      });
+    }
+
+    const { data } = await axios.put(api + path, passedData, {
       headers,
     });
     return data;

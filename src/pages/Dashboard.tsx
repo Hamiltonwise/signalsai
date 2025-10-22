@@ -490,7 +490,11 @@ export default function Dashboard() {
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
                   >
-                    {activeTab === "Dashboard" && <DashboardOverview />}
+                    {activeTab === "Dashboard" && (
+                      <DashboardOverview
+                        googleAccountId={userProfile?.googleAccountId || 17}
+                      />
+                    )}
 
                     {activeTab === "Patient Journey Insights" && (
                       <VitalSignsCards

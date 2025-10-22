@@ -17,6 +17,7 @@ import type {
   ProoflineAgentData,
   SummaryAgentData,
   OpportunityAgentData,
+  WebhookResult,
 } from "../../types/agents";
 import { ProoflineAgentEditor } from "./ProoflineAgentEditor";
 import { SummaryAgentEditor } from "./SummaryAgentEditor";
@@ -263,9 +264,9 @@ export function AgentInsights() {
     updatedData: ProoflineAgentData | SummaryAgentData | OpportunityAgentData
   ) => {
     try {
-      // Clone the agent response
-      const updatedResponse = { ...result.agent_response };
-      const webhooks = [...(updatedResponse.webhooks || [])];
+      // Clone the agent response and ensure webhooks is always an array
+      const currentWebhooks = result.agent_response?.webhooks || [];
+      const webhooks = [...currentWebhooks];
 
       // Update the specific webhook's data
       if (webhooks[webhookIndex]) {
@@ -275,7 +276,11 @@ export function AgentInsights() {
         };
       }
 
-      updatedResponse.webhooks = webhooks;
+      const updatedResponse = {
+        webhooks,
+        successCount: result.agent_response?.successCount,
+        totalCount: result.agent_response?.totalCount,
+      };
 
       // Call the API to update
       const response = await updateAgentResult({
@@ -463,72 +468,74 @@ export function AgentInsights() {
                   {isExpanded && (
                     <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
                       <div className="space-y-4">
-                        {webhooks.map((webhook, index) => {
-                          const agentType = getAgentType(webhook.webhookUrl);
-                          const agentName = getAgentDisplayName(
-                            webhook.webhookUrl
-                          );
-                          const agentData = webhook.data?.[0];
+                        {webhooks.map(
+                          (webhook: WebhookResult, index: number) => {
+                            const agentType = getAgentType(webhook.webhookUrl);
+                            const agentName = getAgentDisplayName(
+                              webhook.webhookUrl
+                            );
+                            const agentData = webhook.data?.[0];
 
-                          if (!agentData) {
+                            if (!agentData) {
+                              return (
+                                <div
+                                  key={index}
+                                  className="rounded-lg border border-gray-200 bg-white p-4"
+                                >
+                                  <p className="text-sm text-gray-500">
+                                    {agentName}: No data available
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            const isReadOnly = result.status !== "pending";
+
                             return (
-                              <div
-                                key={index}
-                                className="rounded-lg border border-gray-200 bg-white p-4"
-                              >
-                                <p className="text-sm text-gray-500">
-                                  {agentName}: No data available
-                                </p>
+                              <div key={index}>
+                                {agentType === "proofline" && (
+                                  <ProoflineAgentEditor
+                                    data={agentData as ProoflineAgentData}
+                                    onSave={(updatedData) =>
+                                      handleSaveAgentData(
+                                        result,
+                                        index,
+                                        updatedData
+                                      )
+                                    }
+                                    isReadOnly={isReadOnly}
+                                  />
+                                )}
+                                {agentType === "summary" && (
+                                  <SummaryAgentEditor
+                                    data={agentData as SummaryAgentData}
+                                    onSave={(updatedData) =>
+                                      handleSaveAgentData(
+                                        result,
+                                        index,
+                                        updatedData
+                                      )
+                                    }
+                                    isReadOnly={isReadOnly}
+                                  />
+                                )}
+                                {agentType === "opportunity" && (
+                                  <OpportunityAgentEditor
+                                    data={agentData as OpportunityAgentData}
+                                    onSave={(updatedData) =>
+                                      handleSaveAgentData(
+                                        result,
+                                        index,
+                                        updatedData
+                                      )
+                                    }
+                                    isReadOnly={isReadOnly}
+                                  />
+                                )}
                               </div>
                             );
                           }
-
-                          const isReadOnly = result.status !== "pending";
-
-                          return (
-                            <div key={index}>
-                              {agentType === "proofline" && (
-                                <ProoflineAgentEditor
-                                  data={agentData as ProoflineAgentData}
-                                  onSave={(updatedData) =>
-                                    handleSaveAgentData(
-                                      result,
-                                      index,
-                                      updatedData
-                                    )
-                                  }
-                                  isReadOnly={isReadOnly}
-                                />
-                              )}
-                              {agentType === "summary" && (
-                                <SummaryAgentEditor
-                                  data={agentData as SummaryAgentData}
-                                  onSave={(updatedData) =>
-                                    handleSaveAgentData(
-                                      result,
-                                      index,
-                                      updatedData
-                                    )
-                                  }
-                                  isReadOnly={isReadOnly}
-                                />
-                              )}
-                              {agentType === "opportunity" && (
-                                <OpportunityAgentEditor
-                                  data={agentData as OpportunityAgentData}
-                                  onSave={(updatedData) =>
-                                    handleSaveAgentData(
-                                      result,
-                                      index,
-                                      updatedData
-                                    )
-                                  }
-                                  isReadOnly={isReadOnly}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
+                        )}
 
                         {/* Metadata Section */}
                         <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">

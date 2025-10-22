@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getLatestAgentResult, type AgentResult } from "../api/agents";
+import type { WebhookResult } from "../types/agents";
 
 interface ApprovedInsightCardProps {
   domain: string;
@@ -97,14 +98,14 @@ export function ApprovedInsightCard({ domain }: ApprovedInsightCardProps) {
   }
 
   // Extract data from all three agents
-  const prooflineWebhook = insight.agent_response?.webhooks?.find((wh) =>
-    wh.webhookUrl?.includes("proofline-agent")
+  const prooflineWebhook = insight.agent_response?.webhooks?.find(
+    (wh: WebhookResult) => wh.webhookUrl?.includes("proofline-agent")
   );
-  const summaryWebhook = insight.agent_response?.webhooks?.find((wh) =>
-    wh.webhookUrl?.includes("summary-agent")
+  const summaryWebhook = insight.agent_response?.webhooks?.find(
+    (wh: WebhookResult) => wh.webhookUrl?.includes("summary-agent")
   );
-  const opportunityWebhook = insight.agent_response?.webhooks?.find((wh) =>
-    wh.webhookUrl?.includes("opportunity-agent")
+  const opportunityWebhook = insight.agent_response?.webhooks?.find(
+    (wh: WebhookResult) => wh.webhookUrl?.includes("opportunity-agent")
   );
 
   const prooflineData = prooflineWebhook?.data?.[0] as

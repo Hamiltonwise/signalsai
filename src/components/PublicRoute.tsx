@@ -18,16 +18,12 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   useEffect(() => {
     // Small delay to allow OAuth flow to complete if in progress
     const timer = setTimeout(() => {
-      const hasToken = localStorage.getItem("google_access_token");
-      const tokenExpiry = localStorage.getItem("google_token_expiry");
+      const googleAccountId = localStorage.getItem("google_account_id");
+      const isAuthenticated = !!googleAccountId;
 
-      // Check if token exists and is not expired
-      const isTokenValid =
-        hasToken && (!tokenExpiry || Date.now() < parseInt(tokenExpiry));
-
-      if (isTokenValid) {
+      if (isAuthenticated) {
         console.log(
-          "[PublicRoute] User is authenticated, redirecting to dashboard"
+          "[PublicRoute] google_account_id present; redirecting to dashboard"
         );
         setShouldRedirect(true);
       }

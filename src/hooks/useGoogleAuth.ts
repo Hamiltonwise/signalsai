@@ -44,22 +44,8 @@ export const useGoogleAuth = () => {
       error: null,
     });
 
-    // Store tokens in localStorage for persistence
-    if (authResponse.accessToken) {
-      localStorage.setItem("google_access_token", authResponse.accessToken);
-    }
-    if (authResponse.expiresAt) {
-      // Store as timestamp (milliseconds) for easy comparison
-      const expiryTimestamp =
-        authResponse.expiresAt instanceof Date
-          ? authResponse.expiresAt.getTime()
-          : new Date(authResponse.expiresAt).getTime();
-      localStorage.setItem("google_token_expiry", expiryTimestamp.toString());
-      console.log(
-        "[OAuth] Stored token expiry:",
-        new Date(expiryTimestamp).toISOString()
-      );
-    }
+    // Do NOT store Google access tokens or expiry in the browser.
+    // The backend refreshes Google tokens; frontend gates on google_account_id only.
     // Store googleAccountId for multi-tenant API requests
     if (authResponse.googleAccountId) {
       localStorage.setItem(

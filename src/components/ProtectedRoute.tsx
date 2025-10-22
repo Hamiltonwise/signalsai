@@ -9,27 +9,15 @@ interface ProtectedRouteProps {
  * Checks localStorage for authentication tokens (context-free for route-level protection)
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // Check localStorage for tokens
-  const hasToken = localStorage.getItem("google_access_token");
-  const tokenExpiry = localStorage.getItem("google_token_expiry");
+  // Authenticate based on presence of google_account_id only.
+  // Google access tokens are refreshed server-side; frontend should not gate on token expiry.
+  const googleAccountId = localStorage.getItem("google_account_id");
+  const isAuthenticated = !!googleAccountId;
 
-  // Check if token exists and is not expired
-  const isTokenValid =
-    hasToken && (!tokenExpiry || Date.now() < parseInt(tokenExpiry));
-
-  // If no valid token, redirect to signin
-  if (!isTokenValid) {
+  if (!isAuthenticated) {
     console.log(
-      "[ProtectedRoute] No valid authentication found, redirecting to signin",
-      {
-        hasToken: !!hasToken,
-        tokenExpiry,
-        expiryDate: tokenExpiry
-          ? new Date(parseInt(tokenExpiry)).toISOString()
-          : null,
-        currentTime: new Date().toISOString(),
-        isExpired: tokenExpiry ? Date.now() >= parseInt(tokenExpiry) : null,
-      }
+      "[ProtectedRoute] Missing google_account_id; redirecting to signin",
+      { currentTime: new Date().toISOString() }
     );
     return <Navigate to="/signin" replace />;
   }

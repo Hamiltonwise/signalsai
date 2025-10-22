@@ -1,8 +1,8 @@
 import axios, { type ResponseType } from "axios";
 import { getItem } from "../hooks/useLocalStorage";
 
-const api = "http://localhost:3000/api";
-// const api = "https://app.getalloro.com/api";
+// const api = "http://localhost:3000/api";
+const api = "https://app.getalloro.com/api";
 
 /**
  * Helper function to get common headers for API requests

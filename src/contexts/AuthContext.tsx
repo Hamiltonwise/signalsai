@@ -39,11 +39,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (status.success && status.onboardingCompleted && status.propertyIds) {
         // Load user profile
         if (status.profile) {
+          // Get googleAccountId from backend first, fallback to localStorage
+          const storedGoogleAccountId =
+            localStorage.getItem("google_account_id");
+          const googleAccountId =
+            status.profile.googleAccountId ||
+            (storedGoogleAccountId
+              ? parseInt(storedGoogleAccountId, 10)
+              : null);
+
           setUserProfile({
             firstName: status.profile.firstName,
             lastName: status.profile.lastName,
             practiceName: status.profile.practiceName,
             domainName: status.profile.domainName,
+            googleAccountId,
           });
         }
 

@@ -492,7 +492,7 @@ export default function Dashboard() {
                   >
                     {activeTab === "Dashboard" && (
                       <DashboardOverview
-                        googleAccountId={userProfile?.googleAccountId || 17}
+                        googleAccountId={userProfile?.googleAccountId ?? null}
                       />
                     )}
 

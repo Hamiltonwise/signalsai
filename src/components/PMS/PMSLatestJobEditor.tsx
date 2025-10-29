@@ -36,11 +36,27 @@ const toNumber = (value: unknown): number => {
 };
 
 const normaliseMonthEntries = (raw: unknown): MonthEntryForm[] => {
-  if (!Array.isArray(raw)) {
+  let dataArray: unknown = raw;
+
+  // Handle new canonical structure with monthly_rollup
+  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+    const container = raw as Record<string, unknown>;
+
+    // Check for monthly_rollup (canonical format)
+    if (Array.isArray(container.monthly_rollup)) {
+      dataArray = container.monthly_rollup;
+    }
+    // Fallback to report_data (legacy format)
+    else if (Array.isArray(container.report_data)) {
+      dataArray = container.report_data;
+    }
+  }
+
+  if (!Array.isArray(dataArray)) {
     return [];
   }
 
-  return raw.map((entry) => {
+  return dataArray.map((entry) => {
     const monthEntry = typeof entry === "object" && entry !== null ? entry : {};
     const sourcesRaw = Array.isArray((monthEntry as any).sources)
       ? ((monthEntry as any).sources as unknown[])
@@ -248,12 +264,14 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                          {([
-                            ["Self referrals", "self_referrals"],
-                            ["Doctor referrals", "doctor_referrals"],
-                            ["Total referrals", "total_referrals"],
-                            ["Production total", "production_total"],
-                          ] as const).map(([label, field]) => (
+                          {(
+                            [
+                              ["Self referrals", "self_referrals"],
+                              ["Doctor referrals", "doctor_referrals"],
+                              ["Total referrals", "total_referrals"],
+                              ["Production total", "production_total"],
+                            ] as const
+                          ).map(([label, field]) => (
                             <div key={field} className="flex flex-col">
                               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                 {label}
@@ -281,7 +299,9 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                             <tr>
                               <th className="px-3 py-2 text-left">Source</th>
                               <th className="px-3 py-2 text-left">Referrals</th>
-                              <th className="px-3 py-2 text-left">Production</th>
+                              <th className="px-3 py-2 text-left">
+                                Production
+                              </th>
                               <th className="px-3 py-2 text-right">Actions</th>
                             </tr>
                           </thead>
@@ -336,7 +356,10 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      handleRemoveSource(monthIndex, sourceIndex)
+                                      handleRemoveSource(
+                                        monthIndex,
+                                        sourceIndex
+                                      )
                                     }
                                     className="inline-flex items-center justify-center rounded-full border border-red-100 bg-red-50 p-2 text-red-600 transition hover:border-red-200 hover:bg-red-100"
                                   >

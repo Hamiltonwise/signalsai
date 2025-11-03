@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   ArrowUpRight,
   ExternalLink,
@@ -5,10 +6,12 @@ import {
   TrendingDown,
   RefreshCw,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useAgentData } from "../../hooks/useAgentData";
 import { useAuth } from "../../hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
+import { fetchPmsKeyData, type PmsKeyDataResponse } from "../../api/pms";
 
 interface DashboardOverviewProps {
   googleAccountId?: number | null;
@@ -19,6 +22,111 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const { data, loading, error, refetch } = useAgentData(
     googleAccountId || null
   );
+
+  // PMS data state
+  const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
+    null
+  );
+  const [pmsLoading, setPmsLoading] = useState(true);
+  const [pmsError, setPmsError] = useState<string | null>(null);
+
+  // Fetch PMS data
+  useEffect(() => {
+    const loadPmsData = async () => {
+      const domain = userProfile?.domainName;
+      if (!domain) {
+        setPmsLoading(false);
+        return;
+      }
+
+      setPmsLoading(true);
+      setPmsError(null);
+
+      try {
+        const response = await fetchPmsKeyData(domain);
+        if (response?.success && response.data) {
+          setPmsData(response.data);
+        } else {
+          setPmsError(
+            response?.error || response?.message || "Failed to load PMS data"
+          );
+        }
+      } catch (err) {
+        setPmsError(
+          err instanceof Error ? err.message : "Failed to load PMS data"
+        );
+      } finally {
+        setPmsLoading(false);
+      }
+    };
+
+    loadPmsData();
+  }, [userProfile?.domainName]);
+
+  // Calculate PMS metrics from latest month
+  const calculatePmsMetrics = () => {
+    if (!pmsData?.months || pmsData.months.length === 0) {
+      return null;
+    }
+
+    const latestMonth = pmsData.months[pmsData.months.length - 1];
+    const previousMonth =
+      pmsData.months.length > 1
+        ? pmsData.months[pmsData.months.length - 2]
+        : null;
+
+    const calculatePercentChange = (
+      current: number,
+      previous: number | undefined
+    ) => {
+      if (!previous || previous === 0) return 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    const totalReferrals = latestMonth.totalReferrals || 0;
+    const selfReferrals = latestMonth.selfReferrals || 0;
+    const doctorReferrals = latestMonth.doctorReferrals || 0;
+    const production = latestMonth.productionTotal || 0;
+
+    return {
+      totalReferrals,
+      selfReferrals,
+      doctorReferrals,
+      production,
+      month: latestMonth.month,
+      referralChange: calculatePercentChange(
+        totalReferrals,
+        previousMonth?.totalReferrals
+      ),
+      selfReferralChange: calculatePercentChange(
+        selfReferrals,
+        previousMonth?.selfReferrals
+      ),
+      doctorReferralChange: calculatePercentChange(
+        doctorReferrals,
+        previousMonth?.doctorReferrals
+      ),
+      productionChange: calculatePercentChange(
+        production,
+        previousMonth?.productionTotal
+      ),
+    };
+  };
+
+  const pmsMetrics = calculatePmsMetrics();
+
+  // Format month label
+  const formatMonthLabel = (monthStr: string) => {
+    try {
+      const date = new Date(`${monthStr}-01`);
+      return date.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return monthStr;
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -137,7 +245,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           )}
         </div>
 
-        {/* PMS Upload Data Card - Keep as placeholder for now */}
+        {/* PMS Upload Data Card - Dynamic */}
         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200 shadow-sm">
           <div className="flex items-start gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
@@ -147,7 +255,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
                 Latest Practice Data
                 <span className="ml-2 text-sm font-normal text-pink-600">
-                  PMS UPLOAD DATA
+                  PMS DATA
                 </span>
               </h3>
               <p className="text-sm text-gray-600">
@@ -156,73 +264,132 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="bg-white/60 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-2">
-                Monthly Summary - January 15, 2025
+          {pmsLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Loading practice data...</p>
+            </div>
+          ) : pmsError ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+              <p className="text-sm text-red-600 mb-1">
+                Failed to load PMS data
               </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-semibold text-gray-900">
-                      1,547
-                    </span>
-                    <span className="text-xs text-green-600 font-medium">
-                      +8%
-                    </span>
+              <p className="text-xs text-gray-500">{pmsError}</p>
+            </div>
+          ) : pmsMetrics ? (
+            <div className="space-y-3">
+              <div className="bg-white/60 rounded-lg p-3">
+                <p className="text-xs text-gray-600 mb-2">
+                  Monthly Summary - {formatMonthLabel(pmsMetrics.month)}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-semibold text-gray-900">
+                        {pmsMetrics.totalReferrals.toLocaleString()}
+                      </span>
+                      {pmsMetrics.referralChange !== 0 && (
+                        <span
+                          className={`text-xs font-medium ${
+                            pmsMetrics.referralChange >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {pmsMetrics.referralChange >= 0 ? "+" : ""}
+                          {pmsMetrics.referralChange.toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600">Total Referrals</p>
                   </div>
-                  <p className="text-xs text-gray-600">Total Patients</p>
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-semibold text-gray-900">
-                      89
-                    </span>
-                    <span className="text-xs text-green-600 font-medium">
-                      +12%
-                    </span>
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-semibold text-gray-900">
+                        {pmsMetrics.selfReferrals.toLocaleString()}
+                      </span>
+                      {pmsMetrics.selfReferralChange !== 0 && (
+                        <span
+                          className={`text-xs font-medium ${
+                            pmsMetrics.selfReferralChange >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {pmsMetrics.selfReferralChange >= 0 ? "+" : ""}
+                          {pmsMetrics.selfReferralChange.toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600">Self Referrals</p>
                   </div>
-                  <p className="text-xs text-gray-600">New Patients</p>
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-semibold text-gray-900">
-                      $157K
-                    </span>
-                    <span className="text-xs text-green-600 font-medium">
-                      +15%
-                    </span>
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-semibold text-gray-900">
+                        ${(pmsMetrics.production / 1000).toFixed(0)}K
+                      </span>
+                      {pmsMetrics.productionChange !== 0 && (
+                        <span
+                          className={`text-xs font-medium ${
+                            pmsMetrics.productionChange >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {pmsMetrics.productionChange >= 0 ? "+" : ""}
+                          {pmsMetrics.productionChange.toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600">Production</p>
                   </div>
-                  <p className="text-xs text-gray-600">Revenue</p>
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-semibold text-gray-900">
-                      234
-                    </span>
-                    <span className="text-xs text-green-600 font-medium">
-                      +6%
-                    </span>
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-semibold text-gray-900">
+                        {pmsMetrics.doctorReferrals.toLocaleString()}
+                      </span>
+                      {pmsMetrics.doctorReferralChange !== 0 && (
+                        <span
+                          className={`text-xs font-medium ${
+                            pmsMetrics.doctorReferralChange >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {pmsMetrics.doctorReferralChange >= 0 ? "+" : ""}
+                          {pmsMetrics.doctorReferralChange.toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600">Doctor Referrals</p>
                   </div>
-                  <p className="text-xs text-gray-600">Appointments</p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-purple-600">
-                Next upload scheduled for February 15, 2025
-              </span>
-              <button className="text-xs text-purple-700 font-medium hover:underline flex items-center gap-1">
-                Upload new data
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-purple-600">
+                  {pmsData?.stats?.latestJobTimestamp
+                    ? `Updated ${new Date(
+                        pmsData.stats.latestJobTimestamp
+                      ).toLocaleDateString()}`
+                    : "Data available"}
+                </span>
+              </div>
+
+              <button className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2">
+                View Full PMS Report
+                <ExternalLink className="w-4 h-4" />
               </button>
             </div>
-
-            <button className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2">
-              Open Full Summary Report
-              <ExternalLink className="w-4 h-4" />
-            </button>
-          </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No practice data available yet.</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Upload PMS data to see your practice metrics.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

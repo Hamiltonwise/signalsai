@@ -1,0 +1,169 @@
+import type {
+  ActionItem,
+  GroupedActionItemsResponse,
+  ActionItemsResponse,
+  CreateActionItemRequest,
+  UpdateActionItemRequest,
+  FetchActionItemsRequest,
+  ClientsResponse,
+} from "../types/tasks";
+
+const API_BASE = "/api/tasks";
+
+/**
+ * Fetch tasks for logged-in client (grouped by category)
+ */
+export const fetchClientTasks = async (
+  googleAccountId: number
+): Promise<GroupedActionItemsResponse> => {
+  const response = await fetch(
+    `${API_BASE}?googleAccountId=${googleAccountId}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Mark a USER category task as complete
+ */
+export const completeTask = async (
+  taskId: number,
+  googleAccountId: number
+): Promise<{ success: boolean; task: ActionItem; message: string }> => {
+  const response = await fetch(`${API_BASE}/${taskId}/complete`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ googleAccountId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to complete task");
+  }
+
+  return response.json();
+};
+
+/**
+ * Create a new task (admin only)
+ */
+export const createTask = async (
+  task: CreateActionItemRequest
+): Promise<{ success: boolean; task: ActionItem; message: string }> => {
+  const response = await fetch(API_BASE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(task),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to create task");
+  }
+
+  return response.json();
+};
+
+/**
+ * Fetch all tasks with filters (admin only)
+ */
+export const fetchAllTasks = async (
+  filters: FetchActionItemsRequest = {}
+): Promise<ActionItemsResponse> => {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.append(key, String(value));
+    }
+  });
+
+  const response = await fetch(
+    `${API_BASE}/admin/all${params.toString() ? `?${params.toString()}` : ""}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update a task (admin only)
+ */
+export const updateTask = async (
+  taskId: number,
+  updates: Omit<UpdateActionItemRequest, "id">
+): Promise<{ success: boolean; task: ActionItem; message: string }> => {
+  const response = await fetch(`${API_BASE}/${taskId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update task");
+  }
+
+  return response.json();
+};
+
+/**
+ * Archive a task (soft delete)
+ */
+export const archiveTask = async (
+  taskId: number
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE}/${taskId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to archive task");
+  }
+
+  return response.json();
+};
+
+/**
+ * Get list of available clients for task creation
+ */
+export const fetchClients = async (): Promise<ClientsResponse> => {
+  const response = await fetch(`${API_BASE}/clients`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch clients: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Health check
+ */
+export const healthCheck = async (): Promise<{
+  success: boolean;
+  status: string;
+  timestamp: string;
+}> => {
+  const response = await fetch(`${API_BASE}/health`);
+
+  if (!response.ok) {
+    throw new Error(`Health check failed: ${response.statusText}`);
+  }
+
+  return response.json();
+};

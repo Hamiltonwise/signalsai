@@ -5,20 +5,14 @@ import {
   PMSAutomationCards,
   AgentInsights,
 } from "../components/Admin";
+import { ActionItemsHub } from "@/components/Admin/ActionItemsHub";
 
 function renderContent(activeNav: AdminNavKey) {
   switch (activeNav) {
     case "ai-pms-automation":
       return <PMSAutomationCards />;
-    case "job-dashboards":
-      return (
-        <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
-          <p className="text-lg font-semibold text-gray-700">Job Dashboards</p>
-          <p className="mt-2 max-w-md text-sm text-gray-500">
-            Metrics and pipeline views for open roles will appear here.
-          </p>
-        </div>
-      );
+    case "action-items":
+      return <ActionItemsHub />;
     case "ai-data-insight":
       return <AgentInsights />;
     case "webdev-engine":
@@ -53,8 +47,8 @@ export default function Admin() {
           <h1 className="text-2xl font-bold text-gray-900">
             {activeNav === "ai-pms-automation"
               ? "AI PMS Automation"
-              : activeNav === "job-dashboards"
-              ? "Job Dashboards"
+              : activeNav === "action-items"
+              ? "Action Items Hub"
               : activeNav === "ai-data-insight"
               ? "AI Data Insight"
               : "Alloro WebDev Engine"}

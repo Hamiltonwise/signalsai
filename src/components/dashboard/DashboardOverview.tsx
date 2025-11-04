@@ -12,6 +12,10 @@ import { useAgentData } from "../../hooks/useAgentData";
 import { useAuth } from "../../hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { fetchPmsKeyData, type PmsKeyDataResponse } from "../../api/pms";
+import { useGSC } from "../../hooks/useGSC";
+import { useGA4 } from "../../hooks/useGA4";
+import { useClarity } from "../../hooks/useClarity";
+import { useGBP } from "../../hooks/useGBP";
 
 interface DashboardOverviewProps {
   googleAccountId?: number | null;
@@ -22,6 +26,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const { data, loading, error, refetch } = useAgentData(
     googleAccountId || null
   );
+
+  // Analytics hooks for Patient Journey data
+  const { gscData, isLoading: gscLoading } = useGSC();
+  const { ga4Data, isLoading: ga4Loading } = useGA4();
+  const { clarityData, isLoading: clarityLoading } = useClarity();
+  const { gbpData, isLoading: gbpLoading } = useGBP();
 
   // PMS data state
   const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
@@ -127,6 +137,69 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       return monthStr;
     }
   };
+
+  // Calculate percentage change helper
+  const calculatePercentChange = (currMonth: number, prevMonth: number) => {
+    if (!prevMonth || prevMonth === 0) return 0;
+    return ((currMonth - prevMonth) / prevMonth) * 100;
+  };
+
+  // Calculate Patient Journey Health metrics
+  const calculateJourneyMetrics = () => {
+    // Awareness - GSC clicks and impressions
+    const awarenessChange = gscData?.clicks
+      ? calculatePercentChange(
+          gscData.clicks.currMonth,
+          gscData.clicks.prevMonth
+        )
+      : 0;
+
+    // Research - Clarity bounce rate (lower is better, so invert)
+    const researchChange = clarityData?.bounceRate
+      ? -calculatePercentChange(
+          clarityData.bounceRate.currMonth,
+          clarityData.bounceRate.prevMonth
+        )
+      : 0;
+
+    // Consideration - GBP reviews
+    const considerationChange = gbpData?.newReviews
+      ? calculatePercentChange(
+          gbpData.newReviews.currMonth,
+          gbpData.newReviews.prevMonth
+        )
+      : 0;
+
+    // Decision - GBP call clicks
+    const decisionChange = gbpData?.callClicks
+      ? calculatePercentChange(
+          gbpData.callClicks.currMonth,
+          gbpData.callClicks.prevMonth
+        )
+      : 0;
+
+    // Loyalty - GA4 engagement rate
+    const loyaltyChange = ga4Data?.engagementRate
+      ? calculatePercentChange(
+          ga4Data.engagementRate.currMonth,
+          ga4Data.engagementRate.prevMonth
+        )
+      : 0;
+
+    return {
+      awareness: awarenessChange,
+      research: researchChange,
+      consideration: considerationChange,
+      decision: decisionChange,
+      loyalty: loyaltyChange,
+    };
+  };
+
+  const journeyMetrics = calculateJourneyMetrics();
+
+  // Check if any data is still loading
+  const analyticsLoading =
+    gscLoading || ga4Loading || clarityLoading || gbpLoading;
 
   // Loading state
   if (loading) {
@@ -399,21 +472,39 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           <h2 className="text-xl font-semibold text-gray-900">
             Patient Journey Health
           </h2>
-          <span className="text-sm text-green-600 font-medium">
-            All sections trending positively
-          </span>
+          {analyticsLoading ? (
+            <span className="text-sm text-gray-500 flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading metrics...
+            </span>
+          ) : (
+            <></>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Awareness */}
+          {/* Awareness - GSC Clicks */}
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-600">+8%</span>
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <span
+                  className={`text-2xl font-bold ${
+                    journeyMetrics.awareness >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {journeyMetrics.awareness >= 0 ? "+" : ""}
+                  {journeyMetrics.awareness.toFixed(0)}%
+                </span>
+                {journeyMetrics.awareness >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                )}
               </div>
               <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
-                Growing
+                {journeyMetrics.awareness >= 0 ? "Growing" : "Declining"}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
@@ -422,15 +513,28 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <p className="text-xs text-gray-600">How patients discover you</p>
           </div>
 
-          {/* Research */}
+          {/* Research - Clarity Bounce Rate (inverted) */}
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-red-600">-3%</span>
-                <TrendingDown className="w-4 h-4 text-red-600" />
+                <span
+                  className={`text-2xl font-bold ${
+                    journeyMetrics.research >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {journeyMetrics.research >= 0 ? "+" : ""}
+                  {journeyMetrics.research.toFixed(0)}%
+                </span>
+                {journeyMetrics.research >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                )}
               </div>
               <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
-                Declining
+                {journeyMetrics.research >= 0 ? "Growing" : "Declining"}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
@@ -441,15 +545,28 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </p>
           </div>
 
-          {/* Consideration */}
+          {/* Consideration - GBP Reviews */}
           <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-600">+15%</span>
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <span
+                  className={`text-2xl font-bold ${
+                    journeyMetrics.consideration >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {journeyMetrics.consideration >= 0 ? "+" : ""}
+                  {journeyMetrics.consideration.toFixed(0)}%
+                </span>
+                {journeyMetrics.consideration >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                )}
               </div>
               <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
-                Growing
+                {journeyMetrics.consideration >= 0 ? "Growing" : "Declining"}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
@@ -458,15 +575,28 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <p className="text-xs text-gray-600">Reviews & local reputation</p>
           </div>
 
-          {/* Decision */}
+          {/* Decision - GBP Call Clicks */}
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-red-600">-8%</span>
-                <TrendingDown className="w-4 h-4 text-red-600" />
+                <span
+                  className={`text-2xl font-bold ${
+                    journeyMetrics.decision >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {journeyMetrics.decision >= 0 ? "+" : ""}
+                  {journeyMetrics.decision.toFixed(0)}%
+                </span>
+                {journeyMetrics.decision >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                )}
               </div>
               <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
-                Declining
+                {journeyMetrics.decision >= 0 ? "Growing" : "Declining"}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
@@ -475,15 +605,28 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <p className="text-xs text-gray-600">Booking & conversion</p>
           </div>
 
-          {/* Loyalty */}
+          {/* Loyalty - GA4 Engagement Rate */}
           <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-4 border border-indigo-200">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-green-600">+5%</span>
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <span
+                  className={`text-2xl font-bold ${
+                    journeyMetrics.loyalty >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {journeyMetrics.loyalty >= 0 ? "+" : ""}
+                  {journeyMetrics.loyalty.toFixed(0)}%
+                </span>
+                {journeyMetrics.loyalty >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-600" />
+                )}
               </div>
               <span className="text-xs text-gray-600 bg-white/50 px-2 py-1 rounded">
-                Growing
+                {journeyMetrics.loyalty >= 0 ? "Growing" : "Declining"}
               </span>
             </div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">

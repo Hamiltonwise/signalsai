@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
-import { Briefcase, Cpu, LineChart, Globe } from "lucide-react";
+import { CheckSquare, Cpu, LineChart, Globe } from "lucide-react";
 
 export type AdminNavKey =
-  | "job-dashboards"
+  | "action-items"
   | "ai-pms-automation"
   | "ai-data-insight"
   | "webdev-engine";
@@ -17,7 +17,7 @@ const NAV_ITEMS: Array<{
   label: string;
   icon: ComponentType<{ className?: string }>;
 }> = [
-  { key: "job-dashboards", label: "Job Dashboards", icon: Briefcase },
+  { key: "action-items", label: "Action Items Hub", icon: CheckSquare },
   { key: "ai-pms-automation", label: "AI PMS Automation", icon: Cpu },
   { key: "ai-data-insight", label: "AI Data Insight", icon: LineChart },
   { key: "webdev-engine", label: "Alloro WebDev Engine", icon: Globe },

@@ -26,7 +26,7 @@ import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
 import { PMSUploadModal } from "../components/PMS/PMSUploadModal";
 import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
-import { MondayTasks } from "../components/Monday/MondayTasks";
+import { TasksView } from "../components/tasks/TasksView";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -505,9 +505,9 @@ export default function Dashboard() {
                     {activeTab === "PMS Statistics" && <PMSVisualPillars />}
 
                     {activeTab === "Tasks" && (
-                      <div className="mb-8">
-                        <MondayTasks />
-                      </div>
+                      <TasksView
+                        googleAccountId={userProfile?.googleAccountId ?? null}
+                      />
                     )}
                   </motion.div>
                 </AnimatePresence>

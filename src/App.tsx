@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
@@ -38,6 +39,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/" element={<Navigate to="/signin" replace />} />
           <Route

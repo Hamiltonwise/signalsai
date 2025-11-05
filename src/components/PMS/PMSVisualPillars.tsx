@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { motion } from "framer-motion";
+import { showSparkleToast, showUploadToast } from "../../lib/toast";
 import {
   AlertCircle,
   CheckCircle2,
@@ -255,6 +256,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
     try {
       await updatePmsJobClientApproval(latestJobId, true);
+
+      // Show glassmorphism toast notification for client approval
+      showSparkleToast(
+        "Perfect!",
+        "We're now setting up your summary and action items for this month"
+      );
+
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(storageKey);
       }
@@ -291,15 +299,26 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setInlineIsUploading(true);
     setInlineStatus("idle");
     try {
-      const json = await uploadPMSData({ clientId: domain, file: fileToUpload });
+      const json = await uploadPMSData({
+        clientId: domain,
+        file: fileToUpload,
+      });
       if (json?.success) {
+        // Show glassmorphism toast notification
+        showUploadToast(
+          "PMS export received!",
+          "We'll notify when ready for checking"
+        );
+
         // Clear input and let the processing banner handle UX
         setInlineStatus("idle");
         setInlineMessage("");
         setInlineFile(null);
         try {
           if (inlineInputRef.current) inlineInputRef.current.value = "";
-        } catch {}
+        } catch {
+          // Ignore errors clearing file input
+        }
         try {
           window.localStorage.setItem(
             `pmsProcessing:${domain}`,
@@ -310,7 +329,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               detail: { clientId: domain },
             })
           );
-        } catch {}
+        } catch {
+          // Ignore localStorage errors
+        }
         await loadKeyData({ silent: true });
       } else {
         setInlineStatus("error");

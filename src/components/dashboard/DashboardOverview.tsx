@@ -640,15 +640,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Monthly Summary —{" "}
-                  {data?.agents?.summary?.dateStart
-                    ? new Date(
-                        data.agents.summary.dateStart
-                      ).toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })
-                    : "Latest"}
+                  Monthly Summary
                 </h2>
                 <p className="text-sm text-gray-600">
                   15-second snapshot of key changes

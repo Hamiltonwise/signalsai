@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { showUploadToast } from "../../lib/toast";
 import {
   X,
   Upload,
@@ -103,6 +104,12 @@ export const PMSUploadModal: React.FC<PMSUploadModalProps> = ({
         setUploadStatus("success");
         setMessage(
           "We're processing your PMS data now. We'll notify you once it's ready."
+        );
+
+        // Show glassmorphism toast notification
+        showUploadToast(
+          "PMS export received!",
+          "We'll notify when ready for checking"
         );
         if (typeof window !== "undefined") {
           try {
@@ -357,7 +364,6 @@ export const PMSUploadModal: React.FC<PMSUploadModalProps> = ({
                   </motion.div>
                 )}
               </motion.div>
-
             </div>
           </motion.div>
         </motion.div>

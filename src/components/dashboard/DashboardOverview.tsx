@@ -301,10 +301,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     Updated{" "}
                     {formatTimeAgo(data?.agents?.proofline?.lastUpdated)}
                   </span>
-                  <span className="text-xs text-blue-600">
-                    Confidence:{" "}
-                    {((prooflineData.confidence || 0) * 100).toFixed(0)}%
-                  </span>
                 </div>
               </div>
             </>
@@ -767,26 +763,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   </div>
                 </div>
               )}
-
-            {/* Attribution Footer */}
-            {summaryData?.citations && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                  <div>
-                    <span className="font-medium">Confidence:</span>
-                    <span className="ml-2">
-                      {((summaryData.confidence || 0) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Citations:</span>
-                    <span className="ml-2">
-                      {summaryData.citations.length} sources
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         ) : (
           <div className="text-center py-12">

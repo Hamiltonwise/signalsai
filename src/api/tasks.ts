@@ -152,6 +152,74 @@ export const fetchClients = async (): Promise<ClientsResponse> => {
 };
 
 /**
+ * Bulk archive tasks (admin only)
+ */
+export const bulkArchiveTasks = async (
+  taskIds: number[]
+): Promise<{ success: boolean; message: string; count: number }> => {
+  const response = await fetch(`${API_BASE}/bulk/delete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ taskIds }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to bulk archive tasks");
+  }
+
+  return response.json();
+};
+
+/**
+ * Bulk approve/unapprove tasks (admin only)
+ */
+export const bulkApproveTasks = async (
+  taskIds: number[],
+  is_approved: boolean
+): Promise<{ success: boolean; message: string; count: number }> => {
+  const response = await fetch(`${API_BASE}/bulk/approve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ taskIds, is_approved }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to bulk approve tasks");
+  }
+
+  return response.json();
+};
+
+/**
+ * Bulk update task status (admin only)
+ */
+export const bulkUpdateStatus = async (
+  taskIds: number[],
+  status: "pending" | "in_progress" | "complete" | "archived"
+): Promise<{ success: boolean; message: string; count: number }> => {
+  const response = await fetch(`${API_BASE}/bulk/status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ taskIds, status }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to bulk update status");
+  }
+
+  return response.json();
+};
+
+/**
  * Health check
  */
 export const healthCheck = async (): Promise<{

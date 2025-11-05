@@ -7,12 +7,17 @@ import {
   Check,
   X,
   Loader2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import {
   fetchAllTasks,
   updateTask,
   archiveTask,
   fetchClients,
+  bulkArchiveTasks,
+  bulkApproveTasks,
+  bulkUpdateStatus,
 } from "../../api/tasks";
 import type {
   ActionItem,
@@ -27,6 +32,12 @@ export function ActionItemsHub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Multi-select state
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [bulkOperationLoading, setBulkOperationLoading] = useState(false);
 
   // Loading states for individual operations
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
@@ -159,6 +170,84 @@ export function ActionItemsHub() {
     }
   };
 
+  // Multi-select handlers
+  const toggleSelectAll = () => {
+    if (selectedTaskIds.size === tasks.length) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
+    }
+  };
+
+  const toggleSelectTask = (taskId: number) => {
+    const newSelected = new Set(selectedTaskIds);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTaskIds(newSelected);
+  };
+
+  // Bulk operations
+  const handleBulkDelete = async () => {
+    if (selectedTaskIds.size === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to archive ${selectedTaskIds.size} task(s)?`
+      )
+    )
+      return;
+
+    try {
+      setBulkOperationLoading(true);
+      await bulkArchiveTasks(Array.from(selectedTaskIds));
+      setSelectedTaskIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to archive tasks");
+    } finally {
+      setBulkOperationLoading(false);
+    }
+  };
+
+  const handleBulkApprove = async (approve: boolean) => {
+    if (selectedTaskIds.size === 0) return;
+
+    try {
+      setBulkOperationLoading(true);
+      await bulkApproveTasks(Array.from(selectedTaskIds), approve);
+      setSelectedTaskIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Failed to update task approval"
+      );
+    } finally {
+      setBulkOperationLoading(false);
+    }
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    if (selectedTaskIds.size === 0) return;
+
+    try {
+      setBulkOperationLoading(true);
+      await bulkUpdateStatus(
+        Array.from(selectedTaskIds),
+        status as "pending" | "in_progress" | "complete" | "archived"
+      );
+      setSelectedTaskIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Failed to update task status"
+      );
+    } finally {
+      setBulkOperationLoading(false);
+    }
+  };
+
   const getCategoryBadge = (category: string) => {
     return (
       <span
@@ -183,6 +272,72 @@ export function ActionItemsHub() {
 
   return (
     <div className="space-y-4">
+      {/* Bulk Actions Bar */}
+      {selectedTaskIds.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+            <CheckSquare className="h-4 w-4" />
+            <span>
+              {selectedTaskIds.size} task{selectedTaskIds.size !== 1 ? "s" : ""}{" "}
+              selected
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleBulkStatusChange(e.target.value);
+                  e.target.value = "";
+                }
+              }}
+              disabled={bulkOperationLoading}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-xs font-semibold uppercase text-gray-700 transition hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Change Status...</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="complete">Complete</option>
+            </select>
+            <button
+              onClick={() => handleBulkApprove(true)}
+              disabled={bulkOperationLoading}
+              className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Approve
+            </button>
+            <button
+              onClick={() => handleBulkApprove(false)}
+              disabled={bulkOperationLoading}
+              className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold uppercase text-yellow-700 transition hover:border-yellow-300 hover:bg-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X className="h-3.5 w-3.5" />
+              Unapprove
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkOperationLoading}
+              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkOperationLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedTaskIds(new Set())}
+              disabled={bulkOperationLoading}
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filters Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -277,7 +432,23 @@ export function ActionItemsHub() {
 
       {/* Tasks Table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="grid grid-cols-[auto_1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <button
+            onClick={toggleSelectAll}
+            disabled={tasks.length === 0}
+            className="flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              selectedTaskIds.size === tasks.length
+                ? "Deselect all"
+                : "Select all"
+            }
+          >
+            {selectedTaskIds.size === tasks.length && tasks.length > 0 ? (
+              <CheckSquare className="h-4 w-4 text-blue-600" />
+            ) : (
+              <Square className="h-4 w-4 text-gray-400" />
+            )}
+          </button>
           <span>Client</span>
           <span>Task</span>
           <span>Category</span>
@@ -310,8 +481,23 @@ export function ActionItemsHub() {
           tasks.map((task) => (
             <div
               key={task.id}
-              className="grid grid-cols-[1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0"
+              className={`grid grid-cols-[auto_1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
+                selectedTaskIds.has(task.id) ? "bg-blue-50" : ""
+              }`}
             >
+              <button
+                onClick={() => toggleSelectTask(task.id)}
+                className="flex items-center justify-center"
+                title={
+                  selectedTaskIds.has(task.id) ? "Deselect task" : "Select task"
+                }
+              >
+                {selectedTaskIds.has(task.id) ? (
+                  <CheckSquare className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <Square className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                )}
+              </button>
               <div className="text-sm text-gray-700">{task.domain_name}</div>
               <div>
                 <div className="text-sm text-gray-900 font-medium">

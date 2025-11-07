@@ -6,7 +6,6 @@ import {
   BarChart3,
   LayoutGrid,
   CheckSquare,
-  Bell,
   Settings,
 } from "lucide-react";
 
@@ -17,6 +16,7 @@ import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 // Dashboard Components
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
 import { DashboardOverview } from "../components/dashboard/DashboardOverview";
+import { NotificationPopover } from "../components/NotificationPopover";
 
 // Integration Modal Components ✅
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
@@ -329,10 +329,9 @@ export default function Dashboard() {
 
           <div className="mt-auto space-y-3">
             {onboardingCompleted && (
-              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <Bell className="h-4 w-4" />
-                <span>Notifications</span>
-              </div>
+              <NotificationPopover
+                googleAccountId={userProfile?.googleAccountId ?? null}
+              />
             )}
 
             {/* Logout Button with Animated Confirmation */}

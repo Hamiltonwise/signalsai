@@ -121,6 +121,29 @@ export const updateTask = async (
 };
 
 /**
+ * Update task category (admin only)
+ */
+export const updateTaskCategory = async (
+  taskId: number,
+  category: "ALLORO" | "USER"
+): Promise<{ success: boolean; task: ActionItem; message: string }> => {
+  const response = await fetch(`${API_BASE}/${taskId}/category`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ category }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update task category");
+  }
+
+  return response.json();
+};
+
+/**
  * Archive a task (soft delete)
  */
 export const archiveTask = async (

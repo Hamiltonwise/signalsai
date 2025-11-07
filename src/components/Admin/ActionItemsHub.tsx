@@ -13,6 +13,7 @@ import {
 import {
   fetchAllTasks,
   updateTask,
+  updateTaskCategory,
   archiveTask,
   fetchClients,
   bulkArchiveTasks,
@@ -42,6 +43,9 @@ export function ActionItemsHub() {
   // Loading states for individual operations
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [updatingApprovalId, setUpdatingApprovalId] = useState<number | null>(
+    null
+  );
+  const [updatingCategoryId, setUpdatingCategoryId] = useState<number | null>(
     null
   );
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -155,6 +159,20 @@ export function ActionItemsHub() {
     }
   };
 
+  const handleCategoryChange = async (taskId: number, newCategory: string) => {
+    if (updatingCategoryId) return;
+
+    try {
+      setUpdatingCategoryId(taskId);
+      await updateTaskCategory(taskId, newCategory as "ALLORO" | "USER");
+      await loadTasks();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update category");
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  };
+
   const handleArchive = async (taskId: number) => {
     if (deletingId) return;
     if (!confirm("Are you sure you want to archive this task?")) return;
@@ -246,20 +264,6 @@ export function ActionItemsHub() {
     } finally {
       setBulkOperationLoading(false);
     }
-  };
-
-  const getCategoryBadge = (category: string) => {
-    return (
-      <span
-        className={`px-2 py-1 text-xs rounded-full font-medium ${
-          category === "ALLORO"
-            ? "bg-purple-100 text-purple-800"
-            : "bg-blue-100 text-blue-800"
-        }`}
-      >
-        {category}
-      </span>
-    );
   };
 
   const formatDate = (dateString: string) => {
@@ -509,7 +513,30 @@ export function ActionItemsHub() {
                   </div>
                 )}
               </div>
-              <div>{getCategoryBadge(task.category)}</div>
+              <div>
+                {updatingCategoryId === task.id ? (
+                  <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Updating...
+                  </div>
+                ) : (
+                  <select
+                    value={task.category}
+                    onChange={(e) =>
+                      handleCategoryChange(task.id, e.target.value)
+                    }
+                    disabled={updatingCategoryId !== null}
+                    className={`rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      task.category === "ALLORO"
+                        ? "text-purple-700"
+                        : "text-blue-700"
+                    }`}
+                  >
+                    <option value="ALLORO">ALLORO</option>
+                    <option value="USER">USER</option>
+                  </select>
+                )}
+              </div>
               <div>
                 {updatingStatusId === task.id ? (
                   <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">

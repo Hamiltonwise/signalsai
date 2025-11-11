@@ -351,7 +351,6 @@ export function AgentInsights() {
           </label>
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-500">
-          <span className="hidden sm:inline">Auto-refreshing every 3s</span>
           {lastUpdated && (
             <span className="hidden sm:inline">
               Last updated {lastUpdated.toLocaleTimeString()}

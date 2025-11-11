@@ -7,6 +7,12 @@ export type ActionItemStatus =
   | "in_progress"
   | "archived";
 
+export type AgentType =
+  | "GBP_OPTIMIZATION"
+  | "OPPORTUNITY"
+  | "CRO_OPTIMIZER"
+  | "MANUAL";
+
 export interface ActionItem {
   id: number;
   domain_name: string;
@@ -17,6 +23,7 @@ export interface ActionItem {
   status: ActionItemStatus;
   is_approved: boolean;
   created_by_admin: boolean;
+  agent_type?: AgentType | null;
   created_at: string;
   updated_at: string;
   completed_at?: string;
@@ -70,6 +77,7 @@ export interface FetchActionItemsRequest {
   category?: ActionItemCategory;
   status?: ActionItemStatus;
   is_approved?: boolean;
+  agent_type?: AgentType;
   limit?: number;
   offset?: number;
   date_from?: string;

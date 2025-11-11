@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   CheckSquare,
   Square,
@@ -19,6 +19,27 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [clampedTasks, setClampedTasks] = useState<Set<number>>(new Set());
+  const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
+
+  // Check which descriptions are clamped after tasks load
+  useEffect(() => {
+    if (!tasks) return;
+
+    const checkClamped = () => {
+      const newClampedTasks = new Set<number>();
+      descriptionRefs.current.forEach((element, taskId) => {
+        if (element && element.scrollHeight > element.clientHeight) {
+          newClampedTasks.add(taskId);
+        }
+      });
+      setClampedTasks(newClampedTasks);
+    };
+
+    // Small delay to ensure DOM is rendered
+    setTimeout(checkClamped, 100);
+  }, [tasks]);
 
   // Fetch tasks on mount and when googleAccountId changes
   useEffect(() => {
@@ -221,9 +242,50 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                         {getStatusBadge(task.status)}
                       </div>
                       {task.description && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                          {task.description}
-                        </p>
+                        <div className="mb-3">
+                          <p
+                            ref={(el) => {
+                              if (el) {
+                                descriptionRefs.current.set(task.id, el);
+                              }
+                            }}
+                            onClick={() => {
+                              if (clampedTasks.has(task.id)) {
+                                setExpandedTaskId(
+                                  expandedTaskId === task.id ? null : task.id
+                                );
+                              }
+                            }}
+                            className={`text-sm text-gray-600 transition-colors ${
+                              expandedTaskId === task.id ? "" : "line-clamp-2"
+                            } ${
+                              clampedTasks.has(task.id)
+                                ? "cursor-pointer hover:text-gray-800"
+                                : ""
+                            }`}
+                            title={
+                              clampedTasks.has(task.id)
+                                ? "Click to expand/collapse"
+                                : undefined
+                            }
+                          >
+                            {task.description}
+                          </p>
+                          {clampedTasks.has(task.id) && (
+                            <button
+                              onClick={() =>
+                                setExpandedTaskId(
+                                  expandedTaskId === task.id ? null : task.id
+                                )
+                              }
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+                            >
+                              {expandedTaskId === task.id
+                                ? "Show less"
+                                : "Read more"}
+                            </button>
+                          )}
+                        </div>
                       )}
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span>Created {formatDate(task.created_at)}</span>
@@ -312,15 +374,58 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                         {getStatusBadge(task.status)}
                       </div>
                       {task.description && (
-                        <p
-                          className={`text-sm mb-3 line-clamp-2 ${
-                            task.status === "complete"
-                              ? "text-gray-400"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {task.description}
-                        </p>
+                        <div className="mb-3">
+                          <p
+                            ref={(el) => {
+                              if (el) {
+                                descriptionRefs.current.set(task.id, el);
+                              }
+                            }}
+                            onClick={() => {
+                              if (clampedTasks.has(task.id)) {
+                                setExpandedTaskId(
+                                  expandedTaskId === task.id ? null : task.id
+                                );
+                              }
+                            }}
+                            className={`text-sm transition-opacity ${
+                              expandedTaskId === task.id ? "" : "line-clamp-2"
+                            } ${
+                              task.status === "complete"
+                                ? "text-gray-400"
+                                : "text-gray-600"
+                            } ${
+                              clampedTasks.has(task.id)
+                                ? "cursor-pointer hover:opacity-80"
+                                : ""
+                            }`}
+                            title={
+                              clampedTasks.has(task.id)
+                                ? "Click to expand/collapse"
+                                : undefined
+                            }
+                          >
+                            {task.description}
+                          </p>
+                          {clampedTasks.has(task.id) && (
+                            <button
+                              onClick={() =>
+                                setExpandedTaskId(
+                                  expandedTaskId === task.id ? null : task.id
+                                )
+                              }
+                              className={`text-xs font-medium mt-1 ${
+                                task.status === "complete"
+                                  ? "text-gray-400 hover:text-gray-500"
+                                  : "text-blue-600 hover:text-blue-800"
+                              }`}
+                            >
+                              {expandedTaskId === task.id
+                                ? "Show less"
+                                : "Read more"}
+                            </button>
+                          )}
+                        </div>
                       )}
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span>Created {formatDate(task.created_at)}</span>

@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { CheckSquare, Cpu, LineChart, Globe } from "lucide-react";
 
 export type AdminNavKey =
@@ -6,11 +7,6 @@ export type AdminNavKey =
   | "ai-pms-automation"
   | "ai-data-insight"
   | "webdev-engine";
-
-export interface AdminSidebarProps {
-  activeKey: AdminNavKey;
-  onSelect?: (key: AdminNavKey) => void;
-}
 
 const NAV_ITEMS: Array<{
   key: AdminNavKey;
@@ -23,7 +19,12 @@ const NAV_ITEMS: Array<{
   { key: "webdev-engine", label: "Alloro WebDev Engine", icon: Globe },
 ];
 
-export function AdminSidebar({ activeKey, onSelect }: AdminSidebarProps) {
+export function AdminSidebar() {
+  const location = useLocation();
+
+  // Extract the current page from the pathname
+  const currentPath = location.pathname.split("/").pop() || "ai-pms-automation";
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
       <div className="px-6 py-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
@@ -31,13 +32,12 @@ export function AdminSidebar({ activeKey, onSelect }: AdminSidebarProps) {
       </div>
       <nav className="flex-1 space-y-1 px-4 pb-6">
         {NAV_ITEMS.map(({ key, label, icon: Icon }) => {
-          const isActive = key === activeKey;
+          const isActive = key === currentPath;
 
           return (
-            <button
+            <Link
               key={key}
-              type="button"
-              onClick={() => onSelect?.(key)}
+              to={`/admin/${key}`}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                 isActive
                   ? "bg-blue-50 text-blue-700"
@@ -50,12 +50,10 @@ export function AdminSidebar({ activeKey, onSelect }: AdminSidebarProps) {
                 }`}
               />
               <span>{label}</span>
-            </button>
+            </Link>
           );
         })}
       </nav>
     </aside>
   );
 }
-
-export { NAV_ITEMS as ADMIN_NAV_ITEMS };

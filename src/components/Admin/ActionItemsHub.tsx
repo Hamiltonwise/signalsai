@@ -9,6 +9,7 @@ import {
   Loader2,
   CheckSquare,
   Square,
+  Eye,
 } from "lucide-react";
 import {
   fetchAllTasks,
@@ -24,8 +25,11 @@ import type {
   ActionItem,
   FetchActionItemsRequest,
   ClientOption,
+  AgentType,
 } from "../../types/tasks";
 import { CreateTaskModal } from "./CreateTaskModal";
+import { TaskDetailsModal } from "../tasks/TaskDetailsModal";
+import { AgentTypePill } from "../tasks/AgentTypePill";
 
 export function ActionItemsHub() {
   const [tasks, setTasks] = useState<ActionItem[]>([]);
@@ -33,6 +37,8 @@ export function ActionItemsHub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<ActionItem | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Multi-select state
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(
@@ -58,6 +64,7 @@ export function ActionItemsHub() {
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedAgentType, setSelectedAgentType] = useState<string>("all");
   const [selectedApproval, setSelectedApproval] = useState<string>("all");
 
   useEffect(() => {
@@ -66,6 +73,15 @@ export function ActionItemsHub() {
 
   useEffect(() => {
     loadTasks();
+  }, [filters]);
+
+  // Auto-refresh effect - silent refresh every 3 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadTasks({ silent: true });
+    }, 3000);
+
+    return () => clearInterval(intervalId);
   }, [filters]);
 
   const loadClients = async () => {
@@ -77,9 +93,11 @@ export function ActionItemsHub() {
     }
   };
 
-  const loadTasks = async () => {
+  const loadTasks = async (options?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!options?.silent) {
+        setLoading(true);
+      }
       setError(null);
       const response = await fetchAllTasks(filters);
       setTasks(response.tasks);
@@ -87,7 +105,9 @@ export function ActionItemsHub() {
       console.error("Failed to fetch tasks:", err);
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -110,6 +130,9 @@ export function ActionItemsHub() {
     if (selectedCategory !== "all") {
       newFilters.category = selectedCategory as "ALLORO" | "USER";
     }
+    if (selectedAgentType !== "all") {
+      newFilters.agent_type = selectedAgentType as AgentType;
+    }
     if (selectedApproval !== "all") {
       newFilters.is_approved = selectedApproval === "true";
     }
@@ -121,8 +144,14 @@ export function ActionItemsHub() {
     setSelectedClient("all");
     setSelectedStatus("all");
     setSelectedCategory("all");
+    setSelectedAgentType("all");
     setSelectedApproval("all");
     setFilters({ limit: 50, offset: 0 });
+  };
+
+  const handleViewDetails = (task: ActionItem) => {
+    setSelectedTask(task);
+    setShowDetailsModal(true);
   };
 
   const handleApprove = async (taskId: number, currentApproval: boolean) => {
@@ -342,9 +371,9 @@ export function ActionItemsHub() {
       )}
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
             Client
             <select
               value={selectedClient}
@@ -359,7 +388,7 @@ export function ActionItemsHub() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
             Status
             <select
               value={selectedStatus}
@@ -373,7 +402,7 @@ export function ActionItemsHub() {
               <option value="archived">Archived</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
             Category
             <select
               value={selectedCategory}
@@ -385,7 +414,21 @@ export function ActionItemsHub() {
               <option value="USER">USER</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            Agent Type
+            <select
+              value={selectedAgentType}
+              onChange={(e) => setSelectedAgentType(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="all">All Types</option>
+              <option value="GBP_OPTIMIZATION">GBP Copy</option>
+              <option value="OPPORTUNITY">Opportunity</option>
+              <option value="CRO_OPTIMIZER">CRO</option>
+              <option value="MANUAL">Manual</option>
+            </select>
+          </label>
+          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
             Approval
             <select
               value={selectedApproval}
@@ -420,7 +463,7 @@ export function ActionItemsHub() {
           </button>
           <button
             type="button"
-            onClick={loadTasks}
+            onClick={() => loadTasks()}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
           >
@@ -436,7 +479,7 @@ export function ActionItemsHub() {
 
       {/* Tasks Table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[auto_1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="grid grid-cols-[auto_1fr_1.5fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
           <button
             onClick={toggleSelectAll}
             disabled={tasks.length === 0}
@@ -456,6 +499,7 @@ export function ActionItemsHub() {
           <span>Client</span>
           <span>Task</span>
           <span>Category</span>
+          <span>Agent Type</span>
           <span>Status</span>
           <span>Approval</span>
           <span>Created</span>
@@ -471,7 +515,7 @@ export function ActionItemsHub() {
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
             <p className="text-red-600 mb-4">{error}</p>
             <button
-              onClick={loadTasks}
+              onClick={() => loadTasks()}
               className="rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
             >
               Retry
@@ -485,7 +529,7 @@ export function ActionItemsHub() {
           tasks.map((task) => (
             <div
               key={task.id}
-              className={`grid grid-cols-[auto_1.2fr_1.8fr_1fr_1fr_1fr_1fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
+              className={`grid grid-cols-[auto_1fr_1.5fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
                 selectedTaskIds.has(task.id) ? "bg-blue-50" : ""
               }`}
             >
@@ -538,6 +582,9 @@ export function ActionItemsHub() {
                 )}
               </div>
               <div>
+                <AgentTypePill agentType={task.agent_type ?? null} />
+              </div>
+              <div>
                 {updatingStatusId === task.id ? (
                   <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -587,6 +634,14 @@ export function ActionItemsHub() {
                 {formatDate(task.created_at)}
               </div>
               <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => handleViewDetails(task)}
+                  className="inline-flex items-center gap-1 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
+                  title="View task details"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  View
+                </button>
                 {deletingId === task.id ? (
                   <div className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -647,6 +702,16 @@ export function ActionItemsHub() {
           loadTasks();
         }}
         clients={clients}
+      />
+
+      {/* Task Details Modal */}
+      <TaskDetailsModal
+        task={selectedTask}
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedTask(null);
+        }}
       />
     </div>
   );

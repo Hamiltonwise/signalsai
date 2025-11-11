@@ -12,6 +12,8 @@ import { useAgentData } from "../../hooks/useAgentData";
 import { useAuth } from "../../hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { fetchPmsKeyData, type PmsKeyDataResponse } from "../../api/pms";
+import { fetchClientTasks } from "../../api/tasks";
+import type { ActionItem } from "../../types/tasks";
 import { useGSC } from "../../hooks/useGSC";
 import { useGA4 } from "../../hooks/useGA4";
 import { useClarity } from "../../hooks/useClarity";
@@ -39,6 +41,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   );
   const [pmsLoading, setPmsLoading] = useState(true);
   const [pmsError, setPmsError] = useState<string | null>(null);
+
+  // Tasks data state
+  const [tasks, setTasks] = useState<ActionItem[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
 
   // Fetch PMS data
   useEffect(() => {
@@ -72,6 +79,41 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
     loadPmsData();
   }, [userProfile?.domainName]);
+
+  // Fetch tasks data
+  useEffect(() => {
+    const loadTasks = async () => {
+      if (!googleAccountId) {
+        setTasksLoading(false);
+        return;
+      }
+
+      setTasksLoading(true);
+      setTasksError(null);
+
+      try {
+        const response = await fetchClientTasks(googleAccountId);
+        if (response?.success && response.tasks) {
+          // Combine ALLORO and USER tasks, filter for OPPORTUNITY agent type
+          const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
+          const opportunityTasks = allTasks.filter(
+            (task) => task.agent_type === "OPPORTUNITY"
+          );
+          setTasks(opportunityTasks);
+        } else {
+          setTasksError("Failed to load tasks");
+        }
+      } catch (err) {
+        setTasksError(
+          err instanceof Error ? err.message : "Failed to load tasks"
+        );
+      } finally {
+        setTasksLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, [googleAccountId]);
 
   // Calculate PMS metrics from latest month
   const calculatePmsMetrics = () => {
@@ -702,59 +744,94 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </div>
             )}
 
-            {/* Next Steps Section */}
-            {opportunityData?.opportunities &&
-              opportunityData.opportunities.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 text-sm">→</span>
-                    </div>
-                    <h3 className="text-base font-semibold text-gray-900">
-                      Next Steps:
-                    </h3>
+            {/* Next Steps Section - Now using approved tasks from database */}
+            {tasksLoading ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-600 text-sm">→</span>
                   </div>
-                  <div className="space-y-2">
-                    {opportunityData.opportunities.map(
-                      (
-                        opp: {
-                          title: string;
-                          urgency: string;
-                          category: string;
-                          explanation: string;
-                        },
-                        index: number
-                      ) => (
-                        <div
-                          key={index}
-                          className="bg-blue-50 border border-blue-200 rounded-lg p-3"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {opp.title}
-                            </p>
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                opp.urgency === "Immediate"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {opp.urgency}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700">
-                            {opp.explanation}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Category: {opp.category}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Next Steps:
+                  </h3>
                 </div>
-              )}
+                <div className="text-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Loading tasks...</p>
+                </div>
+              </div>
+            ) : tasksError ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-600 text-sm">→</span>
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Next Steps:
+                  </h3>
+                </div>
+                <div className="text-center py-4">
+                  <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                  <p className="text-sm text-red-600">{tasksError}</p>
+                </div>
+              </div>
+            ) : tasks.length > 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-600 text-sm">→</span>
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Next Steps:
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  {tasks.map((task) => {
+                    // Parse metadata to get urgency
+                    let urgency = "Normal";
+                    try {
+                      const metadata =
+                        typeof task.metadata === "string"
+                          ? JSON.parse(task.metadata)
+                          : task.metadata;
+                      urgency = metadata?.urgency || "Normal";
+                    } catch {
+                      // If parsing fails, use default
+                    }
+
+                    return (
+                      <div
+                        key={task.id}
+                        className="bg-blue-50 border border-blue-200 rounded-lg p-3"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {task.title}
+                          </p>
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              urgency === "Immediate"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {urgency}
+                          </span>
+                        </div>
+                        {task.description && (
+                          <p className="text-sm text-gray-700">
+                            {task.description}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Category: {task.category}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </>
         ) : (
           <div className="text-center py-12">

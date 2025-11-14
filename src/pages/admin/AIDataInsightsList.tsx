@@ -18,6 +18,7 @@ export default function AIDataInsightsList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isRunning, setIsRunning] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     fetchSummary();
@@ -97,6 +98,153 @@ export default function AIDataInsightsList() {
     }
   };
 
+  const handleClearData = async () => {
+    if (isClearing) return;
+
+    if (
+      !confirm(
+        "This will delete ALL Guardian and Governance data for this month. This action cannot be undone. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      const response = await fetch(
+        "/api/admin/agent-insights/clear-month-data",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(
+          `Successfully cleared ${data.deleted.recommendations} recommendations and ${data.deleted.agent_results} agent results.`
+        );
+        fetchSummary();
+      } else {
+        alert("Failed to clear data: " + (data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Failed to clear Guardian/Governance data:", err);
+      alert("Failed to clear data. Please try again.");
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  // Render action buttons (used in multiple states)
+  const renderActionButtons = () => (
+    <div className="flex gap-2">
+      <button
+        onClick={handleRunAgents}
+        disabled={isRunning || isClearing}
+        className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isRunning ? (
+          <>
+            <svg
+              className="animate-spin h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Running...
+          </>
+        ) : (
+          <>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Run Guardian & Governance
+          </>
+        )}
+      </button>
+      <button
+        onClick={handleClearData}
+        disabled={isRunning || isClearing}
+        className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isClearing ? (
+          <>
+            <svg
+              className="animate-spin h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Clearing...
+          </>
+        ) : (
+          <>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Clear Month Data
+          </>
+        )}
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -118,12 +266,30 @@ export default function AIDataInsightsList() {
 
   if (summaryData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600 text-center">
-          <p className="text-lg mb-2">No agent data available</p>
-          <p className="text-sm">
-            Guardian and Governance agents haven't run yet this month
-          </p>
+      <div className="space-y-4">
+        {/* Header with buttons even in empty state */}
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <p className="text-gray-600">
+              {new Date().toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+          {renderActionButtons()}
+        </div>
+
+        {/* Empty state message */}
+        <div className="flex items-center justify-center h-64 rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="text-gray-600 text-center">
+            <p className="text-lg mb-2">No agent data available</p>
+            <p className="text-sm">
+              Guardian and Governance agents haven't run yet this month.
+              <br />
+              Click "Run Guardian & Governance" above to start.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -144,60 +310,7 @@ export default function AIDataInsightsList() {
             })}
           </p>
         </div>
-        <button
-          onClick={handleRunAgents}
-          disabled={isRunning}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isRunning ? (
-            <>
-              <svg
-                className="animate-spin h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Running...
-            </>
-          ) : (
-            <>
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Run Guardian & Governance
-            </>
-          )}
-        </button>
+        {renderActionButtons()}
       </div>
 
       {/* Table */}

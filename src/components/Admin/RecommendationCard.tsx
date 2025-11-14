@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { CheckSquare, Square, Loader2 } from "lucide-react";
 import type { AgentRecommendation } from "../../types/agentInsights";
 

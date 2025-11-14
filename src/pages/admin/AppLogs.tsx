@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Trash2, AlertCircle, RefreshCw } from "lucide-react";
 
 interface LogsData {

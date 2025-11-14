@@ -5,13 +5,18 @@ import {
   AgentInsights,
 } from "../components/Admin";
 import { ActionItemsHub } from "@/components/Admin/ActionItemsHub";
+import AIDataInsightsList from "./admin/AIDataInsightsList";
+import AIDataInsightsDetail from "./admin/AIDataInsightsDetail";
+import AppLogs from "./admin/AppLogs";
 
 // Map route paths to titles
 const ROUTE_TITLES: Record<string, string> = {
   "ai-pms-automation": "AI PMS Automation",
   "action-items": "Action Items Hub",
   "ai-data-insight": "AI Data Insight",
+  "ai-data-insights": "AI Data Insights Dashboard",
   "webdev-engine": "Alloro WebDev Engine",
+  "app-logs": "App Logs",
 };
 
 function WebDevEngine() {
@@ -51,7 +56,13 @@ export default function Admin() {
         <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
         <Route path="action-items" element={<ActionItemsHub />} />
         <Route path="ai-data-insight" element={<AgentInsights />} />
+        <Route path="ai-data-insights" element={<AIDataInsightsList />} />
+        <Route
+          path="ai-data-insights/:agentType"
+          element={<AIDataInsightsDetail />}
+        />
         <Route path="webdev-engine" element={<WebDevEngine />} />
+        <Route path="app-logs" element={<AppLogs />} />
       </Routes>
     </AdminLayout>
   );

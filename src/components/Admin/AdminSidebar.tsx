@@ -1,12 +1,13 @@
 import type { ComponentType } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { CheckSquare, Cpu, LineChart, Globe } from "lucide-react";
+import { CheckSquare, Cpu, LineChart, Globe, FileText } from "lucide-react";
 
 export type AdminNavKey =
   | "action-items"
   | "ai-pms-automation"
-  | "ai-data-insight"
-  | "webdev-engine";
+  | "ai-data-insights"
+  | "webdev-engine"
+  | "app-logs";
 
 const NAV_ITEMS: Array<{
   key: AdminNavKey;
@@ -15,8 +16,13 @@ const NAV_ITEMS: Array<{
 }> = [
   { key: "action-items", label: "Action Items Hub", icon: CheckSquare },
   { key: "ai-pms-automation", label: "AI PMS Automation", icon: Cpu },
-  { key: "ai-data-insight", label: "AI Data Insight", icon: LineChart },
+  {
+    key: "ai-data-insights",
+    label: "AI Data Insights Dashboard",
+    icon: LineChart,
+  },
   { key: "webdev-engine", label: "Alloro WebDev Engine", icon: Globe },
+  { key: "app-logs", label: "App Logs", icon: FileText },
 ];
 
 export function AdminSidebar() {

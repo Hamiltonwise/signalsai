@@ -37,7 +37,7 @@ export interface AgentRecommendation {
   escalation_required: boolean;
 
   // Tracking
-  status: "PENDING" | "COMPLETED";
+  status: "PASS" | "REJECT" | null;
 
   // Timestamps
   observed_at: string;

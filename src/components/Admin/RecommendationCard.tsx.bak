@@ -25,7 +25,7 @@ export default function RecommendationCard({
 
     try {
       const newStatus =
-        recommendation.status === "PASS" ? "REJECT" : "PASS";
+        recommendation.status === "PENDING" ? "COMPLETED" : "PENDING";
 
       const response = await fetch(
         `/api/admin/agent-insights/recommendations/${recommendation.id}`,
@@ -83,14 +83,14 @@ export default function RecommendationCard({
               disabled={isUpdating}
               className="flex-shrink-0 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed disabled:hover:scale-100"
               title={
-                recommendation.status === "PASS"
+                recommendation.status === "COMPLETED"
                   ? "Mark as pending"
                   : "Mark as completed"
               }
             >
               {isUpdating ? (
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-              ) : recommendation.status === "PASS" ? (
+              ) : recommendation.status === "COMPLETED" ? (
                 <CheckSquare className="w-5 h-5 text-green-600 hover:text-green-700" />
               ) : (
                 <Square className="w-5 h-5 text-gray-400 hover:text-blue-600" />
@@ -100,7 +100,7 @@ export default function RecommendationCard({
         </div>
 
         {/* Status Badge */}
-        {recommendation.status === "REJECT" && (
+        {recommendation.status === "PENDING" && (
           <div className="mt-2">
             <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-50 text-orange-600 rounded border border-orange-200">
               Pending

@@ -137,6 +137,43 @@ export default function AIDataInsightsList() {
     }
   };
 
+  const handleGenerateLogRef = async (
+    agentType: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+
+    try {
+      const response = await fetch(
+        `/api/admin/agent-insights/${agentType}/passed-ids`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.ids.length === 0) {
+          alert(
+            `No PASS recommendations found for ${formatAgentName(agentType)}`
+          );
+        } else {
+          const message = `Governance Log Reference for ${formatAgentName(
+            agentType
+          )}:\n\nPASS Recommendation IDs:\n${data.ids.join(", ")}\n\nTotal: ${
+            data.count
+          } recommendations`;
+          alert(message);
+          console.log("PASS IDs for", agentType, ":", data.ids);
+        }
+      } else {
+        alert(
+          "Failed to generate log ref: " + (data.message || "Unknown error")
+        );
+      }
+    } catch (err) {
+      console.error("Failed to generate governance log ref:", err);
+      alert("Failed to generate governance log reference. Please try again.");
+    }
+  };
+
   // Render action buttons (used in multiple states)
   const renderActionButtons = () => (
     <div className="flex gap-2">
@@ -356,15 +393,24 @@ export default function AIDataInsightsList() {
                   {agent.fixed_count}
                 </td>
                 <td className="py-4 px-4">
-                  <button
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRowClick(agent.agent_type);
-                    }}
-                  >
-                    View more
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      className="text-purple-600 hover:text-purple-700 text-sm font-medium whitespace-nowrap"
+                      onClick={(e) => handleGenerateLogRef(agent.agent_type, e)}
+                      title="Generate governance log reference"
+                    >
+                      Governance Log IDs
+                    </button>
+                    <button
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRowClick(agent.agent_type);
+                      }}
+                    >
+                      View more
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

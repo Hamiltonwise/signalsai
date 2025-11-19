@@ -145,23 +145,29 @@ export default function AIDataInsightsList() {
 
     try {
       const response = await fetch(
-        `/api/admin/agent-insights/${agentType}/passed-ids`
+        `/api/admin/agent-insights/${agentType}/governance-ids`
       );
       const data = await response.json();
 
       if (data.success) {
-        if (data.ids.length === 0) {
+        const totalCount = data.counts.passed + data.counts.rejected;
+
+        if (totalCount === 0) {
           alert(
-            `No PASS recommendations found for ${formatAgentName(agentType)}`
+            `No PASS or REJECT recommendations found for ${formatAgentName(
+              agentType
+            )}`
           );
         } else {
           const message = `Governance Log Reference for ${formatAgentName(
             agentType
-          )}:\n\nPASS Recommendation IDs:\n${data.ids.join(", ")}\n\nTotal: ${
-            data.count
-          } recommendations`;
+          )}:\n\nPASSED (${data.counts.passed}):\n${
+            data.passed.length > 0 ? data.passed.join(", ") : "None"
+          }\n\nREJECTED (${data.counts.rejected}):\n${
+            data.rejected.length > 0 ? data.rejected.join(", ") : "None"
+          }\n\nTotal: ${totalCount} recommendations`;
           alert(message);
-          console.log("PASS IDs for", agentType, ":", data.ids);
+          console.log("Governance IDs for", agentType, ":", data);
         }
       } else {
         alert(
@@ -337,9 +343,6 @@ export default function AIDataInsightsList() {
       {/* Header */}
       <div className="mb-6 flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            AI Data Insights Dashboard
-          </h1>
           <p className="text-gray-600">
             {new Date().toLocaleDateString("en-US", {
               month: "long",

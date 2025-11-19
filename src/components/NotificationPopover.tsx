@@ -11,6 +11,7 @@ import {
   Info,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -26,6 +27,7 @@ interface NotificationPopoverProps {
 export function NotificationPopover({
   googleAccountId,
 }: NotificationPopoverProps) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -87,7 +89,50 @@ export function NotificationPopover({
     };
   }, [isOpen]);
 
-  const handleMarkAsRead = async (notificationId: number) => {
+  // Get navigation path based on notification type
+  const getNotificationPath = (type: string) => {
+    switch (type) {
+      case "pms":
+        return "/pmsStatistics";
+      case "task":
+        return "/tasks";
+      case "agent":
+        return "/dashboard";
+      default:
+        return "/dashboard";
+    }
+  };
+
+  // Handle notification click - mark as read and navigate
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!googleAccountId) return;
+
+    try {
+      // Mark as read if not already read
+      if (!notification.read) {
+        await markNotificationRead(notification.id, googleAccountId);
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      // Close popover
+      setIsOpen(false);
+
+      // Navigate to appropriate page
+      navigate(getNotificationPath(notification.type));
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (
+    notificationId: number,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation(); // Prevent notification click
     if (!googleAccountId) return;
 
     try {
@@ -229,7 +274,8 @@ export function NotificationPopover({
               return (
                 <div
                   key={notification.id}
-                  className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
                     !notification.read
                       ? "bg-blue-50/50 dark:bg-blue-900/20"
                       : ""
@@ -264,7 +310,9 @@ export function NotificationPopover({
                         </div>
                         {!notification.read && (
                           <button
-                            onClick={() => handleMarkAsRead(notification.id)}
+                            onClick={(e) =>
+                              handleMarkAsRead(notification.id, e)
+                            }
                             className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex-shrink-0"
                             title="Mark as read"
                           >

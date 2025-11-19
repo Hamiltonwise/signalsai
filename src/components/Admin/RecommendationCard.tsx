@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { CheckSquare, Square, Loader2 } from "lucide-react";
 import type { AgentRecommendation } from "../../types/agentInsights";
 
 interface Props {
@@ -18,15 +17,12 @@ export default function RecommendationCard({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleToggleStatus = async () => {
+  const handleStatusChange = async (newStatus: string) => {
     if (isUpdating) return;
 
     setIsUpdating(true);
 
     try {
-      const newStatus =
-        recommendation.status === "PASS" ? "REJECT" : "PASS";
-
       const response = await fetch(
         `/api/admin/agent-insights/recommendations/${recommendation.id}`,
         {
@@ -77,34 +73,33 @@ export default function RecommendationCard({
               Feed to Fixer agent
             </button>
 
-            {/* Status Checkbox */}
-            <button
-              onClick={handleToggleStatus}
+            {/* Status Dropdown */}
+            <select
+              value={recommendation.status || "IGNORE"}
+              onChange={(e) => handleStatusChange(e.target.value)}
               disabled={isUpdating}
-              className="flex-shrink-0 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed disabled:hover:scale-100"
-              title={
-                recommendation.status === "PASS"
-                  ? "Mark as pending"
-                  : "Mark as completed"
-              }
+              className="flex-shrink-0 border border-gray-300 rounded px-2 py-1 text-sm bg-white hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isUpdating ? (
-                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-              ) : recommendation.status === "PASS" ? (
-                <CheckSquare className="w-5 h-5 text-green-600 hover:text-green-700" />
-              ) : (
-                <Square className="w-5 h-5 text-gray-400 hover:text-blue-600" />
-              )}
-            </button>
+              <option value="IGNORE">Ignore</option>
+              <option value="PASS">Pass</option>
+              <option value="REJECT">Reject</option>
+            </select>
           </div>
         </div>
 
         {/* Status Badge */}
-        {recommendation.status === "REJECT" && (
+        {recommendation.status && (
           <div className="mt-2">
-            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-orange-50 text-orange-600 rounded border border-orange-200">
-              Pending
-            </span>
+            {recommendation.status === "PASS" && (
+              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-50 text-green-600 rounded border border-green-200">
+                Passed
+              </span>
+            )}
+            {recommendation.status === "REJECT" && (
+              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-red-600 rounded border border-red-200">
+                Rejected
+              </span>
+            )}
           </div>
         )}
 

@@ -7,7 +7,9 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAgentData } from "../../hooks/useAgentData";
 import { useAuth } from "../../hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
@@ -18,12 +20,14 @@ import { useGSC } from "../../hooks/useGSC";
 import { useGA4 } from "../../hooks/useGA4";
 import { useClarity } from "../../hooks/useClarity";
 import { useGBP } from "../../hooks/useGBP";
+import { NotificationWidget } from "./NotificationWidget";
 
 interface DashboardOverviewProps {
   googleAccountId?: number | null;
 }
 
 export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
+  const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { data, loading, error, refetch } = useAgentData(
     googleAccountId || null
@@ -44,6 +48,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Tasks data state
   const [tasks, setTasks] = useState<ActionItem[]>([]);
+  const [allUserTasks, setAllUserTasks] = useState<ActionItem[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
@@ -100,6 +105,9 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             (task) => task.agent_type === "OPPORTUNITY"
           );
           setTasks(opportunityTasks);
+
+          // Store all tasks for count calculation
+          setAllUserTasks(response.tasks.USER);
         } else {
           setTasksError("Failed to load tasks");
         }
@@ -318,8 +326,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
       {/* Top Cards Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Fresh Insight Card - Proofline Data */}
+        {/* Fresh Insight Card - Notification Widget + Proofline Data */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 border border-blue-200 shadow-sm">
+          {/* Notification Widget - Above Proofline */}
+          <div className="mb-4">
+            <NotificationWidget googleAccountId={googleAccountId ?? null} />
+          </div>
+
           {prooflineData ? (
             <>
               <div className="flex items-start gap-3 mb-4">
@@ -488,7 +501,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 </span>
               </div>
 
-              <button className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2">
+              <button
+                onClick={() => navigate("/pmsStatistics")}
+                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
+              >
                 View Full PMS Report
                 <ExternalLink className="w-4 h-4" />
               </button>
@@ -830,6 +846,20 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     );
                   })}
                 </div>
+
+                {/* View all action items link */}
+                {allUserTasks.length > 0 && (
+                  <button
+                    onClick={() => navigate("/tasks")}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1.5 hover:gap-2 transition-all"
+                  >
+                    <span>
+                      View {allUserTasks.length} action item
+                      {allUserTasks.length !== 1 ? "s" : ""}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ) : null}
           </>

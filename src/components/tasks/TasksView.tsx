@@ -23,6 +23,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const [clampedTasks, setClampedTasks] = useState<Set<number>>(new Set());
   const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
 
+  // Get user role for permission checks
+  const userRole = localStorage.getItem("user_role");
+  const canEditTasks = userRole === "admin" || userRole === "manager";
+
   // Check which descriptions are clamped after tasks load
   useEffect(() => {
     if (!tasks) return;
@@ -316,10 +320,29 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
             </span>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Tip:</strong> Check off tasks as you complete them to keep
-              track of your progress.
+          <div
+            className={`border rounded-lg p-3 ${
+              canEditTasks
+                ? "bg-blue-50 border-blue-200"
+                : "bg-amber-50 border-amber-200"
+            }`}
+          >
+            <p
+              className={`text-sm ${
+                canEditTasks ? "text-blue-800" : "text-amber-800"
+              }`}
+            >
+              {canEditTasks ? (
+                <>
+                  <strong>Tip:</strong> Check off tasks as you complete them to
+                  keep track of your progress.
+                </>
+              ) : (
+                <>
+                  <strong>View Only:</strong> You can view tasks but cannot edit
+                  them. Contact an admin or manager to update task status.
+                </>
+              )}
             </p>
           </div>
 
@@ -342,24 +365,34 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <button
-                      onClick={() => handleToggleTask(task.id, task.status)}
-                      disabled={completingTaskId === task.id}
-                      className={`mt-1 flex-shrink-0 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed disabled:hover:scale-100`}
-                      title={
-                        task.status === "complete"
-                          ? "Click to undo completion"
-                          : "Click to mark as complete"
-                      }
-                    >
-                      {completingTaskId === task.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                      ) : task.status === "complete" ? (
-                        <CheckSquare className="w-5 h-5 text-green-600 hover:text-green-700" />
-                      ) : (
-                        <Square className="w-5 h-5 text-gray-400 hover:text-blue-600" />
-                      )}
-                    </button>
+                    {canEditTasks ? (
+                      <button
+                        onClick={() => handleToggleTask(task.id, task.status)}
+                        disabled={completingTaskId === task.id}
+                        className={`mt-1 flex-shrink-0 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed disabled:hover:scale-100`}
+                        title={
+                          task.status === "complete"
+                            ? "Click to undo completion"
+                            : "Click to mark as complete"
+                        }
+                      >
+                        {completingTaskId === task.id ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                        ) : task.status === "complete" ? (
+                          <CheckSquare className="w-5 h-5 text-green-600 hover:text-green-700" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400 hover:text-blue-600" />
+                        )}
+                      </button>
+                    ) : (
+                      <div className="mt-1 flex-shrink-0">
+                        {task.status === "complete" ? (
+                          <CheckSquare className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h4

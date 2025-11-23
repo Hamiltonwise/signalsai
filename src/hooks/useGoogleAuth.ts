@@ -35,29 +35,42 @@ export const useGoogleAuth = () => {
     }));
   }, []);
 
-  const setAuthenticated = useCallback((authResponse: AuthResponse) => {
-    setAuthState({
-      isAuthenticated: true,
-      isLoading: false,
-      user: authResponse.user,
-      googleAccount: authResponse.googleAccount,
-      error: null,
-    });
+  const setAuthenticated = useCallback(
+    (authResponse: AuthResponse & { role?: string }) => {
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: authResponse.user,
+        googleAccount: authResponse.googleAccount,
+        error: null,
+      });
 
-    // Do NOT store Google access tokens or expiry in the browser.
-    // The backend refreshes Google tokens; frontend gates on google_account_id only.
-    // Store googleAccountId for multi-tenant API requests
-    if (authResponse.googleAccountId) {
-      localStorage.setItem(
-        "google_account_id",
-        authResponse.googleAccountId.toString()
-      );
-      console.log(
-        "[OAuth] Stored google account ID:",
-        authResponse.googleAccountId
-      );
-    }
-  }, []);
+      // Do NOT store Google access tokens or expiry in the browser.
+      // The backend refreshes Google tokens; frontend gates on google_account_id only.
+      // Store googleAccountId for multi-tenant API requests
+      if (authResponse.googleAccountId) {
+        localStorage.setItem(
+          "google_account_id",
+          authResponse.googleAccountId.toString()
+        );
+        console.log(
+          "[OAuth] Stored google account ID:",
+          authResponse.googleAccountId
+        );
+      }
+
+      // Store user role from OAuth response
+      if (authResponse.role) {
+        localStorage.setItem("user_role", authResponse.role);
+        console.log("[OAuth] Stored user role:", authResponse.role);
+      } else {
+        // Default OAuth users to admin if no role provided (backwards compatibility)
+        localStorage.setItem("user_role", "admin");
+        console.log("[OAuth] Defaulted to admin role");
+      }
+    },
+    []
+  );
 
   const clearAuth = useCallback(() => {
     setAuthState({
@@ -72,6 +85,8 @@ export const useGoogleAuth = () => {
     localStorage.removeItem("google_access_token");
     localStorage.removeItem("google_token_expiry");
     localStorage.removeItem("google_account_id");
+    localStorage.removeItem("auth_token"); // Clear OTP auth token
+    localStorage.removeItem("user_role"); // Clear user role
   }, []);
 
   const closePopup = useCallback(() => {

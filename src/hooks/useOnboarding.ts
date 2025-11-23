@@ -2,15 +2,11 @@ import { useState, useCallback } from "react";
 import onboarding from "../api/onboarding";
 import type {
   AvailableProperties,
-  PropertySelections,
-  GA4Property,
-  GSCSite,
-  GBPLocation,
 } from "../types/onboarding";
 
 export const useOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6; // User info (3 steps) + GA4, GSC, GBP (3 steps)
+  const totalSteps = 3; // User info (3 steps)
 
   // Profile state
   const [firstName, setFirstName] = useState("");
@@ -20,93 +16,21 @@ export const useOnboarding = () => {
 
   const [availableProperties, setAvailableProperties] =
     useState<AvailableProperties | null>(null);
-  const [selections, setSelections] = useState<PropertySelections>({
-    profile: {
-      firstName: "",
-      lastName: "",
-      practiceName: "",
-      domainName: "",
-    },
-    ga4: null,
-    gsc: null,
-    gbp: [],
-  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
    * Fetch available properties from API
+   * Keeping this for now as it might be used for pre-fetching or checking status,
+   * even if not used in the wizard steps directly anymore.
+   * Or we can remove it if we don't show them at all.
+   * The OnboardingContainer still calls it.
    */
   const fetchAvailableProperties = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await onboarding.getAvailableProperties();
-
-      if (response.success && response.properties) {
-        setAvailableProperties(response.properties);
-        console.log(
-          "[Onboarding] Fetched available properties:",
-          response.properties
-        );
-      } else {
-        throw new Error(response.message || "Failed to fetch properties");
-      }
-    } catch (err: any) {
-      console.error("[Onboarding] Error fetching properties:", err);
-      setError(err.message || "Failed to fetch available properties");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  /**
-   * Select GA4 property
-   */
-  const selectGA4Property = useCallback((property: GA4Property | null) => {
-    setSelections((prev) => ({
-      ...prev,
-      ga4: property
-        ? {
-            propertyId: property.propertyId,
-            displayName: property.displayName,
-          }
-        : null,
-    }));
-    console.log("[Onboarding] Selected GA4:", property);
-  }, []);
-
-  /**
-   * Select GSC site
-   */
-  const selectGSCSite = useCallback((site: GSCSite | null) => {
-    setSelections((prev) => ({
-      ...prev,
-      gsc: site
-        ? {
-            siteUrl: site.siteUrl,
-            displayName: site.displayName,
-          }
-        : null,
-    }));
-    console.log("[Onboarding] Selected GSC:", site);
-  }, []);
-
-  /**
-   * Select GBP locations (multiple)
-   */
-  const selectGBPLocations = useCallback((locations: GBPLocation[]) => {
-    setSelections((prev) => ({
-      ...prev,
-      gbp: locations.map((loc) => ({
-        accountId: loc.accountId,
-        locationId: loc.locationId,
-        displayName: loc.displayName,
-      })),
-    }));
-    console.log("[Onboarding] Selected GBP locations:", locations);
+    // No-op for now as we don't need to fetch properties during onboarding
+    // But keeping the function signature to avoid breaking changes if called
+    // setAvailableProperties({ ga4: [], gsc: [], gbp: [] });
   }, []);
 
   /**
@@ -130,33 +54,6 @@ export const useOnboarding = () => {
   }, [currentStep]);
 
   /**
-   * Skip current step
-   */
-  const skipStep = useCallback(() => {
-    // Steps 1-3 are profile steps (cannot skip)
-    // Steps 4-6 are property steps (can skip)
-    if (currentStep === 4) {
-      // Skip GA4
-      selectGA4Property(null);
-    } else if (currentStep === 5) {
-      // Skip GSC
-      selectGSCSite(null);
-    } else if (currentStep === 6) {
-      // Skip GBP
-      selectGBPLocations([]);
-    }
-
-    // Move to next step
-    nextStep();
-  }, [
-    currentStep,
-    nextStep,
-    selectGA4Property,
-    selectGSCSite,
-    selectGBPLocations,
-  ]);
-
-  /**
    * Complete onboarding and save selections
    */
   const completeOnboarding = useCallback(async (): Promise<boolean> => {
@@ -165,21 +62,20 @@ export const useOnboarding = () => {
 
     try {
       // Build selections with profile info
-      const finalSelections: PropertySelections = {
+      const finalSelections = {
         profile: {
           firstName,
           lastName,
           practiceName,
           domainName,
         },
-        ga4: selections.ga4,
-        gsc: selections.gsc,
-        gbp: selections.gbp,
       };
 
       console.log("[Onboarding] Saving selections:", finalSelections);
 
-      const response = await onboarding.saveProperties(finalSelections);
+      // We need to cast to any because the type definition might still expect property selections
+      // pending type updates.
+      const response = await onboarding.saveProperties(finalSelections as any);
 
       if (response.success) {
         console.log("[Onboarding] Successfully completed!");
@@ -194,7 +90,7 @@ export const useOnboarding = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [firstName, lastName, practiceName, domainName, selections]);
+  }, [firstName, lastName, practiceName, domainName]);
 
   /**
    * Reset onboarding state
@@ -205,17 +101,6 @@ export const useOnboarding = () => {
     setLastName("");
     setPracticeName("");
     setDomainName("");
-    setSelections({
-      profile: {
-        firstName: "",
-        lastName: "",
-        practiceName: "",
-        domainName: "",
-      },
-      ga4: null,
-      gsc: null,
-      gbp: [],
-    });
     setError(null);
     console.log("[Onboarding] Reset");
   }, []);
@@ -224,7 +109,6 @@ export const useOnboarding = () => {
     currentStep,
     totalSteps,
     availableProperties,
-    selections,
     isLoading,
     error,
 
@@ -239,12 +123,8 @@ export const useOnboarding = () => {
     setDomainName,
 
     fetchAvailableProperties,
-    selectGA4Property,
-    selectGSCSite,
-    selectGBPLocations,
     nextStep,
     previousStep,
-    skipStep,
     completeOnboarding,
     resetOnboarding,
   };

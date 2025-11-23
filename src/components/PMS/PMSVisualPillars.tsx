@@ -69,6 +69,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
+  // Get user role for permission checks
+  const userRole = localStorage.getItem("user_role");
+  const canUploadPMS = userRole === "admin" || userRole === "manager";
+
   const storageKey = useMemo(
     () => `pmsProcessing:${domain || DEFAULT_DOMAIN}`,
     [domain]
@@ -451,80 +455,100 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         </div>
       )}
 
-      {/* Inline Upload Panel */}
-      <div className="mt-8">
-        <h3 className="text-lg font-[200] text-slate-900 tracking-tight">
-          PMS Data Upload
-        </h3>
-        <p className="text-xs font-[400] text-slate-600 mb-3">
-          Upload your PMS data below and we'll take care of the rest for you
-        </p>
+      {/* Inline Upload Panel - Only visible to Admin and Manager */}
+      {canUploadPMS ? (
+        <div className="mt-8">
+          <h3 className="text-lg font-[200] text-slate-900 tracking-tight">
+            PMS Data Upload
+          </h3>
+          <p className="text-xs font-[400] text-slate-600 mb-3">
+            Upload your PMS data below and we'll take care of the rest for you
+          </p>
 
-        <div
-          className={`mt-5 border-2 border-dashed rounded-xl p-6 bg-white/40 backdrop-blur-md transition-all duration-300 ${
-            inlineIsDragOver
-              ? "border-emerald-400 bg-emerald-50/60"
-              : inlineFile
-              ? "border-emerald-300"
-              : "border-white/60 hover:border-emerald-400"
-          }`}
-          role="button"
-          onClick={() => inlineInputRef.current?.click()}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setInlineIsDragOver(false);
-            const f = e.dataTransfer?.files?.[0];
-            if (f) handleInlineFile(f);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setInlineIsDragOver(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setInlineIsDragOver(false);
-          }}
-        >
-          <input
-            ref={inlineInputRef}
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls"
-            onChange={(e) => handleInlineFile(e.target.files?.[0] || null)}
-            className="hidden"
-          />
-          <div className="text-center">
-            <div className="text-sm text-slate-700 mb-1">
-              {inlineFile ? inlineFile.name : "Drop your file here or browse"}
-            </div>
-            <div className="text-xs font-[400] text-slate-500 mb-3">
-              CSV, Excel, or Text files supported
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                type="button"
-                onClick={() => inlineInputRef.current?.click()}
-                className="px-4 py-2 rounded-lg text-xs bg-white/70 border border-white/60 hover:bg-white/90 transition"
-              >
-                {inlineFile ? "Choose Different File" : "Browse Files"}
-              </button>
-              {inlineIsUploading && (
-                <div className="px-4 py-2 rounded-lg text-xs text-emerald-800 bg-emerald-50 border border-emerald-200">
-                  Uploading...
+          <div
+            className={`mt-5 border-2 border-dashed rounded-xl p-6 bg-white/40 backdrop-blur-md transition-all duration-300 ${
+              inlineIsDragOver
+                ? "border-emerald-400 bg-emerald-50/60"
+                : inlineFile
+                ? "border-emerald-300"
+                : "border-white/60 hover:border-emerald-400"
+            }`}
+            role="button"
+            onClick={() => inlineInputRef.current?.click()}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setInlineIsDragOver(false);
+              const f = e.dataTransfer?.files?.[0];
+              if (f) handleInlineFile(f);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setInlineIsDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setInlineIsDragOver(false);
+            }}
+          >
+            <input
+              ref={inlineInputRef}
+              type="file"
+              accept=".csv,.txt,.xlsx,.xls"
+              onChange={(e) => handleInlineFile(e.target.files?.[0] || null)}
+              className="hidden"
+            />
+            <div className="text-center">
+              <div className="text-sm text-slate-700 mb-1">
+                {inlineFile ? inlineFile.name : "Drop your file here or browse"}
+              </div>
+              <div className="text-xs font-[400] text-slate-500 mb-3">
+                CSV, Excel, or Text files supported
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={() => inlineInputRef.current?.click()}
+                  className="px-4 py-2 rounded-lg text-xs bg-white/70 border border-white/60 hover:bg-white/90 transition"
+                >
+                  {inlineFile ? "Choose Different File" : "Browse Files"}
+                </button>
+                {inlineIsUploading && (
+                  <div className="px-4 py-2 rounded-lg text-xs text-emerald-800 bg-emerald-50 border border-emerald-200">
+                    Uploading...
+                  </div>
+                )}
+              </div>
+              {/* Success message intentionally suppressed; processing banner will show */}
+              {inlineStatus === "error" && (
+                <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {inlineMessage}
                 </div>
               )}
             </div>
-            {/* Success message intentionally suppressed; processing banner will show */}
-            {inlineStatus === "error" && (
-              <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                {inlineMessage}
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-8">
+          <h3 className="text-lg font-[200] text-slate-900 tracking-tight">
+            PMS Data Upload
+          </h3>
+          <div className="mt-5 border-2 border-dashed rounded-xl p-6 bg-amber-50/40 backdrop-blur-md border-amber-200">
+            <div className="text-center">
+              <AlertCircle className="h-8 w-8 mx-auto mb-3 text-amber-600" />
+              <div className="text-sm text-slate-700 mb-1 font-medium">
+                Upload Restricted
+              </div>
+              <div className="text-xs font-[400] text-slate-600">
+                Only admins and managers can upload PMS data. Please contact
+                your administrator if you need to upload data.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {latestJobId && hasLatestJobRaw && (
         <PMSLatestJobEditor

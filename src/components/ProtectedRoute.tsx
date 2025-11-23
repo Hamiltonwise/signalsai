@@ -9,14 +9,14 @@ interface ProtectedRouteProps {
  * Checks localStorage for authentication tokens (context-free for route-level protection)
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // Authenticate based on presence of google_account_id only.
-  // Google access tokens are refreshed server-side; frontend should not gate on token expiry.
+  // Authenticate based on presence of google_account_id OR auth_token (OTP)
   const googleAccountId = localStorage.getItem("google_account_id");
-  const isAuthenticated = !!googleAccountId;
+  const authToken = localStorage.getItem("auth_token");
+  const isAuthenticated = !!googleAccountId || !!authToken;
 
   if (!isAuthenticated) {
     console.log(
-      "[ProtectedRoute] Missing google_account_id; redirecting to signin",
+      "[ProtectedRoute] Missing authentication (google_account_id or auth_token); redirecting to signin",
       { currentTime: new Date().toISOString() }
     );
     return <Navigate to="/signin" replace />;

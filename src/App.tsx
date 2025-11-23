@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import { Settings } from "./pages/Settings";
 
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GSCProvider } from "./contexts/GSCContext.tsx";
@@ -98,6 +99,16 @@ function App() {
               <ProtectedRoute>
                 <AppProviders>
                   <Admin />
+                </AppProviders>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <AppProviders>
+                  <Settings />
                 </AppProviders>
               </ProtectedRoute>
             }

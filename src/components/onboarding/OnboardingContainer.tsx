@@ -1,13 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOnboarding } from "../../hooks/useOnboarding";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { Step0UserInfo } from "./Step0_UserInfo";
 import { Step1PracticeInfo } from "./Step1_PracticeInfo";
 import { Step2DomainInfo } from "./Step2_DomainInfo";
-import { Step1GA4Selection } from "./Step1_GA4Selection";
-import { Step2GSCSelection } from "./Step2_GSCSelection";
-import { Step3GBPSelection } from "./Step3_GBPSelection";
 import { BootMessages } from "./BootMessages";
 
 interface OnboardingContainerProps {
@@ -20,9 +17,6 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
   const {
     currentStep,
     totalSteps,
-    availableProperties,
-    selections,
-    isLoading,
     error,
     firstName,
     lastName,
@@ -32,23 +26,13 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     setLastName,
     setPracticeName,
     setDomainName,
-    fetchAvailableProperties,
-    selectGA4Property,
-    selectGSCSite,
-    selectGBPLocations,
     nextStep,
     previousStep,
-    skipStep,
     completeOnboarding,
   } = useOnboarding();
 
   const [showBootMessages, setShowBootMessages] = useState(true);
   const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
-
-  // Fetch available properties immediately on mount during boot messages
-  useEffect(() => {
-    fetchAvailableProperties();
-  }, [fetchAvailableProperties]);
 
   // Handle onboarding completion
   const handleComplete = async () => {
@@ -98,10 +82,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     previousStep();
   };
 
-  const handleSkipStep = () => {
-    setDirection(1);
-    skipStep();
-  };
+
 
   // Show "Preparing your dashboard" after completion
   if (isCompletingOnboarding) {
@@ -148,7 +129,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
   if (showBootMessages) {
     return (
       <BootMessages
-        isLoadingComplete={!!availableProperties && !isLoading}
+        isLoadingComplete={true}
         onComplete={() => {
           setShowBootMessages(false);
         }}
@@ -249,86 +230,12 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                 <Step2DomainInfo
                   domainName={domainName}
                   onDomainNameChange={setDomainName}
-                  onNext={handleNextStep}
+                  onNext={handleComplete}
                   onBack={handlePreviousStep}
                 />
               )}
 
-              {/* Property Selection Steps (4-6) */}
-              {currentStep === 4 && availableProperties && (
-                <Step1GA4Selection
-                  properties={availableProperties.ga4}
-                  selectedProperty={
-                    selections.ga4
-                      ? {
-                          propertyId: selections.ga4.propertyId,
-                          displayName: selections.ga4.displayName,
-                        }
-                      : null
-                  }
-                  onSelect={(property) =>
-                    selectGA4Property(
-                      property
-                        ? {
-                            propertyId: property.propertyId,
-                            displayName: property.displayName,
-                          }
-                        : null
-                    )
-                  }
-                  onNext={handleNextStep}
-                  onSkip={handleSkipStep}
-                />
-              )}
 
-              {currentStep === 5 && availableProperties && (
-                <Step2GSCSelection
-                  sites={availableProperties.gsc}
-                  selectedSite={
-                    selections.gsc
-                      ? {
-                          siteUrl: selections.gsc.siteUrl,
-                          displayName: selections.gsc.displayName,
-                        }
-                      : null
-                  }
-                  onSelect={(site) =>
-                    selectGSCSite(
-                      site
-                        ? {
-                            siteUrl: site.siteUrl,
-                            displayName: site.displayName,
-                          }
-                        : null
-                    )
-                  }
-                  onNext={handleNextStep}
-                  onSkip={handleSkipStep}
-                  onBack={handlePreviousStep}
-                />
-              )}
-
-              {currentStep === 6 && availableProperties && (
-                <Step3GBPSelection
-                  locations={availableProperties.gbp}
-                  selectedLocations={selections.gbp}
-                  onSelect={(locations) => selectGBPLocations(locations)}
-                  onComplete={handleComplete}
-                  onSkip={handleComplete}
-                  onBack={handlePreviousStep}
-                  isLoading={isLoading}
-                />
-              )}
-
-              {/* Loading state for property steps if properties haven't loaded yet */}
-              {currentStep >= 4 && !availableProperties && (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#86b4ef] mx-auto mb-4"></div>
-                  <p className="text-gray-700">
-                    Loading your Google properties...
-                  </p>
-                </div>
-              )}
             </motion.div>
           </AnimatePresence>
         </div>

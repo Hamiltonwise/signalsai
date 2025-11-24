@@ -40,19 +40,18 @@ async function getAvailableProperties() {
  * Save user's selected properties
  * @param properties Object containing ga4, gsc, and gbp selections
  */
-async function saveProperties(properties: {
-  ga4: { propertyId: string; displayName: string } | null;
-  gsc: { siteUrl: string; displayName: string } | null;
-  gbp: Array<{
-    accountId: string;
-    locationId: string;
-    displayName: string;
-  }>;
+async function saveProperties(data: {
+  profile: {
+    firstName: string;
+    lastName: string;
+    practiceName: string;
+    domainName: string;
+  };
 }) {
   try {
     return await apiPost({
       path: baseurl + `/save-properties`,
-      passedData: properties,
+      passedData: data,
     });
   } catch (err) {
     console.log(err);

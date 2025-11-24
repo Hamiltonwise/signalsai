@@ -5,9 +5,11 @@ import {
   AgentInsights,
 } from "../components/Admin";
 import { ActionItemsHub } from "@/components/Admin/ActionItemsHub";
+import { AdminGuard } from "@/components/Admin/AdminGuard";
 import AIDataInsightsList from "./admin/AIDataInsightsList";
 import AIDataInsightsDetail from "./admin/AIDataInsightsDetail";
 import AppLogs from "./admin/AppLogs";
+import { OrganizationManagement } from "./admin/OrganizationManagement";
 
 // Map route paths to titles
 const ROUTE_TITLES: Record<string, string> = {
@@ -17,6 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "ai-data-insights": "AI Data Insights Dashboard",
   "webdev-engine": "Alloro WebDev Engine",
   "app-logs": "App Logs",
+  "organization-management": "Organization Management",
 };
 
 function WebDevEngine() {
@@ -41,29 +44,35 @@ export default function Admin() {
   const pageTitle = ROUTE_TITLES[currentPath] || "Control Center";
 
   return (
-    <AdminLayout
-      actionBar={
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-            Control Center
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
-        </div>
-      }
-    >
-      <Routes>
-        <Route path="/" element={<Navigate to="action-items" replace />} />
-        <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
-        <Route path="action-items" element={<ActionItemsHub />} />
-        <Route path="ai-data-insight" element={<AgentInsights />} />
-        <Route path="ai-data-insights" element={<AIDataInsightsList />} />
-        <Route
-          path="ai-data-insights/:agentType"
-          element={<AIDataInsightsDetail />}
-        />
-        <Route path="webdev-engine" element={<WebDevEngine />} />
-        <Route path="app-logs" element={<AppLogs />} />
-      </Routes>
-    </AdminLayout>
+    <AdminGuard>
+      <AdminLayout
+        actionBar={
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+              Control Center
+            </span>
+            <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Navigate to="action-items" replace />} />
+          <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
+          <Route path="action-items" element={<ActionItemsHub />} />
+          <Route path="ai-data-insight" element={<AgentInsights />} />
+          <Route path="ai-data-insights" element={<AIDataInsightsList />} />
+          <Route
+            path="ai-data-insights/:agentType"
+            element={<AIDataInsightsDetail />}
+          />
+          <Route path="webdev-engine" element={<WebDevEngine />} />
+          <Route path="app-logs" element={<AppLogs />} />
+          <Route
+            path="organization-management"
+            element={<OrganizationManagement />}
+          />
+        </Routes>
+      </AdminLayout>
+    </AdminGuard>
   );
 }

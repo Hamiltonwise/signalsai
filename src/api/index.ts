@@ -26,10 +26,21 @@ const getCommonHeaders = (): Record<string, string> => {
   return headers;
 };
 
-export async function apiGet({ path }: { path: string }) {
+export async function apiGet({
+  path,
+  token,
+}: {
+  path: string;
+  token?: string;
+}) {
   try {
+    const headers = getCommonHeaders();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const { data } = await axios.get(api + path, {
-      headers: getCommonHeaders(),
+      headers,
     });
     return data;
   } catch (err) {
@@ -46,6 +57,7 @@ export async function apiPost({
   passedData = {},
   responseType = "json",
   additionalHeaders,
+  token,
 }: {
   path: string;
   passedData?: object | FormData;
@@ -54,6 +66,7 @@ export async function apiPost({
     Accept?: string;
     [key: string]: string | undefined;
   };
+  token?: string;
 }) {
   try {
     // Handle FormData differently - don't set Content-Type for FormData
@@ -61,6 +74,10 @@ export async function apiPost({
 
     // Start with common headers (includes google-account-id)
     const headers: Record<string, string> = getCommonHeaders();
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     // Only add additional headers if they exist and aren't Content-Type for FormData
     if (additionalHeaders) {

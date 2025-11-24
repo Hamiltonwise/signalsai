@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import onboarding from "../api/onboarding";
-import type {
-  AvailableProperties,
-} from "../types/onboarding";
+import type { AvailableProperties } from "../types/onboarding";
 
 export const useOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -14,8 +12,7 @@ export const useOnboarding = () => {
   const [practiceName, setPracticeName] = useState("");
   const [domainName, setDomainName] = useState("");
 
-  const [availableProperties, setAvailableProperties] =
-    useState<AvailableProperties | null>(null);
+  const [availableProperties] = useState<AvailableProperties | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +72,7 @@ export const useOnboarding = () => {
 
       // We need to cast to any because the type definition might still expect property selections
       // pending type updates.
-      const response = await onboarding.saveProperties(finalSelections as any);
+      const response = await onboarding.saveProperties(finalSelections);
 
       if (response.success) {
         console.log("[Onboarding] Successfully completed!");

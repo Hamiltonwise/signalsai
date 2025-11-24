@@ -96,11 +96,9 @@ function App() {
           <Route
             path="/admin/*"
             element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <Admin />
-                </AppProviders>
-              </ProtectedRoute>
+              <AppProviders>
+                <Admin />
+              </AppProviders>
             }
           />
           <Route

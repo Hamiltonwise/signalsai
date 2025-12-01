@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  AlertTriangle,
-  Building2,
-  Settings,
-} from "lucide-react";
+import { AlertTriangle, Building2, Settings } from "lucide-react";
 
 // Import auth and integration hooks for domain selection
 import { useAuth } from "../hooks/useAuth";
@@ -12,6 +8,7 @@ import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 // Dashboard Components
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
 import { DashboardOverview } from "../components/dashboard/DashboardOverview";
+import { ReferralEngineDashboard } from "../components/ReferralEngineDashboard";
 
 // Integration Modal Components ✅
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
@@ -45,7 +42,11 @@ export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    "Dashboard" | "Patient Journey Insights" | "PMS Statistics" | "Tasks"
+    | "Dashboard"
+    | "Patient Journey Insights"
+    | "PMS Statistics"
+    | "Tasks"
+    | "Referral Engine"
   >("Dashboard");
 
   // Onboarding state
@@ -61,6 +62,7 @@ export default function Dashboard() {
       return "Patient Journey Insights";
     if (path.startsWith("/pmsStatistics")) return "PMS Statistics";
     if (path.startsWith("/tasks")) return "Tasks";
+    if (path.startsWith("/referralEngine")) return "Referral Engine";
     return "Dashboard";
   };
 
@@ -79,15 +81,20 @@ export default function Dashboard() {
         // Backend returns { success: true, onboardingCompleted: boolean, hasPropertyIds: boolean }
         if (response.success || response.successful) {
           setOnboardingCompleted(response.onboardingCompleted === true);
-          
+
           // Check if properties are actually connected (parsing the JSON if needed)
           let hasProps = false;
           if (response.propertyIds) {
-             const props = typeof response.propertyIds === 'string' 
-               ? JSON.parse(response.propertyIds) 
-               : response.propertyIds;
-             
-             hasProps = !!(props.ga4 || props.gsc || (props.gbp && props.gbp.length > 0));
+            const props =
+              typeof response.propertyIds === "string"
+                ? JSON.parse(response.propertyIds)
+                : response.propertyIds;
+
+            hasProps = !!(
+              props.ga4 ||
+              props.gsc ||
+              (props.gbp && props.gbp.length > 0)
+            );
           }
           setHasProperties(hasProps);
 
@@ -139,7 +146,7 @@ export default function Dashboard() {
         response.onboardingCompleted === true || response.success === true
       );
       // After simplified onboarding, properties are NOT connected yet
-      setHasProperties(false); 
+      setHasProperties(false);
     } catch (error) {
       console.error("Failed to re-check status:", error);
       setOnboardingCompleted(true); // Assume success
@@ -174,7 +181,7 @@ export default function Dashboard() {
         {/* Main glass content area */}
         <main className="flex-1 glass rounded-3xl overflow-hidden">
           {/* Show loading state while checking onboarding */}
-          {(!ready || checkingOnboarding) ? (
+          {!ready || checkingOnboarding ? (
             <div className="h-full flex items-center justify-center bg-gray-50/50">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -244,9 +251,12 @@ export default function Dashboard() {
                 <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
                   <Settings className="w-12 h-12 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Properties</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Connect Your Properties
+                </h2>
                 <p className="text-gray-600 max-w-md mb-8">
-                  Welcome to Alloro! To get started, please connect your Google Analytics, Search Console, and Business Profile in Settings.
+                  Welcome to Alloro! To get started, please connect your Google
+                  Analytics, Search Console, and Business Profile in Settings.
                 </p>
                 <button
                   onClick={() => navigate("/settings")}
@@ -283,6 +293,12 @@ export default function Dashboard() {
 
                       {activeTab === "Tasks" && (
                         <TasksView
+                          googleAccountId={userProfile?.googleAccountId ?? null}
+                        />
+                      )}
+
+                      {activeTab === "Referral Engine" && (
+                        <ReferralEngineDashboard
                           googleAccountId={userProfile?.googleAccountId ?? null}
                         />
                       )}

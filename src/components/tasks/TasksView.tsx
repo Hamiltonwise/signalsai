@@ -179,8 +179,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Action Items</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-3xl font-thin text-gray-900 mb-1">
+            Action Items
+          </h2>
+          <p className="text-base font-thin text-gray-600">
             Manage your tasks and track progress
           </p>
         </div>

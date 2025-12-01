@@ -125,7 +125,7 @@ const sampleData = {
       referred: 63,
       pct_started: null,
       referrer_id: "DR-HAPPY-SMILES",
-      trend_label: "increasing",
+      trend_label: "increasing" as const,
       pct_examined: null,
       pct_scheduled: null,
       referrer_name: "Happy Smiles",
@@ -138,7 +138,7 @@ const sampleData = {
       referred: 44,
       pct_started: null,
       referrer_id: "DR-LA-FAMILY",
-      trend_label: "decreasing",
+      trend_label: "decreasing" as const,
       pct_examined: null,
       pct_scheduled: null,
       referrer_name: "LA Family Dentistry",
@@ -151,7 +151,7 @@ const sampleData = {
       referred: 28,
       pct_started: null,
       referrer_id: "DR-HOLLYWOOD-SMILES",
-      trend_label: "decreasing",
+      trend_label: "decreasing" as const,
       pct_examined: null,
       pct_scheduled: null,
       referrer_name: "Hollywood Smiles Dental",
@@ -164,7 +164,7 @@ const sampleData = {
       referred: 1,
       pct_started: null,
       referrer_id: "DR-SMILE-GUY",
-      trend_label: "new",
+      trend_label: "new" as const,
       pct_examined: null,
       pct_scheduled: null,
       referrer_name: "Smile Guy",
@@ -187,8 +187,8 @@ const sampleData = {
       referred: 70,
       source_key: "google-organic-paid-mix",
       pct_started: null,
-      source_type: "digital",
-      trend_label: "increasing",
+      source_type: "digital" as const,
+      trend_label: "increasing" as const,
       pct_examined: null,
       source_label: "Google (Search & Maps)",
       pct_scheduled: null,
@@ -201,8 +201,8 @@ const sampleData = {
       referred: 42,
       source_key: "walk-in",
       pct_started: null,
-      source_type: "patient",
-      trend_label: "increasing",
+      source_type: "patient" as const,
+      trend_label: "increasing" as const,
       pct_examined: null,
       source_label: "Walk‑in / Self‑referral (offline)",
       pct_scheduled: null,
@@ -215,8 +215,8 @@ const sampleData = {
       referred: 7,
       source_key: "website-direct-forms",
       pct_started: null,
-      source_type: "digital",
-      trend_label: "increasing",
+      source_type: "digital" as const,
+      trend_label: "increasing" as const,
       pct_examined: null,
       source_label: "Website (Direct/Forms)",
       pct_scheduled: null,
@@ -229,8 +229,8 @@ const sampleData = {
       referred: 7,
       source_key: "facebook-social",
       pct_started: null,
-      source_type: "digital",
-      trend_label: "dormant",
+      source_type: "digital" as const,
+      trend_label: "dormant" as const,
       pct_examined: null,
       source_label: "Facebook",
       pct_scheduled: null,
@@ -243,8 +243,8 @@ const sampleData = {
       referred: 7,
       source_key: "instagram-social",
       pct_started: null,
-      source_type: "digital",
-      trend_label: "increasing",
+      source_type: "digital" as const,
+      trend_label: "increasing" as const,
       pct_examined: null,
       source_label: "Instagram",
       pct_scheduled: null,
@@ -257,8 +257,8 @@ const sampleData = {
       referred: 7,
       source_key: "promotion-offers",
       pct_started: null,
-      source_type: "other",
-      trend_label: "decreasing",
+      source_type: "other" as const,
+      trend_label: "decreasing" as const,
       pct_examined: null,
       source_label: "Promotions / Special Offers",
       pct_scheduled: null,
@@ -271,8 +271,8 @@ const sampleData = {
       referred: 0,
       source_key: "gbp",
       pct_started: null,
-      source_type: "digital",
-      trend_label: "increasing",
+      source_type: "digital" as const,
+      trend_label: "increasing" as const,
       pct_examined: null,
       source_label: "Google Business Profile (Calls & Directions)",
       pct_scheduled: null,
@@ -317,7 +317,7 @@ const sampleData = {
       "Slow season (September–February) → focus on reactivation, doctor relationship building, and system improvements",
     ],
   },
-};
+} as const satisfies ReferralEngineData;
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -445,9 +445,13 @@ const formatDate = (dateString: string | undefined): string => {
 
 const calculateDoctorReferralMetrics = (
   matrix: DoctorReferral[] | undefined
-) => {
+): {
+  total: number;
+  production: number;
+  trend: "increasing" | "decreasing" | "stable";
+} => {
   if (!matrix || matrix.length === 0)
-    return { total: 0, production: 0, trend: "stable" };
+    return { total: 0, production: 0, trend: "stable" as const };
 
   const total = matrix.reduce((sum, r) => sum + (r.referred || 0), 0);
   const production = matrix.reduce(
@@ -1175,9 +1179,13 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
         } else {
           setFetchedData(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to fetch referral engine data:", err);
-        setError(err.message || "Failed to load referral engine data");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load referral engine data"
+        );
       } finally {
         setLoading(false);
       }

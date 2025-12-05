@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type {
   AgentInsightSummary,
   AgentInsightsSummaryResponse,
 } from "../../types/agentInsights";
+import { MonthSelector } from "../../components/Admin";
 
 /**
  * AI Data Insights List Page
@@ -12,6 +13,7 @@ import type {
  */
 export default function AIDataInsightsList() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [summaryData, setSummaryData] = useState<AgentInsightSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,9 +22,24 @@ export default function AIDataInsightsList() {
   const [isRunning, setIsRunning] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
+  // Month selector state - read from URL params, default to current month
+  const getDefaultMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
+  const selectedMonth = searchParams.get("month") || getDefaultMonth();
+
+  const setSelectedMonth = (month: string) => {
+    setSearchParams({ month });
+  };
+
   useEffect(() => {
     fetchSummary();
-  }, [currentPage]);
+  }, [currentPage, selectedMonth]);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -30,7 +47,7 @@ export default function AIDataInsightsList() {
 
     try {
       const response = await fetch(
-        `/api/admin/agent-insights/summary?page=${currentPage}&limit=50`
+        `/api/admin/agent-insights/summary?page=${currentPage}&limit=50&month=${selectedMonth}`
       );
       const data: AgentInsightsSummaryResponse = await response.json();
 
@@ -56,15 +73,25 @@ export default function AIDataInsightsList() {
   };
 
   const handleRowClick = (agentType: string) => {
-    navigate(`/admin/ai-data-insights/${agentType}`);
+    navigate(`/admin/ai-data-insights/${agentType}?month=${selectedMonth}`);
   };
 
   const handleRunAgents = async () => {
     if (isRunning) return;
 
+    // Format month for display in confirmation
+    const [year, monthNum] = selectedMonth.split("-");
+    const monthName = new Date(
+      parseInt(year),
+      parseInt(monthNum) - 1
+    ).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+
     if (
       !confirm(
-        "This will run Guardian and Governance agents across all practices. This may take several minutes. Continue?"
+        `This will run Guardian and Governance agents for ${monthName}. This may take several minutes. Continue?`
       )
     ) {
       return;
@@ -77,6 +104,7 @@ export default function AIDataInsightsList() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ month: selectedMonth }),
         }
       );
 
@@ -84,7 +112,7 @@ export default function AIDataInsightsList() {
 
       if (data.success) {
         alert(
-          "Guardian and Governance agents completed successfully! Refreshing data..."
+          `Guardian and Governance agents completed successfully for ${monthName}! Refreshing data...`
         );
         fetchSummary();
       } else {
@@ -101,9 +129,19 @@ export default function AIDataInsightsList() {
   const handleClearData = async () => {
     if (isClearing) return;
 
+    // Format month for display
+    const [year, month] = selectedMonth.split("-");
+    const monthName = new Date(
+      parseInt(year),
+      parseInt(month) - 1
+    ).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+
     if (
       !confirm(
-        "This will delete ALL Guardian and Governance data for this month. This action cannot be undone. Continue?"
+        `This will delete ALL Guardian and Governance data for ${monthName}. This action cannot be undone. Continue?`
       )
     ) {
       return;
@@ -112,7 +150,7 @@ export default function AIDataInsightsList() {
     setIsClearing(true);
     try {
       const response = await fetch(
-        "/api/admin/agent-insights/clear-month-data",
+        `/api/admin/agent-insights/clear-month-data?month=${selectedMonth}`,
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -178,6 +216,69 @@ export default function AIDataInsightsList() {
       console.error("Failed to generate governance log ref:", err);
       alert("Failed to generate governance log reference. Please try again.");
     }
+  };
+
+  // Render progress bar when running
+  const renderProgressBar = () => {
+    if (!isRunning) return null;
+
+    return (
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+        <div className="flex items-center gap-3 mb-3">
+          <svg
+            className="animate-spin h-5 w-5 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <div>
+            <p className="font-medium text-blue-900">
+              Running Guardian & Governance Agents
+            </p>
+            <p className="text-sm text-blue-700">
+              This may take several minutes. Please wait...
+            </p>
+          </div>
+        </div>
+        {/* Indeterminate progress bar */}
+        <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 rounded-full animate-pulse"
+            style={{
+              width: "40%",
+              animation: "indeterminate 1.5s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <style>{`
+          @keyframes indeterminate {
+            0% {
+              transform: translateX(-100%);
+            }
+            50% {
+              transform: translateX(150%);
+            }
+            100% {
+              transform: translateX(-100%);
+            }
+          }
+        `}</style>
+      </div>
+    );
   };
 
   // Render action buttons (used in multiple states)
@@ -313,22 +414,26 @@ export default function AIDataInsightsList() {
         {/* Header with buttons even in empty state */}
         <div className="mb-6 flex justify-between items-start">
           <div>
-            <p className="text-gray-600">
-              {new Date().toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
+            <MonthSelector
+              value={selectedMonth}
+              onChange={(month) => {
+                setSelectedMonth(month);
+                setCurrentPage(1); // Reset to page 1 when month changes
+              }}
+            />
           </div>
           {renderActionButtons()}
         </div>
+
+        {/* Progress bar */}
+        {renderProgressBar()}
 
         {/* Empty state message */}
         <div className="flex items-center justify-center h-64 rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="text-gray-600 text-center">
             <p className="text-lg mb-2">No agent data available</p>
             <p className="text-sm">
-              Guardian and Governance agents haven't run yet this month.
+              Guardian and Governance agents haven't run yet for this month.
               <br />
               Click "Run Guardian & Governance" above to start.
             </p>
@@ -343,15 +448,19 @@ export default function AIDataInsightsList() {
       {/* Header */}
       <div className="mb-6 flex justify-between items-start">
         <div>
-          <p className="text-gray-600">
-            {new Date().toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
+          <MonthSelector
+            value={selectedMonth}
+            onChange={(month) => {
+              setSelectedMonth(month);
+              setCurrentPage(1); // Reset to page 1 when month changes
+            }}
+          />
         </div>
         {renderActionButtons()}
       </div>
+
+      {/* Progress bar */}
+      {renderProgressBar()}
 
       {/* Table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

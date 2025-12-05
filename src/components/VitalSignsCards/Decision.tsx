@@ -128,31 +128,29 @@ export const Decision: React.FC<DecisionProps> = ({
   return (
     <div className={`${className}`}>
       <div
-        className={`${decisionData.bgGradient} rounded-2xl border-2 ${decisionData.borderGradient} p-8 shadow-lg`}
+        className={`${decisionData.bgGradient} rounded-xl border ${decisionData.borderGradient} p-6`}
       >
         {/* Stage Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div
-                className={`w-16 h-16 rounded-xl ${getScoreGradient(
-                  decisionData.score
-                )} p-0.5 shadow-lg`}
-              >
-                <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                  <decisionData.icon
-                    className={`w-8 h-8 ${decisionData.color}`}
-                  />
-                </div>
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-12 h-12 rounded-lg ${getScoreGradient(
+                decisionData.score
+              )} p-0.5`}
+            >
+              <div className="w-full h-full bg-white rounded-lg flex items-center justify-center">
+                <decisionData.icon
+                  className={`w-6 h-6 ${decisionData.color}`}
+                />
               </div>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+              <h3 className="text-xl font-normal text-gray-900">
                 {decisionData.name}
               </h3>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <div
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-1.5 h-1.5 rounded-full ${
                     isLoading
                       ? "bg-orange-400 animate-pulse"
                       : error
@@ -160,7 +158,7 @@ export const Decision: React.FC<DecisionProps> = ({
                       : "bg-green-400"
                   }`}
                 />
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm text-gray-500">
                   {isLoading
                     ? "Loading data..."
                     : error
@@ -179,12 +177,12 @@ export const Decision: React.FC<DecisionProps> = ({
               "dead clicks (40%), bounce rate (35%), sessions (25%)",
             ]}
           >
-            <div className="flex cursor-pointer items-center space-x-2">
+            <div className="flex cursor-pointer items-center gap-1.5">
               {!isLoading && (
                 <>
                   {getTrendIcon(decisionData.trend)}
                   <span
-                    className={`text-lg font-semibold ${
+                    className={`text-sm font-medium ${
                       decisionData.trend > 0
                         ? "text-emerald-600"
                         : "text-red-500"
@@ -200,16 +198,16 @@ export const Decision: React.FC<DecisionProps> = ({
         </div>
 
         {/* Stage Explainer */}
-        <div className="bg-gradient-to-r from-white/90 to-gray-50/80 backdrop-blur-sm rounded-xl p-6 mb-6 border border-white/60 shadow-sm">
-          <div className="flex items-start space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
-              <span className="text-white text-lg font-bold">4</span>
+        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 mb-5 border border-white/50">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm font-medium">4</span>
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 text-lg">
+              <h4 className="font-medium text-gray-900 mb-1">
                 {decisionData.explainer}
               </h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-sm text-gray-600 leading-relaxed">
                 {decisionData.whyItMatters}
               </p>
             </div>
@@ -217,28 +215,25 @@ export const Decision: React.FC<DecisionProps> = ({
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-5">
           {decisionData.metrics.map((metric) => (
             <div
               key={metric.label}
-              className={`rounded-xl p-5 ${getMetricStatusStyle(
+              className={`rounded-lg p-4 ${getMetricStatusStyle(
                 metric.status
-              )} transform hover:scale-105 transition-transform duration-200`}
+              )} transition-all duration-200 hover:scale-[1.02]`}
             >
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 mb-2">
+                <div className="text-xl font-semibold text-gray-900 mb-1">
                   {metric.value}
                 </div>
-                <div className="text-sm font-medium text-gray-600 mb-1">
-                  {metric.label}
-                </div>
+                <div className="text-sm text-gray-600 mb-1">{metric.label}</div>
                 {!isLoading && metric.prevValue !== undefined && (
-                  <div className="text-xs text-gray-500 italic">
-                    (
+                  <div className="text-xs text-gray-400">
                     {metric.label === "Bounce Rate"
                       ? (metric.prevValue * 100).toFixed(1) + "%"
                       : formatNumber(metric.prevValue)}{" "}
-                    last month)
+                    last month
                   </div>
                 )}
               </div>
@@ -247,41 +242,19 @@ export const Decision: React.FC<DecisionProps> = ({
         </div>
 
         {/* AI Insight */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 mb-6 border border-white/50 shadow-sm">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-              <Lightbulb className="w-5 h-5 text-white" />
+        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/50">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Lightbulb className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 text-lg">
-                AI Insight
-              </h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <h4 className="font-medium text-gray-900 mb-1">AI Insight</h4>
+              <p className="text-sm text-gray-600 leading-relaxed">
                 {decisionData.insight}
               </p>
             </div>
           </div>
         </div>
-
-        {/* Action Step - Optional, commented out like in other cards */}
-        {/* <div className="bg-gradient-to-r from-white to-gray-50/50 rounded-xl p-6 border border-gray-200/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center shadow-md">
-                <Target className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-2 text-lg">
-                  Recommended Action
-                </h4>
-                <p className="text-sm text-gray-700">{decisionData.action}</p>
-              </div>
-            </div>
-            <button className="px-6 py-4 text-sm font-semibold text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 bg-gradient-to-r from-green-500 to-emerald-600">
-              Add to Team Tasks
-            </button>
-          </div>
-        </div> */}
       </div>
     </div>
   );

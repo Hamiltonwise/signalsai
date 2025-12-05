@@ -8,3 +8,5 @@ export { AgentInsights } from "./AgentInsights";
 export { ProoflineAgentEditor } from "./ProoflineAgentEditor";
 export { SummaryAgentEditor } from "./SummaryAgentEditor";
 export { OpportunityAgentEditor } from "./OpportunityAgentEditor";
+export { AgentOutputDetailModal } from "./AgentOutputDetailModal";
+export { MonthSelector } from "./MonthSelector";

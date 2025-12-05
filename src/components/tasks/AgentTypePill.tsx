@@ -30,6 +30,11 @@ export function AgentTypePill({ agentType }: AgentTypePillProps) {
           label: "CRO",
           className: "border-green-200 bg-green-50 text-green-700",
         };
+      case "REFERRAL_ENGINE_ANALYSIS":
+        return {
+          label: "Referral Engine",
+          className: "border-orange-200 bg-orange-50 text-orange-700",
+        };
       case "MANUAL":
         return {
           label: "Manual",

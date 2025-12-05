@@ -10,11 +10,13 @@ import AIDataInsightsList from "./admin/AIDataInsightsList";
 import AIDataInsightsDetail from "./admin/AIDataInsightsDetail";
 import AppLogs from "./admin/AppLogs";
 import { OrganizationManagement } from "./admin/OrganizationManagement";
+import AgentOutputsList from "./admin/AgentOutputsList";
 
 // Map route paths to titles
 const ROUTE_TITLES: Record<string, string> = {
   "ai-pms-automation": "AI PMS Automation",
   "action-items": "Action Items Hub",
+  "agent-outputs": "Agent Outputs",
   "ai-data-insight": "AI Data Insight",
   "ai-data-insights": "AI Data Insights Dashboard",
   "webdev-engine": "Alloro WebDev Engine",
@@ -59,6 +61,7 @@ export default function Admin() {
           <Route path="/" element={<Navigate to="action-items" replace />} />
           <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
           <Route path="action-items" element={<ActionItemsHub />} />
+          <Route path="agent-outputs" element={<AgentOutputsList />} />
           <Route path="ai-data-insight" element={<AgentInsights />} />
           <Route path="ai-data-insights" element={<AIDataInsightsList />} />
           <Route

@@ -11,6 +11,7 @@ export type AgentType =
   | "GBP_OPTIMIZATION"
   | "OPPORTUNITY"
   | "CRO_OPTIMIZER"
+  | "REFERRAL_ENGINE_ANALYSIS"
   | "MANUAL";
 
 export interface ActionItem {

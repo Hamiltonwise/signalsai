@@ -162,6 +162,28 @@ export const archiveTask = async (
 };
 
 /**
+ * Unarchive a task (restore from archived)
+ */
+export const unarchiveTask = async (
+  taskId: number
+): Promise<{ success: boolean; task: ActionItem; message: string }> => {
+  const response = await fetch(`${API_BASE}/${taskId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status: "pending" }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to unarchive task");
+  }
+
+  return response.json();
+};
+
+/**
  * Get list of available clients for task creation
  */
 export const fetchClients = async (): Promise<ClientsResponse> => {
@@ -191,6 +213,28 @@ export const bulkArchiveTasks = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || "Failed to bulk archive tasks");
+  }
+
+  return response.json();
+};
+
+/**
+ * Bulk unarchive tasks (restore from archived)
+ */
+export const bulkUnarchiveTasks = async (
+  taskIds: number[]
+): Promise<{ success: boolean; message: string; count: number }> => {
+  const response = await fetch(`${API_BASE}/bulk/status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ taskIds, status: "pending" }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to bulk unarchive tasks");
   }
 
   return response.json();

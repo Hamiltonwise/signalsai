@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Activity,
   Brain,
   Download,
   Loader2,
@@ -206,76 +205,63 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   };
 
   return (
-    <div
-      className={`bg-gradient-to-br from-white via-gray-50/30 to-blue-50/20 rounded-2xl shadow-xl border border-gray-200/50 backdrop-blur-sm ${className}`}
-    >
+    <div className={`${className}`}>
       {/* Header Section */}
-      <div className="p-8 pb-6">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Activity className="w-6 h-6 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                Patient Journey Insights
-              </h2>
-              <p className="text-gray-600 flex items-center space-x-2">
-                <Brain className="w-4 h-4 text-blue-500" />
-                <span>
-                  AI-powered practice analytics • {cards.length} stages
-                </span>
-              </p>
-            </div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-thin text-gray-900">
+              Patient Journey Insights
+            </h1>
+            <p className="text-base text-gray-600 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-blue-500" />
+              <span>AI-powered practice analytics • {cards.length} stages</span>
+            </p>
           </div>
 
-          {/* Get AI Ready Data Button */}
-          <button
-            onClick={handleFetchAIReadyData}
-            disabled={isFetchingAIData}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-              isFetchingAIData
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg hover:scale-105"
-            }`}
-          >
-            {isFetchingAIData ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Fetching...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5" />
-                <span>Get AI Ready Data</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Get AI Ready Data Button */}
+            <button
+              onClick={handleFetchAIReadyData}
+              disabled={isFetchingAIData}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isFetchingAIData
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {isFetchingAIData ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Fetching...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Get AI Ready Data</span>
+                </>
+              )}
+            </button>
 
-          {/* Card Navigation Indicators */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 border border-gray-200/50 shadow-sm">
-              {cards.map((card, index) => (
-                <button
-                  key={card.id}
-                  onClick={() => goToCard(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                    index === activeIndex
-                      ? "bg-blue-500 scale-125"
-                      : "bg-gray-300 hover:bg-gray-400"
-                  }`}
-                  aria-label={`Go to ${card.title} stage`}
-                />
-              ))}
-            </div>
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">{activeIndex + 1}</span> of{" "}
-              {cards.length}
+            {/* Card Navigation Indicators */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100/50">
+                {cards.map((card, index) => (
+                  <button
+                    key={card.id}
+                    onClick={() => goToCard(index)}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      index === activeIndex
+                        ? "bg-blue-600 scale-125"
+                        : "bg-gray-300 hover:bg-gray-400"
+                    }`}
+                    aria-label={`Go to ${card.title} stage`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-500">
+                {activeIndex + 1} / {cards.length}
+              </span>
             </div>
           </div>
         </div>
@@ -285,24 +271,24 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
           aiDataStatus.gbp !== "idle" ||
           aiDataStatus.gsc !== "idle" ||
           aiDataStatus.clarity !== "idle") && (
-          <div className="flex items-center justify-center space-x-4 mb-4 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50">
-            <span className="text-sm text-gray-600 font-medium">Status:</span>
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+            <span className="text-sm text-gray-500">Status:</span>
+            <div className="flex items-center gap-3">
               {/* GA4 Status */}
               {aiDataStatus.ga4 === "loading" && (
-                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                <div className="flex items-center gap-1 text-xs text-blue-600">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>GA4</span>
                 </div>
               )}
               {aiDataStatus.ga4 === "success" && (
-                <div className="flex items-center space-x-1 text-xs text-green-600">
+                <div className="flex items-center gap-1 text-xs text-green-600">
                   <CheckCircle className="w-3 h-3" />
                   <span>GA4</span>
                 </div>
               )}
               {aiDataStatus.ga4 === "error" && (
-                <div className="flex items-center space-x-1 text-xs text-red-600">
+                <div className="flex items-center gap-1 text-xs text-red-600">
                   <XCircle className="w-3 h-3" />
                   <span>GA4</span>
                 </div>
@@ -310,19 +296,19 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
 
               {/* GBP Status */}
               {aiDataStatus.gbp === "loading" && (
-                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                <div className="flex items-center gap-1 text-xs text-blue-600">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>GBP</span>
                 </div>
               )}
               {aiDataStatus.gbp === "success" && (
-                <div className="flex items-center space-x-1 text-xs text-green-600">
+                <div className="flex items-center gap-1 text-xs text-green-600">
                   <CheckCircle className="w-3 h-3" />
                   <span>GBP</span>
                 </div>
               )}
               {aiDataStatus.gbp === "error" && (
-                <div className="flex items-center space-x-1 text-xs text-red-600">
+                <div className="flex items-center gap-1 text-xs text-red-600">
                   <XCircle className="w-3 h-3" />
                   <span>GBP</span>
                 </div>
@@ -330,19 +316,19 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
 
               {/* GSC Status */}
               {aiDataStatus.gsc === "loading" && (
-                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                <div className="flex items-center gap-1 text-xs text-blue-600">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>GSC</span>
                 </div>
               )}
               {aiDataStatus.gsc === "success" && (
-                <div className="flex items-center space-x-1 text-xs text-green-600">
+                <div className="flex items-center gap-1 text-xs text-green-600">
                   <CheckCircle className="w-3 h-3" />
                   <span>GSC</span>
                 </div>
               )}
               {aiDataStatus.gsc === "error" && (
-                <div className="flex items-center space-x-1 text-xs text-red-600">
+                <div className="flex items-center gap-1 text-xs text-red-600">
                   <XCircle className="w-3 h-3" />
                   <span>GSC</span>
                 </div>
@@ -350,19 +336,19 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
 
               {/* Clarity Status */}
               {aiDataStatus.clarity === "loading" && (
-                <div className="flex items-center space-x-1 text-xs text-blue-600">
+                <div className="flex items-center gap-1 text-xs text-blue-600">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>Clarity</span>
                 </div>
               )}
               {aiDataStatus.clarity === "success" && (
-                <div className="flex items-center space-x-1 text-xs text-green-600">
+                <div className="flex items-center gap-1 text-xs text-green-600">
                   <CheckCircle className="w-3 h-3" />
                   <span>Clarity</span>
                 </div>
               )}
               {aiDataStatus.clarity === "error" && (
-                <div className="flex items-center space-x-1 text-xs text-red-600">
+                <div className="flex items-center gap-1 text-xs text-red-600">
                   <XCircle className="w-3 h-3" />
                   <span>Clarity</span>
                 </div>
@@ -372,22 +358,22 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
         )}
 
         {/* Active Card Title and Description */}
-        <div className="text-center mb-6">
-          <motion.h3
+        <div className="mb-4">
+          <motion.h2
             key={`title-${activeIndex}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-xl font-semibold text-gray-800 mb-1"
-          >
-            {cards[activeIndex].title}
-          </motion.h3>
-          <motion.p
-            key={`desc-${activeIndex}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="text-sm text-gray-600"
+            transition={{ duration: 0.2 }}
+            className="text-xl font-normal text-gray-900 mb-1"
+          >
+            {cards[activeIndex].title}
+          </motion.h2>
+          <motion.p
+            key={`desc-${activeIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, delay: 0.05 }}
+            className="text-sm text-gray-500"
           >
             {cards[activeIndex].description}
           </motion.p>
@@ -395,86 +381,82 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
       </div>
 
       {/* Carousel Container */}
-      <div className="px-8 pb-8">
-        <div className="relative overflow-hidden">
-          {/* Navigation Buttons */}
-          <button
-            onClick={() => paginate(-1)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200/50 flex items-center justify-center hover:shadow-xl transition-all duration-200 hover:scale-110 group"
-            aria-label="Previous card"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-600 group-hover:text-gray-800" />
-          </button>
+      <div className="relative">
+        {/* Navigation Buttons */}
+        <button
+          onClick={() => paginate(-1)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-all duration-200 group"
+          aria-label="Previous card"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+        </button>
 
-          <button
-            onClick={() => paginate(1)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200/50 flex items-center justify-center hover:shadow-xl transition-all duration-200 hover:scale-110 group"
-            aria-label="Next card"
-          >
-            <ChevronRight className="w-6 h-6 text-gray-600 group-hover:text-gray-800" />
-          </button>
+        <button
+          onClick={() => paginate(1)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-all duration-200 group"
+          aria-label="Next card"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+        </button>
 
-          {/* Animated Card Container */}
-          <div className="relative min-h-[600px]">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-              <motion.div
-                key={activeIndex}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  x: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.2 },
-                }}
-                className="absolute inset-0"
-              >
-                <ActiveComponent
-                  className="w-full h-full"
-                  selectedDomain={selectedDomain}
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-6 bg-gray-200 rounded-full h-2 overflow-hidden">
+        {/* Animated Card Container */}
+        <div className="relative min-h-[550px]">
+          <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
-              initial={{ width: "0%" }}
-              animate={{
-                width: `${((activeIndex + 1) / cards.length) * 100}%`,
+              key={activeIndex}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 },
               }}
-              transition={{ duration: 0.3 }}
-            />
-          </div>
+              className="absolute inset-0"
+            >
+              <ActiveComponent
+                className="w-full h-full"
+                selectedDomain={selectedDomain}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-          {/* Card Navigation Pills */}
-          <div className="flex justify-center mt-6 space-x-4">
-            {cards.map((card, index) => (
-              <motion.button
-                key={card.id}
-                onClick={() => goToCard(index)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  index === activeIndex
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "bg-white text-gray-600 border border-gray-300 hover:border-blue-300 hover:text-blue-600"
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {card.title}
-              </motion.button>
-            ))}
-          </div>
+        {/* Progress Bar */}
+        <div className="mt-6 bg-gray-100 rounded-full h-1 overflow-hidden">
+          <motion.div
+            className="h-full bg-blue-600 rounded-full"
+            initial={{ width: "0%" }}
+            animate={{
+              width: `${((activeIndex + 1) / cards.length) * 100}%`,
+            }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+
+        {/* Card Navigation Pills */}
+        <div className="flex justify-center mt-5 gap-2">
+          {cards.map((card, index) => (
+            <button
+              key={card.id}
+              onClick={() => goToCard(index)}
+              className={`px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                index === activeIndex
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {card.title}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Keyboard Navigation Hint */}
-      <div className="px-8 pb-4">
-        <p className="text-xs text-center text-gray-500">
-          Use arrow keys or click navigation buttons to explore different stages
+      <div className="mt-4">
+        <p className="text-xs text-center text-gray-400">
+          Use arrow keys to navigate between stages
         </p>
       </div>
     </div>

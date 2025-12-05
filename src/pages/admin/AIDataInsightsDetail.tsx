@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import RecommendationCard from "../../components/Admin/RecommendationCard";
 import type {
   AgentRecommendation,
@@ -14,6 +14,10 @@ import type {
 export default function AIDataInsightsDetail() {
   const { agentType } = useParams<{ agentType: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Get month from URL params
+  const month = searchParams.get("month");
   const [recommendations, setRecommendations] = useState<AgentRecommendation[]>(
     []
   );
@@ -28,7 +32,7 @@ export default function AIDataInsightsDetail() {
     if (agentType) {
       fetchRecommendations();
     }
-  }, [agentType, currentPage]);
+  }, [agentType, currentPage, month]);
 
   const fetchRecommendations = async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
@@ -37,8 +41,9 @@ export default function AIDataInsightsDetail() {
     setError(null);
 
     try {
+      const monthParam = month ? `&month=${month}` : "";
       const response = await fetch(
-        `/api/admin/agent-insights/${agentType}/recommendations?page=${currentPage}&limit=50`
+        `/api/admin/agent-insights/${agentType}/recommendations?page=${currentPage}&limit=50${monthParam}`
       );
       const data: AgentRecommendationsResponse = await response.json();
 
@@ -181,12 +186,17 @@ export default function AIDataInsightsDetail() {
     );
   }
 
+  // Build back URL with month param preserved
+  const backUrl = month
+    ? `/admin/ai-data-insights?month=${month}`
+    : "/admin/ai-data-insights";
+
   if (recommendations.length === 0) {
     return (
       <div className="space-y-4">
         {/* Back Button */}
         <button
-          onClick={() => navigate("/admin/ai-data-insights")}
+          onClick={() => navigate(backUrl)}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
           ← Back to All Agents
@@ -209,7 +219,7 @@ export default function AIDataInsightsDetail() {
     <div className="space-y-4">
       {/* Back Button */}
       <button
-        onClick={() => navigate("/admin/ai-data-insights")}
+        onClick={() => navigate(backUrl)}
         className="text-blue-600 hover:text-blue-700 text-sm font-medium"
       >
         ← Back to All Agents

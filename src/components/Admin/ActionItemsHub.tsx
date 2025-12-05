@@ -3,21 +3,24 @@ import {
   Plus,
   RefreshCw,
   AlertCircle,
-  Trash2,
   Check,
   X,
   Loader2,
   CheckSquare,
   Square,
   Eye,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import {
   fetchAllTasks,
   updateTask,
   updateTaskCategory,
   archiveTask,
+  unarchiveTask,
   fetchClients,
   bulkArchiveTasks,
+  bulkUnarchiveTasks,
   bulkApproveTasks,
   bulkUpdateStatus,
 } from "../../api/tasks";
@@ -40,6 +43,12 @@ export function ActionItemsHub() {
   const [selectedTask, setSelectedTask] = useState<ActionItem | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Pagination state
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+  const totalPages = Math.ceil(total / pageSize);
+
   // Multi-select state
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<number>>(
     new Set()
@@ -58,7 +67,7 @@ export function ActionItemsHub() {
 
   // Filter states
   const [filters, setFilters] = useState<FetchActionItemsRequest>({
-    limit: 50,
+    limit: pageSize,
     offset: 0,
   });
   const [selectedClient, setSelectedClient] = useState<string>("all");
@@ -101,6 +110,7 @@ export function ActionItemsHub() {
       setError(null);
       const response = await fetchAllTasks(filters);
       setTasks(response.tasks);
+      setTotal(response.total);
     } catch (err) {
       console.error("Failed to fetch tasks:", err);
       setError(err instanceof Error ? err.message : "Failed to load tasks");
@@ -113,7 +123,7 @@ export function ActionItemsHub() {
 
   const applyFilters = () => {
     const newFilters: FetchActionItemsRequest = {
-      limit: 50,
+      limit: pageSize,
       offset: 0,
     };
 
@@ -137,6 +147,7 @@ export function ActionItemsHub() {
       newFilters.is_approved = selectedApproval === "true";
     }
 
+    setCurrentPage(1);
     setFilters(newFilters);
   };
 
@@ -146,7 +157,17 @@ export function ActionItemsHub() {
     setSelectedCategory("all");
     setSelectedAgentType("all");
     setSelectedApproval("all");
-    setFilters({ limit: 50, offset: 0 });
+    setCurrentPage(1);
+    setFilters({ limit: pageSize, offset: 0 });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setFilters((prev) => ({
+      ...prev,
+      offset: (newPage - 1) * pageSize,
+    }));
+    setSelectedTaskIds(new Set()); // Clear selection on page change
   };
 
   const handleViewDetails = (task: ActionItem) => {
@@ -217,6 +238,21 @@ export function ActionItemsHub() {
     }
   };
 
+  const handleUnarchive = async (taskId: number) => {
+    if (deletingId) return;
+    if (!confirm("Are you sure you want to restore this task?")) return;
+
+    try {
+      setDeletingId(taskId);
+      await unarchiveTask(taskId);
+      await loadTasks();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to restore task");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // Multi-select handlers
   const toggleSelectAll = () => {
     if (selectedTaskIds.size === tasks.length) {
@@ -237,7 +273,7 @@ export function ActionItemsHub() {
   };
 
   // Bulk operations
-  const handleBulkDelete = async () => {
+  const handleBulkArchive = async () => {
     if (selectedTaskIds.size === 0) return;
     if (
       !confirm(
@@ -253,6 +289,27 @@ export function ActionItemsHub() {
       await loadTasks();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to archive tasks");
+    } finally {
+      setBulkOperationLoading(false);
+    }
+  };
+
+  const handleBulkUnarchive = async () => {
+    if (selectedTaskIds.size === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to restore ${selectedTaskIds.size} task(s)?`
+      )
+    )
+      return;
+
+    try {
+      setBulkOperationLoading(true);
+      await bulkUnarchiveTasks(Array.from(selectedTaskIds));
+      setSelectedTaskIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to restore tasks");
     } finally {
       setBulkOperationLoading(false);
     }
@@ -303,6 +360,22 @@ export function ActionItemsHub() {
     });
   };
 
+  // Check if all selected items are archived (for showing correct bulk action button)
+  const allSelectedAreArchived =
+    selectedTaskIds.size > 0 &&
+    Array.from(selectedTaskIds).every((id) => {
+      const task = tasks.find((t) => t.id === id);
+      return task?.status === "archived";
+    });
+
+  // Check if any selected items are not archived
+  const anySelectedNotArchived =
+    selectedTaskIds.size > 0 &&
+    Array.from(selectedTaskIds).some((id) => {
+      const task = tasks.find((t) => t.id === id);
+      return task?.status !== "archived";
+    });
+
   return (
     <div className="space-y-4">
       {/* Bulk Actions Bar */}
@@ -347,18 +420,34 @@ export function ActionItemsHub() {
               <X className="h-3.5 w-3.5" />
               Unapprove
             </button>
-            <button
-              onClick={handleBulkDelete}
-              disabled={bulkOperationLoading}
-              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {bulkOperationLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-              Delete
-            </button>
+            {anySelectedNotArchived && (
+              <button
+                onClick={handleBulkArchive}
+                disabled={bulkOperationLoading}
+                className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase text-orange-600 transition hover:border-orange-300 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkOperationLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Archive className="h-3.5 w-3.5" />
+                )}
+                Archive
+              </button>
+            )}
+            {allSelectedAreArchived && (
+              <button
+                onClick={handleBulkUnarchive}
+                disabled={bulkOperationLoading}
+                className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkOperationLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ArchiveRestore className="h-3.5 w-3.5" />
+                )}
+                Restore
+              </button>
+            )}
             <button
               onClick={() => setSelectedTaskIds(new Set())}
               disabled={bulkOperationLoading}
@@ -425,6 +514,7 @@ export function ActionItemsHub() {
               <option value="GBP_OPTIMIZATION">GBP Copy</option>
               <option value="OPPORTUNITY">Opportunity</option>
               <option value="CRO_OPTIMIZER">CRO</option>
+              <option value="REFERRAL_ENGINE_ANALYSIS">Referral Engine</option>
               <option value="MANUAL">Manual</option>
             </select>
           </label>
@@ -602,6 +692,7 @@ export function ActionItemsHub() {
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
                     <option value="complete">Complete</option>
+                    <option value="archived">Archived</option>
                   </select>
                 )}
               </div>
@@ -642,20 +733,37 @@ export function ActionItemsHub() {
                   <Eye className="h-3.5 w-3.5" />
                   View
                 </button>
-                {deletingId === task.id ? (
-                  <div className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+                {task.status === "archived" ? (
+                  deletingId === task.id ? (
+                    <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Restoring...
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleUnarchive(task.id)}
+                      disabled={deletingId !== null}
+                      className="inline-flex items-center gap-1 rounded-full border border-green-200 px-3 py-1 text-xs font-semibold uppercase text-green-600 transition hover:border-green-300 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Restore task"
+                    >
+                      <ArchiveRestore className="h-3.5 w-3.5" />
+                      Restore
+                    </button>
+                  )
+                ) : deletingId === task.id ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase text-orange-700">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Deleting...
+                    Archiving...
                   </div>
                 ) : (
                   <button
                     onClick={() => handleArchive(task.id)}
                     disabled={deletingId !== null}
-                    className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1 rounded-full border border-orange-200 px-3 py-1 text-xs font-semibold uppercase text-orange-600 transition hover:border-orange-300 hover:text-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Archive task"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
+                    <Archive className="h-3.5 w-3.5" />
+                    Archive
                   </button>
                 )}
               </div>
@@ -664,12 +772,35 @@ export function ActionItemsHub() {
         )}
       </div>
 
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1 || loading}
+          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        <span className="text-sm text-gray-600">
+          Page {currentPage} of {totalPages || 1} ({total} total)
+        </span>
+        <button
+          onClick={() =>
+            handlePageChange(Math.min(totalPages, currentPage + 1))
+          }
+          disabled={currentPage === totalPages || totalPages === 0 || loading}
+          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+
       {/* Summary */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
         <div>
           {tasks.length > 0 ? (
             <span>
-              Showing {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+              Showing {tasks.length} of {total} task{total !== 1 ? "s" : ""}
             </span>
           ) : (
             <span>0 tasks</span>
@@ -685,7 +816,11 @@ export function ActionItemsHub() {
             </span>
             <span>
               <strong className="text-gray-900">
-                {tasks.filter((t) => t.status !== "complete").length}
+                {
+                  tasks.filter(
+                    (t) => t.status !== "complete" && t.status !== "archived"
+                  ).length
+                }
               </strong>{" "}
               active
             </span>

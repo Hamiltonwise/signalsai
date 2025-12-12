@@ -14,6 +14,43 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+// Type for client GBP data
+interface ClientGbpData {
+  totalReviewCount?: number;
+  averageRating?: number;
+  primaryCategory?: string;
+  reviewsLast30d?: number;
+  postsLast90d?: number;
+  photosCount?: number;
+  hasWebsite?: boolean;
+  hasPhone?: boolean;
+  hasHours?: boolean;
+  performance?: {
+    calls?: number;
+    directions?: number;
+    clicks?: number;
+  };
+  _raw?: {
+    locations?: Array<{
+      displayName?: string;
+      data?: {
+        performance?: {
+          series?: Array<{
+            dailyMetricTimeSeries?: Array<{
+              dailyMetric: string;
+              timeSeries?: {
+                datedValues?: Array<{
+                  value?: string;
+                }>;
+              };
+            }>;
+          }>;
+        };
+      };
+    }>;
+  };
+}
+
 interface RankingResult {
   id: number;
   domain: string;
@@ -54,41 +91,7 @@ interface RankingResult {
     sentiment: { score: number; weighted: number; weight: number };
   } | null;
   rawData: {
-    client_gbp: {
-      totalReviewCount?: number;
-      averageRating?: number;
-      primaryCategory?: string;
-      reviewsLast30d?: number;
-      postsLast90d?: number;
-      photosCount?: number;
-      hasWebsite?: boolean;
-      hasPhone?: boolean;
-      hasHours?: boolean;
-      performance?: {
-        calls?: number;
-        directions?: number;
-        clicks?: number;
-      };
-      _raw?: {
-        locations?: Array<{
-          displayName?: string;
-          data?: {
-            performance?: {
-              series?: Array<{
-                dailyMetricTimeSeries?: Array<{
-                  dailyMetric: string;
-                  timeSeries?: {
-                    datedValues?: Array<{
-                      value?: string;
-                    }>;
-                  };
-                }>;
-              }>;
-            };
-          };
-        }>;
-      };
-    } | null;
+    client_gbp: ClientGbpData | null;
     client_gsc: {
       rows?: unknown[];
       topQueries?: unknown[];
@@ -249,7 +252,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
 
 // Helper function to extract performance metrics from raw GBP data
 function extractPerformanceMetrics(
-  clientGbp: RankingResult["rawData"]["client_gbp"] | null | undefined
+  clientGbp: ClientGbpData | null | undefined
 ) {
   const metrics = { calls: 0, directions: 0, clicks: 0 };
 

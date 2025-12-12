@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
   LayoutGrid,
-  Activity,
   BarChart3,
   CheckSquare,
   Settings,
+  Trophy,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -41,12 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
-    {
-      label: "Patient Journey Insights",
-      icon: Activity,
-      path: "/patientJourneyInsights",
-    },
     { label: "PMS Statistics", icon: BarChart3, path: "/pmsStatistics" },
+    { label: "Rankings", icon: Trophy, path: "/rankings" },
     { label: "Tasks", icon: CheckSquare, path: "/tasks" },
   ];
 

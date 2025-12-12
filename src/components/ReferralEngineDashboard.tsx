@@ -120,7 +120,8 @@ const formatCurrency = (value: number | null | undefined): string => {
 
 const formatPercentage = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return "—";
-  return `${(value * 100).toFixed(1)}%`;
+  // Values from the Referral Engine agent are already in percentage form (e.g., 90 for 90%)
+  return `${value.toFixed(1)}%`;
 };
 
 const formatDate = (dateString: string | undefined): string => {

@@ -9,6 +9,7 @@ import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
 import { DashboardOverview } from "../components/dashboard/DashboardOverview";
 import { ReferralEngineDashboard } from "../components/ReferralEngineDashboard";
+import { RankingsDashboard } from "../components/dashboard/RankingsDashboard";
 
 // Integration Modal Components ✅
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
@@ -45,6 +46,7 @@ export default function Dashboard() {
     | "Dashboard"
     | "Patient Journey Insights"
     | "PMS Statistics"
+    | "Rankings"
     | "Tasks"
     | "Referral Engine"
   >("Dashboard");
@@ -61,6 +63,7 @@ export default function Dashboard() {
     if (path.startsWith("/patientJourneyInsights"))
       return "Patient Journey Insights";
     if (path.startsWith("/pmsStatistics")) return "PMS Statistics";
+    if (path.startsWith("/rankings")) return "Rankings";
     if (path.startsWith("/tasks")) return "Tasks";
     if (path.startsWith("/referralEngine")) return "Referral Engine";
     return "Dashboard";
@@ -290,6 +293,12 @@ export default function Dashboard() {
                       )}
 
                       {activeTab === "PMS Statistics" && <PMSVisualPillars />}
+
+                      {activeTab === "Rankings" && (
+                        <RankingsDashboard
+                          googleAccountId={userProfile?.googleAccountId ?? null}
+                        />
+                      )}
 
                       {activeTab === "Tasks" && (
                         <TasksView

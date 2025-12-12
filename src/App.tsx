@@ -94,6 +94,16 @@ function App() {
             }
           />
           <Route
+            path="/rankings"
+            element={
+              <ProtectedRoute>
+                <AppProviders>
+                  <Dashboard />
+                </AppProviders>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/*"
             element={
               <AppProviders>

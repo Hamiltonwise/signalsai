@@ -11,6 +11,7 @@ import AIDataInsightsDetail from "./admin/AIDataInsightsDetail";
 import AppLogs from "./admin/AppLogs";
 import { OrganizationManagement } from "./admin/OrganizationManagement";
 import AgentOutputsList from "./admin/AgentOutputsList";
+import { PracticeRanking } from "./admin/PracticeRanking";
 
 // Map route paths to titles
 const ROUTE_TITLES: Record<string, string> = {
@@ -22,6 +23,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "webdev-engine": "Alloro WebDev Engine",
   "app-logs": "App Logs",
   "organization-management": "Organization Management",
+  "practice-ranking": "Practice Ranking",
 };
 
 function WebDevEngine() {
@@ -74,6 +76,7 @@ export default function Admin() {
             path="organization-management"
             element={<OrganizationManagement />}
           />
+          <Route path="practice-ranking" element={<PracticeRanking />} />
         </Routes>
       </AdminLayout>
     </AdminGuard>

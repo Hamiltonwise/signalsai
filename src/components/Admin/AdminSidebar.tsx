@@ -8,6 +8,7 @@ import {
   Building,
   Database,
   Bot,
+  TrendingUp,
 } from "lucide-react";
 
 export type AdminNavKey =
@@ -15,6 +16,7 @@ export type AdminNavKey =
   | "agent-outputs"
   | "ai-pms-automation"
   | "ai-data-insights"
+  | "practice-ranking"
   | "app-logs"
   | "organization-management";
 
@@ -30,6 +32,7 @@ const AGENTS_GROUP_ITEMS: NavItem[] = [
   { key: "agent-outputs", label: "Agent Outputs", icon: Database },
   { key: "ai-pms-automation", label: "AI PMS Automation", icon: Cpu },
   { key: "ai-data-insights", label: "Agent Enhancements", icon: LineChart },
+  { key: "practice-ranking", label: "Practice Ranking", icon: TrendingUp },
 ];
 
 // Top-level items

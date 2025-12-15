@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   TrendingUp,
   Play,
@@ -6,7 +6,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Building,
   MapPin,
   Star,
   AlertCircle,
@@ -17,6 +16,7 @@ import {
   Search,
   Trash2,
   Users,
+  Layers,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -213,7 +213,6 @@ const US_CITIES = [
   "Palm Desert, CA",
   "Indio, CA",
   "Bakersfield, CA",
-  "Fresno, CA",
   "Stockton, CA",
   "Modesto, CA",
   "Visalia, CA",
@@ -323,7 +322,6 @@ const US_CITIES = [
   // Other states
   "Cincinnati, OH",
   "Cleveland, OH",
-  "Columbus, OH",
   "Dayton, OH",
   "Akron, OH",
   "Toledo, OH",
@@ -337,6 +335,77 @@ const US_CITIES = [
   "Edison, NJ",
   "Woodbridge, NJ",
   "Trenton, NJ",
+  // Additional NJ cities
+  "West Orange, NJ",
+  "East Orange, NJ",
+  "Orange, NJ",
+  "South Orange, NJ",
+  "Livingston, NJ",
+  "Montclair, NJ",
+  "Bloomfield, NJ",
+  "Nutley, NJ",
+  "Glen Ridge, NJ",
+  "Verona, NJ",
+  "Cedar Grove, NJ",
+  "Caldwell, NJ",
+  "West Caldwell, NJ",
+  "Fairfield, NJ",
+  "Clifton, NJ",
+  "Passaic, NJ",
+  "Hackensack, NJ",
+  "Teaneck, NJ",
+  "Fort Lee, NJ",
+  "Englewood, NJ",
+  "Hoboken, NJ",
+  "Union City, NJ",
+  "North Bergen, NJ",
+  "Bayonne, NJ",
+  "Secaucus, NJ",
+  "New Brunswick, NJ",
+  "Perth Amboy, NJ",
+  "Plainfield, NJ",
+  "Union, NJ",
+  "Westfield, NJ",
+  "Summit, NJ",
+  "Morristown, NJ",
+  "Parsippany, NJ",
+  "Dover, NJ",
+  "Wayne, NJ",
+  "Cherry Hill, NJ",
+  "Vineland, NJ",
+  "Atlantic City, NJ",
+  "Camden, NJ",
+  "Princeton, NJ",
+  "Bridgewater, NJ",
+  "Somerset, NJ",
+  "Flemington, NJ",
+  "Red Bank, NJ",
+  "Toms River, NJ",
+  "Brick, NJ",
+  "Lakewood, NJ",
+  "Long Branch, NJ",
+  "Asbury Park, NJ",
+  "Freehold, NJ",
+  "Marlboro, NJ",
+  "Manalapan, NJ",
+  "Old Bridge, NJ",
+  "Sayreville, NJ",
+  "East Brunswick, NJ",
+  "North Brunswick, NJ",
+  "South Brunswick, NJ",
+  "Franklin, NJ",
+  "Piscataway, NJ",
+  "Metuchen, NJ",
+  "Rahway, NJ",
+  "Linden, NJ",
+  "Cranford, NJ",
+  "Scotch Plains, NJ",
+  "Fanwood, NJ",
+  "Clark, NJ",
+  "Springfield, NJ",
+  "Millburn, NJ",
+  "Short Hills, NJ",
+  "Maplewood, NJ",
   "Hartford, CT",
   "New Haven, CT",
   "Stamford, CT",
@@ -369,12 +438,9 @@ const US_CITIES = [
   "Henderson, NV",
   "North Las Vegas, NV",
   "Sparks, NV",
-  "Albuquerque, NM",
   "Santa Fe, NM",
   "Las Cruces, NM",
   "Rio Rancho, NM",
-  "Oklahoma City, OK",
-  "Tulsa, OK",
   "Norman, OK",
   "Broken Arrow, OK",
   "Edmond, OK",
@@ -383,23 +449,19 @@ const US_CITIES = [
   "Kansas City, KS",
   "Olathe, KS",
   "Topeka, KS",
-  "Omaha, NE",
   "Lincoln, NE",
   "Des Moines, IA",
   "Cedar Rapids, IA",
   "Davenport, IA",
   "St. Louis, MO",
-  "Kansas City, MO",
   "Springfield, MO",
   "Columbia, MO",
   "Independence, MO",
-  "Minneapolis, MN",
   "St. Paul, MN",
   "Rochester, MN",
   "Bloomington, MN",
   "Plymouth, MN",
   "Madison, WI",
-  "Milwaukee, WI",
   "Green Bay, WI",
   "Kenosha, WI",
   "Racine, WI",
@@ -409,7 +471,6 @@ const US_CITIES = [
   "Flint, MI",
   "Warren, MI",
   "Sterling Heights, MI",
-  "Indianapolis, IN",
   "Fort Wayne, IN",
   "Evansville, IN",
   "South Bend, IN",
@@ -450,7 +511,6 @@ const US_CITIES = [
   "Owensboro, KY",
   "Covington, KY",
   "Richmond, VA",
-  "Virginia Beach, VA",
   "Norfolk, VA",
   "Chesapeake, VA",
   "Newport News, VA",
@@ -473,6 +533,21 @@ const US_CITIES = [
   "Pearl City, HI",
   "Hilo, HI",
   "Kailua, HI",
+  "Mililani, HI",
+  "Kahala, HI",
+  "Aiea, HI",
+  "Kapolei, HI",
+  "Ewa Beach, HI",
+  "Waipahu, HI",
+  "Kaneohe, HI",
+  "Wahiawa, HI",
+  "Lahaina, HI",
+  "Kahului, HI",
+  "Kihei, HI",
+  "Wailuku, HI",
+  "Lihue, HI",
+  "Kona, HI",
+  "Waimea, HI",
   "Fargo, ND",
   "Bismarck, ND",
   "Grand Forks, ND",
@@ -497,12 +572,33 @@ const US_CITIES = [
   "Concord, NH",
 ].sort();
 
+// GBP Location from the API
+interface GbpLocation {
+  accountId: string;
+  locationId: string;
+  displayName: string;
+  address?: string;
+}
+
 interface GoogleAccount {
   id: number;
   domain: string;
   practiceName: string;
   hasGbp: boolean;
   hasGsc: boolean;
+  gbpLocations: GbpLocation[];
+  gbpCount: number;
+}
+
+// Location form state for multi-location trigger
+interface LocationFormData {
+  gbpAccountId: string;
+  gbpLocationId: string;
+  gbpLocationName: string;
+  specialty: string;
+  marketLocation: string;
+  marketLocationSearch: string;
+  showDropdown: boolean;
 }
 
 interface StatusDetail {
@@ -520,6 +616,12 @@ interface RankingJob {
   domain: string;
   specialty: string;
   location: string | null;
+  gbpLocationId?: string | null;
+  gbp_location_id?: string | null;
+  gbpLocationName?: string | null;
+  gbp_location_name?: string | null;
+  batchId?: string | null;
+  batch_id?: string | null;
   status: string;
   rankScore?: number | null;
   rank_score?: number | null;
@@ -539,6 +641,9 @@ interface RankingJob {
 const normalizeJob = (job: RankingJob): RankingJob => ({
   ...job,
   google_account_id: job.googleAccountId || job.google_account_id,
+  gbp_location_id: job.gbpLocationId || job.gbp_location_id,
+  gbp_location_name: job.gbpLocationName || job.gbp_location_name,
+  batch_id: job.batchId || job.batch_id,
   rank_score: job.rankScore ?? job.rank_score,
   rank_position: job.rankPosition ?? job.rank_position,
   total_competitors: job.totalCompetitors ?? job.total_competitors,
@@ -547,11 +652,27 @@ const normalizeJob = (job: RankingJob): RankingJob => ({
   status_detail: job.statusDetail || job.status_detail,
 });
 
+// Batch status for polling
+interface BatchStatus {
+  batchId: string;
+  status: "processing" | "completed" | "failed";
+  totalLocations: number;
+  completedLocations: number;
+  failedLocations: number;
+  currentLocationIndex: number;
+  currentLocationName: string;
+  rankingIds: number[];
+  progress: number;
+  errors?: Array<{ locationId: string; error: string; attempt: number }>;
+}
+
 interface RankingResult {
   id: number;
   domain: string;
   specialty: string;
   location: string | null;
+  gbpLocationId?: string | null;
+  gbpLocationName?: string | null;
   observedAt: string;
   rankScore: number | string;
   rankPosition: number;
@@ -626,6 +747,8 @@ interface RankingResult {
         directions?: number;
         clicks?: number;
       };
+      gbpLocationId?: string;
+      gbpLocationName?: string;
       _raw?: unknown;
     } | null;
     client_gsc: {
@@ -676,68 +799,162 @@ const SPECIALTIES = [
   { value: "pediatric dentist", label: "Pediatric Dentist" },
 ];
 
+// Group structure for display - flat batch list
+interface BatchGroup {
+  batchId: string;
+  domain: string;
+  jobs: RankingJob[];
+  status: "processing" | "completed" | "failed" | "pending";
+  createdAt: Date;
+  totalLocations: number;
+  completedLocations: number;
+}
+
 export function PracticeRanking() {
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [jobs, setJobs] = useState<RankingJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
-  const [specialty, setSpecialty] = useState("");
-  const [location, setLocation] = useState("");
-  const [locationSearch, setLocationSearch] = useState("");
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [locationForms, setLocationForms] = useState<LocationFormData[]>([]);
   const [triggering, setTriggering] = useState(false);
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(
+    new Set()
+  );
   const [jobResults, setJobResults] = useState<Record<number, RankingResult>>(
     {}
   );
   const [loadingResults, setLoadingResults] = useState<number | null>(null);
   const [pollingJobs, setPollingJobs] = useState<Set<number>>(new Set());
+  const [pollingBatches, setPollingBatches] = useState<Set<string>>(new Set());
+
+  const [, setBatchStatuses] = useState<Record<string, BatchStatus>>({}); // Used for real-time batch status updates during polling
   const [deletingJob, setDeletingJob] = useState<number | null>(null);
+  const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
   const [refreshingCompetitors, setRefreshingCompetitors] = useState(false);
 
-  const locationDropdownRef = useRef<HTMLDivElement>(null);
+  // Get selected account data (use == for type coercion since API returns id as string)
+  const selectedAccountData = accounts.find(
+    (a) => String(a.id) === String(selectedAccount)
+  );
 
-  // Filter cities based on search
-  const filteredCities = useMemo(() => {
-    if (!locationSearch) return US_CITIES.slice(0, 20);
-    const search = locationSearch.toLowerCase();
-    return US_CITIES.filter((city) =>
-      city.toLowerCase().includes(search)
-    ).slice(0, 20);
-  }, [locationSearch]);
+  // Group jobs by batch - flat list sorted by date (newest first)
+  const groupedBatches = useMemo((): BatchGroup[] => {
+    const batchMap = new Map<string, BatchGroup>();
+
+    jobs.forEach((job) => {
+      if (job.batch_id) {
+        const jobDate = new Date(job.created_at || 0);
+
+        if (!batchMap.has(job.batch_id)) {
+          batchMap.set(job.batch_id, {
+            batchId: job.batch_id,
+            domain: job.domain,
+            jobs: [],
+            status: "pending",
+            createdAt: jobDate,
+            totalLocations: 0,
+            completedLocations: 0,
+          });
+        }
+
+        const batch = batchMap.get(job.batch_id)!;
+        batch.jobs.push(job);
+        batch.totalLocations = batch.jobs.length;
+        batch.completedLocations = batch.jobs.filter(
+          (j) => j.status === "completed"
+        ).length;
+
+        // Determine batch status
+        const hasProcessing = batch.jobs.some(
+          (j) => j.status === "processing" || j.status === "pending"
+        );
+        const hasFailed = batch.jobs.some((j) => j.status === "failed");
+        const allCompleted = batch.jobs.every((j) => j.status === "completed");
+
+        if (allCompleted) {
+          batch.status = "completed";
+        } else if (hasFailed) {
+          batch.status = "failed";
+        } else if (hasProcessing) {
+          batch.status = "processing";
+        } else {
+          batch.status = "pending";
+        }
+      }
+    });
+
+    // Convert to array and sort by date (newest first)
+    return Array.from(batchMap.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+  }, [jobs]);
+
+  // Get standalone jobs (no batch) sorted by date
+  const standaloneJobs = useMemo(() => {
+    return jobs
+      .filter((job) => !job.batch_id)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+      );
+  }, [jobs]);
+
+  // Toggle batch expansion
+  const toggleBatch = (batchId: string) => {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchAccounts();
     fetchJobs();
   }, []);
 
-  // Close dropdown when clicking outside
+  // When account is selected, initialize location forms
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        locationDropdownRef.current &&
-        !locationDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowLocationDropdown(false);
-      }
+    if (selectedAccountData && selectedAccountData.gbpLocations.length > 0) {
+      const initialForms: LocationFormData[] =
+        selectedAccountData.gbpLocations.map((loc) => ({
+          gbpAccountId: loc.accountId,
+          gbpLocationId: loc.locationId,
+          gbpLocationName: loc.displayName,
+          specialty: "",
+          marketLocation: loc.address || "", // Auto-populate from GBP address
+          marketLocationSearch: "",
+          showDropdown: false,
+        }));
+      setLocationForms(initialForms);
+    } else {
+      setLocationForms([]);
     }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [selectedAccount, selectedAccountData]);
 
   // Poll for job status updates (every 2 seconds for more responsive UI)
   useEffect(() => {
-    if (pollingJobs.size === 0) return;
+    if (pollingJobs.size === 0 && pollingBatches.size === 0) return;
 
     const interval = setInterval(() => {
+      // Poll individual jobs
       pollingJobs.forEach((jobId) => {
         fetchJobStatus(jobId);
+      });
+      // Poll batch statuses
+      pollingBatches.forEach((batchId) => {
+        fetchBatchStatus(batchId);
       });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [pollingJobs]);
+  }, [pollingJobs, pollingBatches]);
 
   const fetchAccounts = async () => {
     try {
@@ -775,6 +992,16 @@ export function PracticeRanking() {
         )
         .map((j: RankingJob) => j.id);
       setPollingJobs(new Set(inProgress));
+
+      // Collect unique batch IDs that are still in progress
+      const inProgressBatches = new Set<string>();
+      data.rankings.forEach((j: RankingJob) => {
+        const batchId = j.batchId || j.batch_id;
+        if (batchId && (j.status === "processing" || j.status === "pending")) {
+          inProgressBatches.add(batchId);
+        }
+      });
+      setPollingBatches(inProgressBatches);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -803,6 +1030,9 @@ export function PracticeRanking() {
         rank_score: data.rankScore,
         rank_position: data.rankPosition,
         total_competitors: data.totalCompetitors,
+        gbp_location_id: data.gbpLocationId,
+        gbp_location_name: data.gbpLocationName,
+        batch_id: data.batchId,
       };
 
       setJobs((prev) =>
@@ -821,6 +1051,39 @@ export function PracticeRanking() {
       }
     } catch (error) {
       console.error("Failed to fetch job status:", error);
+    }
+  };
+
+  const fetchBatchStatus = async (batchId: string) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(
+        `/api/admin/practice-ranking/batch/${batchId}/status`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      setBatchStatuses((prev) => ({
+        ...prev,
+        [batchId]: data as BatchStatus,
+      }));
+
+      // Stop polling if batch is complete or failed
+      if (data.status === "completed" || data.status === "failed") {
+        setPollingBatches((prev) => {
+          const next = new Set(prev);
+          next.delete(batchId);
+          return next;
+        });
+        // Refresh the full job list to get final data
+        fetchJobs();
+      }
+    } catch (error) {
+      console.error("Failed to fetch batch status:", error);
     }
   };
 
@@ -849,9 +1112,29 @@ export function PracticeRanking() {
     }
   };
 
+  const updateLocationForm = (
+    index: number,
+    updates: Partial<LocationFormData>
+  ) => {
+    setLocationForms((prev) =>
+      prev.map((form, i) => (i === index ? { ...form, ...updates } : form))
+    );
+  };
+
   const triggerAnalysis = async () => {
-    if (!selectedAccount || !specialty || !location) {
-      toast.error("Please select an account, specialty, and location");
+    if (!selectedAccount || locationForms.length === 0) {
+      toast.error("Please select an account");
+      return;
+    }
+
+    // Validate all location forms
+    const invalidForms = locationForms.filter(
+      (form) => !form.specialty || !form.marketLocation
+    );
+    if (invalidForms.length > 0) {
+      toast.error(
+        "Please fill in specialty and market location for all locations"
+      );
       return;
     }
 
@@ -866,28 +1149,39 @@ export function PracticeRanking() {
         },
         body: JSON.stringify({
           googleAccountId: selectedAccount,
-          specialty,
-          location,
+          locations: locationForms.map((form) => ({
+            gbpAccountId: form.gbpAccountId,
+            gbpLocationId: form.gbpLocationId,
+            gbpLocationName: form.gbpLocationName,
+            specialty: form.specialty,
+            marketLocation: form.marketLocation,
+          })),
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to trigger analysis");
+        throw new Error(
+          error.message || error.error || "Failed to trigger analysis"
+        );
       }
 
       const data = await response.json();
-      toast.success("Analysis started!");
+      toast.success(
+        `Batch analysis started for ${data.totalLocations} location(s)!`
+      );
 
-      // Normalize and add new job to list and start polling
-      const normalizedJob = normalizeJob(data.ranking);
-      setJobs((prev) => [normalizedJob, ...prev]);
-      setPollingJobs((prev) => new Set([...prev, normalizedJob.id]));
+      // Start polling for batch status
+      if (data.batchId) {
+        setPollingBatches((prev) => new Set([...prev, data.batchId]));
+      }
+
+      // Refresh jobs list
+      fetchJobs();
 
       // Reset form
       setSelectedAccount(null);
-      setSpecialty("");
-      setLocation("");
+      setLocationForms([]);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -956,6 +1250,62 @@ export function PracticeRanking() {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setDeletingJob(null);
+    }
+  };
+
+  const deleteBatch = async (batchId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent batch expansion
+
+    const batch = groupedBatches.find((b) => b.batchId === batchId);
+    const locationCount = batch?.totalLocations || 0;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete this entire batch? This will delete ${locationCount} analysis record${
+          locationCount !== 1 ? "s" : ""
+        }. This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingBatch(batchId);
+    try {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(
+        `/api/admin/practice-ranking/batch/${batchId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete batch");
+      }
+
+      const data = await response.json();
+      toast.success(`Batch deleted (${data.deletedCount} analyses removed)`);
+
+      // Remove all jobs in this batch from local state
+      setJobs((prev) => prev.filter((j) => j.batch_id !== batchId));
+
+      // Clean up related state
+      setExpandedBatches((prev) => {
+        const next = new Set(prev);
+        next.delete(batchId);
+        return next;
+      });
+      setPollingBatches((prev) => {
+        const next = new Set(prev);
+        next.delete(batchId);
+        return next;
+      });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setDeletingBatch(null);
     }
   };
 
@@ -1028,8 +1378,6 @@ export function PracticeRanking() {
     return "text-red-600";
   };
 
-  const selectedAccountData = accounts.find((a) => a.id === selectedAccount);
-
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -1054,183 +1402,104 @@ export function PracticeRanking() {
           Run New Analysis
         </h3>
 
-        <div className="grid gap-4 md:grid-cols-4">
-          {/* Account Selector */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Google Account *
-            </label>
-            <select
-              value={selectedAccount || ""}
-              onChange={(e) =>
-                setSelectedAccount(
-                  e.target.value ? Number(e.target.value) : null
-                )
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">Select account...</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.practiceName} ({account.domain})
-                </option>
-              ))}
-            </select>
-            {selectedAccountData && (
-              <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                {selectedAccountData.hasGbp && (
-                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
-                    GBP
-                  </span>
-                )}
-                {selectedAccountData.hasGsc && (
-                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700">
-                    GSC
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Specialty Selector */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Specialty *
-            </label>
-            <select
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">Select specialty...</option>
-              {SPECIALTIES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Location Searchable Select */}
-          <div className="relative" ref={locationDropdownRef}>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Location *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={location || locationSearch}
-                onChange={(e) => {
-                  setLocationSearch(e.target.value);
-                  setLocation("");
-                  setShowLocationDropdown(true);
-                }}
-                onFocus={() => setShowLocationDropdown(true)}
-                placeholder="Search US cities..."
-                className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              {location && (
-                <button
-                  onClick={() => {
-                    setLocation("");
-                    setLocationSearch("");
-                  }}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-4 w-4" />
-                </button>
+        {/* Account Selector */}
+        <div className="mb-4">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Google Account *
+          </label>
+          <select
+            value={selectedAccount || ""}
+            onChange={(e) =>
+              setSelectedAccount(e.target.value ? Number(e.target.value) : null)
+            }
+            className="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Select account...</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.practiceName} ({account.domain}) - {account.gbpCount}{" "}
+                location(s)
+              </option>
+            ))}
+          </select>
+          {selectedAccountData && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+              {selectedAccountData.hasGbp && (
+                <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
+                  GBP: {selectedAccountData.gbpCount}
+                </span>
+              )}
+              {selectedAccountData.hasGsc && (
+                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700">
+                  GSC
+                </span>
               )}
             </div>
-            {showLocationDropdown && !location && (
-              <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                {filteredCities.length > 0 ? (
-                  <>
-                    {filteredCities.map((city) => (
-                      <button
-                        key={city}
-                        onClick={() => {
-                          setLocation(city);
-                          setLocationSearch("");
-                          setShowLocationDropdown(false);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                      >
-                        <MapPin className="inline h-3 w-3 mr-2 text-gray-400" />
-                        {city}
-                      </button>
-                    ))}
-                    {locationSearch &&
-                      !US_CITIES.some(
-                        (c) => c.toLowerCase() === locationSearch.toLowerCase()
-                      ) && (
-                        <button
-                          onClick={() => {
-                            setLocation(locationSearch);
-                            setLocationSearch("");
-                            setShowLocationDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm border-t border-gray-100 bg-gray-50 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                        >
-                          <Search className="inline h-3 w-3 mr-2 text-blue-500" />
-                          Use "{locationSearch}" as custom location
-                        </button>
-                      )}
-                  </>
-                ) : locationSearch ? (
-                  <button
-                    onClick={() => {
-                      setLocation(locationSearch);
-                      setLocationSearch("");
-                      setShowLocationDropdown(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                  >
-                    <Search className="inline h-3 w-3 mr-2 text-blue-500" />
-                    Use "{locationSearch}" as custom location
-                  </button>
-                ) : (
-                  <div className="px-3 py-2 text-sm text-gray-500">
-                    Start typing to search cities...
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Trigger Button */}
-          <div className="flex items-end">
-            <button
-              onClick={triggerAnalysis}
-              disabled={
-                triggering || !selectedAccount || !specialty || !location
-              }
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {triggering ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Run Analysis
-                </>
-              )}
-            </button>
-          </div>
+          )}
         </div>
+
+        {/* Location Forms - One per GBP Location */}
+        {locationForms.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Layers className="h-4 w-4 text-blue-600" />
+              Configure {locationForms.length} Location
+              {locationForms.length > 1 ? "s" : ""}
+            </div>
+
+            {locationForms.map((form, index) => (
+              <LocationFormRow
+                key={form.gbpLocationId}
+                form={form}
+                index={index}
+                updateForm={updateLocationForm}
+              />
+            ))}
+
+            {/* Trigger Button */}
+            <div className="pt-2">
+              <button
+                onClick={triggerAnalysis}
+                disabled={triggering}
+                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {triggering ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Starting Batch...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Run Analysis ({locationForms.length} location
+                    {locationForms.length > 1 ? "s" : ""})
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedAccount && locationForms.length === 0 && (
+          <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
+            <AlertCircle className="inline h-4 w-4 mr-2" />
+            This account has no GBP locations configured. Please set up GBP
+            locations first.
+          </div>
+        )}
       </div>
 
-      {/* Jobs List */}
+      {/* Jobs List - Grouped by Batch */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-6 py-4">
           <h3 className="text-base font-semibold text-gray-900">
             Analysis History
           </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            {groupedBatches.length} batch
+            {groupedBatches.length !== 1 ? "es" : ""} • {jobs.length} total
+            analyses
+          </p>
         </div>
 
         {jobs.length === 0 ? (
@@ -1245,105 +1514,61 @@ export function PracticeRanking() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {jobs.map((job) => (
-              <div key={job.id} className="transition-colors hover:bg-gray-50">
-                {/* Job Header */}
+            {/* Batches - sorted by date (newest first) */}
+            {groupedBatches.map((batch) => (
+              <div key={batch.batchId} className="bg-white">
+                {/* Batch Header */}
                 <div
-                  className="flex cursor-pointer items-center gap-4 p-4"
-                  onClick={() => toggleExpand(job.id)}
+                  className="flex cursor-pointer items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                  onClick={() => toggleBatch(batch.batchId)}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                    <Building className="h-5 w-5" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                    <Layers className="h-5 w-5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-gray-900">
-                        {job.domain}
-                      </h4>
-                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
-                        {job.specialty}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-900">
+                        Batch{" "}
+                        {batch.createdAt.toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        })}{" "}
+                        for {batch.domain}
                       </span>
-                      {job.location && (
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          {job.location}
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                      <span>
+                        {batch.totalLocations} location
+                        {batch.totalLocations !== 1 ? "s" : ""}
+                      </span>
+                      {batch.status === "processing" && (
+                        <span className="flex items-center gap-1 text-blue-600">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          {batch.completedLocations}/{batch.totalLocations}{" "}
+                          completed
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                      <span>
-                        {(() => {
-                          const dateStr =
-                            (job as unknown as { createdAt?: string })
-                              .createdAt || job.created_at;
-                          if (!dateStr) return "Unknown date";
-                          const date = new Date(dateStr);
-                          return isNaN(date.getTime())
-                            ? "Unknown date"
-                            : `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
-                        })()}
-                      </span>
-                    </div>
-                    {/* Progress bar and status for pending/processing jobs */}
-                    {(job.status === "processing" ||
-                      job.status === "pending") && (
-                      <div className="mt-2 flex items-center gap-3">
-                        <div className="h-1.5 w-40 overflow-hidden rounded-full bg-gray-200">
-                          <div
-                            className="h-full bg-blue-600 transition-all duration-500 ease-out"
-                            style={{
-                              width: `${job.status_detail?.progress ?? 0}%`,
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600"></span>
-                          <span className="text-xs text-blue-600 font-medium">
-                            {job.status_detail?.message ||
-                              (job.status === "pending"
-                                ? "Queued..."
-                                : "Processing...")}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {job.status_detail?.progress ?? 0}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    {job.status === "completed" && job.rank_score != null && (
-                      <div className="text-right">
-                        <div
-                          className={`text-2xl font-bold ${getScoreColor(
-                            Number(job.rank_score)
-                          )}`}
-                        >
-                          {Number(job.rank_score).toFixed(1)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          #{job.rank_position ?? "-"} of{" "}
-                          {job.total_competitors ?? "-"}
-                        </div>
-                      </div>
-                    )}
-                    {getStatusBadge(job.status)}
+                  <div className="flex items-center gap-3">
+                    {getStatusBadge(batch.status)}
                     <button
-                      onClick={(e) => deleteJob(job.id, e)}
-                      disabled={deletingJob === job.id}
+                      onClick={(e) => deleteBatch(batch.batchId, e)}
+                      disabled={deletingBatch === batch.batchId}
                       className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                      title="Delete analysis"
+                      title="Delete entire batch"
                     >
-                      {deletingJob === job.id ? (
+                      {deletingBatch === batch.batchId ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
                     </button>
                     <button className="text-gray-400">
-                      {expandedJobId === job.id ? (
+                      {expandedBatches.has(batch.batchId) ? (
                         <ChevronDown className="h-5 w-5" />
                       ) : (
                         <ChevronRight className="h-5 w-5" />
@@ -1352,61 +1577,408 @@ export function PracticeRanking() {
                   </div>
                 </div>
 
-                {/* Expanded Results */}
-                {expandedJobId === job.id && (
-                  <div className="border-t border-gray-100 bg-gray-50/50 p-6">
-                    {job.status === "completed" ? (
-                      loadingResults === job.id ? (
-                        <div className="flex items-center justify-center py-8">
-                          <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-                        </div>
-                      ) : jobResults[job.id] ? (
-                        <RankingResultsView
-                          result={jobResults[job.id]}
-                          onRefreshCompetitors={() =>
-                            refreshCompetitors(
-                              job.specialty,
-                              job.location || ""
-                            )
-                          }
-                          refreshingCompetitors={refreshingCompetitors}
-                        />
-                      ) : (
-                        <div className="text-center text-gray-500">
-                          Failed to load results
-                        </div>
-                      )
-                    ) : job.status === "failed" ? (
-                      <div className="flex items-center gap-3 rounded-lg bg-red-50 p-4 text-red-700">
-                        <AlertCircle className="h-5 w-5" />
-                        <span>Analysis failed. Please try again.</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                          <span className="text-gray-600">
-                            {job.status_detail?.message || "Processing..."}
-                          </span>
-                        </div>
-                        {job.status_detail && (
-                          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-                            <div
-                              className="h-full bg-blue-600 transition-all duration-500"
-                              style={{
-                                width: `${job.status_detail.progress}%`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                {/* Expanded Batch - Individual Locations */}
+                {expandedBatches.has(batch.batchId) && (
+                  <div className="bg-gray-50/50 border-t border-gray-100">
+                    {batch.jobs.map((job) => (
+                      <JobRow
+                        key={job.id}
+                        job={job}
+                        isExpanded={expandedJobId === job.id}
+                        onToggle={() => toggleExpand(job.id)}
+                        onDelete={(e) => deleteJob(job.id, e)}
+                        deletingJob={deletingJob}
+                        loadingResults={loadingResults}
+                        jobResults={jobResults}
+                        refreshingCompetitors={refreshingCompetitors}
+                        onRefreshCompetitors={() =>
+                          refreshCompetitors(job.specialty, job.location || "")
+                        }
+                        getStatusBadge={getStatusBadge}
+                        getScoreColor={getScoreColor}
+                        indentLevel={1}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
             ))}
+
+            {/* Standalone Jobs (no batch) */}
+            {standaloneJobs.length > 0 && (
+              <div className="bg-white">
+                <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+                  <span className="text-sm font-medium text-gray-600">
+                    Individual Analyses (No Batch)
+                  </span>
+                </div>
+                {standaloneJobs.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    isExpanded={expandedJobId === job.id}
+                    onToggle={() => toggleExpand(job.id)}
+                    onDelete={(e) => deleteJob(job.id, e)}
+                    deletingJob={deletingJob}
+                    loadingResults={loadingResults}
+                    jobResults={jobResults}
+                    refreshingCompetitors={refreshingCompetitors}
+                    onRefreshCompetitors={() =>
+                      refreshCompetitors(job.specialty, job.location || "")
+                    }
+                    getStatusBadge={getStatusBadge}
+                    getScoreColor={getScoreColor}
+                    indentLevel={0}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Job Row Component for displaying individual ranking jobs
+function JobRow({
+  job,
+  isExpanded,
+  onToggle,
+  onDelete,
+  deletingJob,
+  loadingResults,
+  jobResults,
+  refreshingCompetitors,
+  onRefreshCompetitors,
+  getStatusBadge,
+  getScoreColor,
+  indentLevel = 0,
+}: {
+  job: RankingJob;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: (e: React.MouseEvent) => void;
+  deletingJob: number | null;
+  loadingResults: number | null;
+  jobResults: Record<number, RankingResult>;
+  refreshingCompetitors: boolean;
+  onRefreshCompetitors: () => void;
+  getStatusBadge: (status: string) => React.ReactNode;
+  getScoreColor: (score: number) => string;
+  indentLevel?: number;
+}) {
+  const paddingLeft =
+    indentLevel === 2 ? "pl-20" : indentLevel === 1 ? "pl-12" : "pl-6";
+
+  return (
+    <div className="transition-colors hover:bg-gray-50">
+      {/* Job Header */}
+      <div
+        className={`flex cursor-pointer items-center gap-4 p-3 ${paddingLeft}`}
+        onClick={onToggle}
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
+          <MapPin className="h-4 w-4" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-medium text-gray-900 text-sm">
+              {job.gbp_location_name || job.domain}
+            </h4>
+            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
+              {job.specialty}
+            </span>
+            {job.location && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <MapPin className="h-3 w-3" />
+                {job.location}
+              </span>
+            )}
+          </div>
+          {/* Progress bar and status for pending/processing jobs */}
+          {(job.status === "processing" || job.status === "pending") && (
+            <div className="mt-1 flex items-center gap-3">
+              <div className="h-1 w-32 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-500 ease-out"
+                  style={{
+                    width: `${job.status_detail?.progress ?? 0}%`,
+                  }}
+                />
+              </div>
+              <span className="text-xs text-blue-600 font-medium">
+                {job.status_detail?.progress ?? 0}%
+              </span>
+              {job.status_detail?.message && (
+                <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                  {job.status_detail.message}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {job.status === "completed" && job.rank_score != null && (
+            <div className="text-right">
+              <div
+                className={`text-xl font-bold ${getScoreColor(
+                  Number(job.rank_score)
+                )}`}
+              >
+                {Number(job.rank_score).toFixed(1)}
+              </div>
+              <div className="text-xs text-gray-500">
+                #{job.rank_position ?? "-"} of {job.total_competitors ?? "-"}
+              </div>
+            </div>
+          )}
+          {getStatusBadge(job.status)}
+          <button
+            onClick={onDelete}
+            disabled={deletingJob === job.id}
+            className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            title="Delete analysis"
+          >
+            {deletingJob === job.id ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </button>
+          <button className="text-gray-400">
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Results */}
+      {isExpanded && (
+        <div
+          className={`border-t border-gray-100 bg-gray-50/50 p-6 ${paddingLeft}`}
+        >
+          {job.status === "completed" ? (
+            loadingResults === job.id ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+              </div>
+            ) : jobResults[job.id] ? (
+              <RankingResultsView
+                result={jobResults[job.id]}
+                onRefreshCompetitors={onRefreshCompetitors}
+                refreshingCompetitors={refreshingCompetitors}
+              />
+            ) : (
+              <div className="text-center text-gray-500">
+                Failed to load results
+              </div>
+            )
+          ) : job.status === "failed" ? (
+            <div className="flex items-center gap-3 rounded-lg bg-red-50 p-4 text-red-700">
+              <AlertCircle className="h-5 w-5" />
+              <span>Analysis failed. Please try again.</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+                <span className="text-gray-600">
+                  {job.status_detail?.message || "Processing..."}
+                </span>
+              </div>
+              {job.status_detail && (
+                <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-500"
+                    style={{
+                      width: `${job.status_detail.progress}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Location Form Row Component
+function LocationFormRow({
+  form,
+  index,
+  updateForm,
+}: {
+  form: LocationFormData;
+  index: number;
+  updateForm: (index: number, updates: Partial<LocationFormData>) => void;
+}) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter cities based on search
+  const filteredCities = useMemo(() => {
+    if (!form.marketLocationSearch) return US_CITIES.slice(0, 20);
+    const search = form.marketLocationSearch.toLowerCase();
+    return US_CITIES.filter((city) =>
+      city.toLowerCase().includes(search)
+    ).slice(0, 20);
+  }, [form.marketLocationSearch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        updateForm(index, { showDropdown: false });
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [index, updateForm]);
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* Location Name (read-only) */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            GBP Location
+          </label>
+          <div className="flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900">
+            <MapPin className="h-4 w-4 text-gray-400" />
+            <span className="truncate">{form.gbpLocationName}</span>
+          </div>
+        </div>
+
+        {/* Specialty Selector */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            Specialty *
+          </label>
+          <select
+            value={form.specialty}
+            onChange={(e) => updateForm(index, { specialty: e.target.value })}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Select specialty...</option>
+            {SPECIALTIES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Market Location Searchable Select */}
+        <div className="relative md:col-span-2" ref={dropdownRef}>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            Market Location *
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={form.marketLocation || form.marketLocationSearch}
+              onChange={(e) => {
+                updateForm(index, {
+                  marketLocationSearch: e.target.value,
+                  marketLocation: "",
+                  showDropdown: true,
+                });
+              }}
+              onFocus={() => updateForm(index, { showDropdown: true })}
+              placeholder="Search or enter market location..."
+              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            {form.marketLocation && (
+              <button
+                onClick={() => {
+                  updateForm(index, {
+                    marketLocation: "",
+                    marketLocationSearch: "",
+                  });
+                }}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {form.showDropdown && !form.marketLocation && (
+            <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {filteredCities.length > 0 ? (
+                <>
+                  {filteredCities.map((city) => (
+                    <button
+                      key={city}
+                      onClick={() => {
+                        updateForm(index, {
+                          marketLocation: city,
+                          marketLocationSearch: "",
+                          showDropdown: false,
+                        });
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                    >
+                      <MapPin className="inline h-3 w-3 mr-2 text-gray-400" />
+                      {city}
+                    </button>
+                  ))}
+                  {form.marketLocationSearch &&
+                    !US_CITIES.some(
+                      (c) =>
+                        c.toLowerCase() ===
+                        form.marketLocationSearch.toLowerCase()
+                    ) && (
+                      <button
+                        onClick={() => {
+                          updateForm(index, {
+                            marketLocation: form.marketLocationSearch,
+                            marketLocationSearch: "",
+                            showDropdown: false,
+                          });
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm border-t border-gray-100 bg-gray-50 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                      >
+                        <Search className="inline h-3 w-3 mr-2 text-blue-500" />
+                        Use "{form.marketLocationSearch}" as custom location
+                      </button>
+                    )}
+                </>
+              ) : form.marketLocationSearch ? (
+                <button
+                  onClick={() => {
+                    updateForm(index, {
+                      marketLocation: form.marketLocationSearch,
+                      marketLocationSearch: "",
+                      showDropdown: false,
+                    });
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                >
+                  <Search className="inline h-3 w-3 mr-2 text-blue-500" />
+                  Use "{form.marketLocationSearch}" as custom location
+                </button>
+              ) : (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  Start typing to search cities...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1442,6 +2014,16 @@ function RankingResultsView({
 
   return (
     <div className="space-y-6">
+      {/* Location Info Header */}
+      {result.gbpLocationName && (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <MapPin className="h-4 w-4" />
+          <span className="font-medium">{result.gbpLocationName}</span>
+          <span className="text-gray-400">•</span>
+          <span>{result.location}</span>
+        </div>
+      )}
+
       {/* Score Overview */}
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -1577,37 +2159,73 @@ function RankingResultsView({
               </tr>
             </thead>
             <tbody>
-              {competitors.slice(0, 10).map((comp, idx) => (
-                <tr key={idx} className="border-b border-gray-100">
-                  <td className="py-2 px-2">
-                    <span className="flex items-center gap-1">
-                      {idx === 0 && (
-                        <Trophy className="h-4 w-4 text-yellow-500" />
-                      )}
-                      #{comp.rankPosition}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2 font-medium text-gray-900">
-                    {comp.name}
-                  </td>
-                  <td
-                    className={`py-2 px-2 text-center font-medium ${getScoreColor(
-                      comp.rankScore
-                    )}`}
+              {(() => {
+                // Create a unified list with client included
+                const clientEntry = {
+                  name: result.gbpLocationName || result.domain,
+                  rankScore: Number(result.rankScore),
+                  rankPosition: result.rankPosition,
+                  totalReviews:
+                    result.rawData?.client_gbp?.totalReviewCount || 0,
+                  averageRating:
+                    factors?.star_rating?.value ??
+                    result.rawData?.client_gbp?.averageRating ??
+                    0,
+                  primaryCategory:
+                    result.rawData?.client_gbp?.primaryCategory ||
+                    result.specialty,
+                  isClient: true,
+                };
+
+                // Merge client with competitors and sort by rank position
+                const allEntries = [
+                  clientEntry,
+                  ...competitors.map((c) => ({ ...c, isClient: false })),
+                ].sort((a, b) => a.rankPosition - b.rankPosition);
+
+                // Show top 10 entries
+                return allEntries.slice(0, 10).map((comp, idx) => (
+                  <tr
+                    key={idx}
+                    className={`border-b border-gray-100 ${
+                      comp.isClient ? "bg-blue-50" : ""
+                    }`}
                   >
-                    {comp.rankScore?.toFixed(1) || "-"}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-700">
-                    {comp.totalReviews}
-                  </td>
-                  <td className="py-2 px-2 text-center text-gray-700">
-                    {comp.averageRating?.toFixed(1) || "-"}
-                  </td>
-                  <td className="py-2 px-2 text-gray-600 truncate max-w-[150px]">
-                    {comp.primaryCategory || "-"}
-                  </td>
-                </tr>
-              ))}
+                    <td className="py-2 px-2">
+                      <span className="flex items-center gap-1">
+                        {comp.rankPosition === 1 && (
+                          <Trophy className="h-4 w-4 text-yellow-500" />
+                        )}
+                        #{comp.rankPosition}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 font-medium text-gray-900">
+                      {comp.name}
+                      {comp.isClient && (
+                        <span className="ml-2 text-xs text-blue-600 font-medium">
+                          (You)
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      className={`py-2 px-2 text-center font-medium ${getScoreColor(
+                        comp.rankScore
+                      )}`}
+                    >
+                      {comp.rankScore?.toFixed(1) || "-"}
+                    </td>
+                    <td className="py-2 px-2 text-center text-gray-700">
+                      {comp.totalReviews}
+                    </td>
+                    <td className="py-2 px-2 text-center text-gray-700">
+                      {comp.averageRating?.toFixed(1) || "-"}
+                    </td>
+                    <td className="py-2 px-2 text-gray-600 truncate max-w-[150px]">
+                      {comp.primaryCategory || "-"}
+                    </td>
+                  </tr>
+                ));
+              })()}
             </tbody>
           </table>
         </div>

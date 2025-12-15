@@ -8,10 +8,13 @@ import {
   AlertTriangle,
   Rocket,
   Stethoscope,
-  Calendar,
   MapPin,
   CheckCircle,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Building,
+  Layers,
 } from "lucide-react";
 
 // Type for client GBP data
@@ -25,6 +28,8 @@ interface ClientGbpData {
   hasWebsite?: boolean;
   hasPhone?: boolean;
   hasHours?: boolean;
+  gbpLocationId?: string;
+  gbpLocationName?: string;
   performance?: {
     calls?: number;
     directions?: number;
@@ -56,6 +61,8 @@ interface RankingResult {
   domain: string;
   specialty: string;
   location: string | null;
+  gbpLocationId?: string | null;
+  gbpLocationName?: string | null;
   observedAt: string;
   rankScore: number | string;
   rankPosition: number;
@@ -143,25 +150,26 @@ interface RankingsDashboardProps {
 
 export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [latestRanking, setLatestRanking] = useState<RankingResult | null>(
+  const [rankings, setRankings] = useState<RankingResult[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (googleAccountId) {
-      fetchLatestRanking();
+      fetchLatestRankings();
     } else {
       setLoading(false);
     }
   }, [googleAccountId]);
 
-  const fetchLatestRanking = async () => {
+  const fetchLatestRankings = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      // Fetch the latest ranking for this google account
+      // Fetch the latest rankings for all locations of this google account
       const response = await fetch(
         `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
         {
@@ -172,16 +180,32 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       if (!response.ok) {
         if (response.status === 404) {
           // No ranking found yet
-          setLatestRanking(null);
+          setRankings([]);
           return;
         }
         throw new Error("Failed to fetch ranking data");
       }
 
       const data = await response.json();
-      setLatestRanking(data.ranking);
+      // Handle both old format (single ranking) and new format (rankings array)
+      if (data.rankings && Array.isArray(data.rankings)) {
+        setRankings(data.rankings);
+        // Auto-select first location if multiple
+        if (data.rankings.length > 0) {
+          const firstRanking = data.rankings[0];
+          setSelectedLocationId(
+            firstRanking.gbpLocationId || firstRanking.id.toString()
+          );
+        }
+      } else if (data.ranking) {
+        // Legacy single ranking format
+        setRankings([data.ranking]);
+        setSelectedLocationId(
+          data.ranking.gbpLocationId || data.ranking.id.toString()
+        );
+      }
     } catch (err) {
-      console.error("Error fetching ranking:", err);
+      console.error("Error fetching rankings:", err);
       setError(
         err instanceof Error ? err.message : "Failed to load ranking data"
       );
@@ -204,7 +228,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
           </h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={fetchLatestRanking}
+            onClick={fetchLatestRankings}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Try Again
@@ -230,7 +254,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  if (!latestRanking) {
+  if (rankings.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-center max-w-md">
@@ -247,7 +271,167 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  return <PerformanceDashboard result={latestRanking} />;
+  // Get selected ranking
+  const selectedRanking =
+    rankings.find(
+      (r) => (r.gbpLocationId || r.id.toString()) === selectedLocationId
+    ) || rankings[0];
+
+  // If only one location, show the full dashboard directly
+  if (rankings.length === 1) {
+    return <PerformanceDashboard result={rankings[0]} />;
+  }
+
+  // Multiple locations - show overview with location cards
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+        <div className="flex items-center gap-3">
+          <Stethoscope className="h-6 w-6 text-gray-600" />
+          <div>
+            <h2 className="text-3xl font-thin text-gray-900 mb-1">
+              Performance Dashboard
+            </h2>
+            <p className="text-sm text-gray-500">
+              {rankings.length} locations analyzed
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-sm text-gray-500">
+          <span className="flex items-center gap-1">
+            <Layers className="h-4 w-4" />
+            Multi-Location Overview
+          </span>
+        </div>
+      </div>
+
+      {/* Location Cards Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {rankings.map((ranking) => {
+          const isSelected =
+            (ranking.gbpLocationId || ranking.id.toString()) ===
+            selectedLocationId;
+          return (
+            <LocationCard
+              key={ranking.id}
+              ranking={ranking}
+              isSelected={isSelected}
+              onClick={() =>
+                setSelectedLocationId(
+                  ranking.gbpLocationId || ranking.id.toString()
+                )
+              }
+            />
+          );
+        })}
+      </div>
+
+      {/* Selected Location Detail */}
+      {selectedRanking && (
+        <div className="border-t border-gray-200 pt-6">
+          <PerformanceDashboard result={selectedRanking} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Location Card Component for Multi-Location Overview
+function LocationCard({
+  ranking,
+  isSelected,
+  onClick,
+}: {
+  ranking: RankingResult;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const scoreColor = getScoreColor(Number(ranking.rankScore));
+  const locationName = ranking.gbpLocationName || ranking.domain;
+  const clientRating =
+    ranking.rankingFactors?.star_rating?.value ??
+    ranking.rawData?.client_gbp?.averageRating ??
+    0;
+  const clientReviews = ranking.rawData?.client_gbp?.totalReviewCount || 0;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+        isSelected
+          ? "border-blue-500 bg-blue-50/50 shadow-md"
+          : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
+      }`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Building className="h-5 w-5 text-gray-400" />
+          <h3 className="font-semibold text-gray-900 truncate max-w-[180px]">
+            {locationName}
+          </h3>
+        </div>
+        {isSelected ? (
+          <ChevronDown className="h-5 w-5 text-blue-500" />
+        ) : (
+          <ChevronRight className="h-5 w-5 text-gray-400" />
+        )}
+      </div>
+
+      {ranking.location && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+          <MapPin className="h-3 w-3" />
+          {ranking.location}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {/* Rank Position */}
+        <div className="rounded-lg bg-gray-50 p-2">
+          <div className="text-lg font-bold text-gray-900">
+            #{ranking.rankPosition}
+          </div>
+          <div className="text-xs text-gray-500">Rank</div>
+        </div>
+
+        {/* Score */}
+        <div className="rounded-lg bg-gray-50 p-2">
+          <div className={`text-lg font-bold ${scoreColor}`}>
+            {Number(ranking.rankScore).toFixed(0)}
+          </div>
+          <div className="text-xs text-gray-500">Score</div>
+        </div>
+
+        {/* Rating */}
+        <div className="rounded-lg bg-gray-50 p-2">
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-lg font-bold text-gray-900">
+              {Number(clientRating).toFixed(1)}
+            </span>
+            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+          </div>
+          <div className="text-xs text-gray-500">{clientReviews} reviews</div>
+        </div>
+      </div>
+
+      {/* Specialty Badge */}
+      <div className="mt-3 flex items-center justify-between">
+        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
+          {ranking.specialty}
+        </span>
+        <span className="text-xs text-gray-400">
+          of {ranking.totalCompetitors}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Helper function to get score color
+function getScoreColor(score: number): string {
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-yellow-600";
+  return "text-red-600";
 }
 
 // Helper function to extract performance metrics from raw GBP data
@@ -326,37 +510,8 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
   // Performance metrics - extract from raw time series data
   const performance = extractPerformanceMetrics(result.rawData?.client_gbp);
 
-  // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  };
-
   return (
     <div className="space-y-6">
-      {/* Dashboard Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-        <div className="flex items-center gap-3">
-          <Stethoscope className="h-6 w-6 text-gray-600" />
-          <div>
-            <h2 className="text-3xl font-thin text-gray-900 mb-1">
-              Performance Dashboard
-            </h2>
-            <p className="text-sm text-gray-500">{result.domain}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          <span className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
-            {result.location}
-          </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            {formatDate(result.observedAt)}
-          </span>
-        </div>
-      </div>
-
       {/* KPI Grid - 4 Glass Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         {/* Current Rank Position */}
@@ -534,8 +689,10 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
 
                   // Create client entry with business name from GBP if available
                   const clientDisplayName =
+                    result.gbpLocationName ||
                     result.rawData?.client_gbp?._raw?.locations?.[0]
-                      ?.displayName || result.domain;
+                      ?.displayName ||
+                    result.domain;
                   const clientEntry = {
                     name: clientDisplayName,
                     rankPosition: clientPosition,

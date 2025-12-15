@@ -6,6 +6,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowRight,
+  MapPin,
+  Trophy,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAgentData } from "../../hooks/useAgentData";
@@ -16,6 +18,31 @@ import { fetchClientTasks } from "../../api/tasks";
 import type { ActionItem } from "../../types/tasks";
 import { NotificationWidget } from "./NotificationWidget";
 import { ReferralEngineDashboard } from "../ReferralEngineDashboard";
+
+// Ranking data types (matching API response from /latest endpoint)
+interface RankingResult {
+  id: number;
+  googleAccountId: number;
+  domain: string;
+  specialty: string;
+  location: string;
+  gbpAccountId: string | null;
+  gbpLocationId: string | null;
+  gbpLocationName: string | null;
+  batchId: string | null;
+  observedAt: string;
+  status: string;
+  rankScore: number;
+  rankPosition: number;
+  totalCompetitors: number;
+  rankingFactors: Record<string, unknown> | null;
+  rawData: Record<string, unknown> | null;
+  llmAnalysis: Record<string, unknown> | null;
+  statusDetail: Record<string, unknown> | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface DashboardOverviewProps {
   googleAccountId?: number | null;
@@ -40,6 +67,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [allUserTasks, setAllUserTasks] = useState<ActionItem[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
+
+  // Ranking data state
+  const [rankingData, setRankingData] = useState<RankingResult[] | null>(null);
+  const [rankingLoading, setRankingLoading] = useState(true);
+  const [rankingError, setRankingError] = useState<string | null>(null);
 
   // Fetch PMS data
   useEffect(() => {
@@ -73,6 +105,56 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
     loadPmsData();
   }, [userProfile?.domainName]);
+
+  // Fetch ranking data
+  useEffect(() => {
+    const loadRankingData = async () => {
+      if (!googleAccountId) {
+        setRankingLoading(false);
+        return;
+      }
+
+      setRankingLoading(true);
+      setRankingError(null);
+
+      try {
+        const response = await fetch(
+          `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`
+        );
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setRankingData(null);
+            setRankingLoading(false);
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("[DashboardOverview] Ranking API response:", result);
+        if (result.success && result.rankings) {
+          // Handle both array and single object
+          const rankings = Array.isArray(result.rankings)
+            ? result.rankings
+            : [result.rankings];
+          console.log("[DashboardOverview] Parsed rankings:", rankings);
+          setRankingData(rankings);
+        } else {
+          console.log("[DashboardOverview] No rankings in response");
+          setRankingData(null);
+        }
+      } catch (err) {
+        setRankingError(
+          err instanceof Error ? err.message : "Failed to load ranking data"
+        );
+      } finally {
+        setRankingLoading(false);
+      }
+    };
+
+    loadRankingData();
+  }, [googleAccountId]);
 
   // Fetch tasks data
   useEffect(() => {
@@ -164,17 +246,44 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   const pmsMetrics = calculatePmsMetrics();
 
-  // Format month label
-  const formatMonthLabel = (monthStr: string) => {
-    try {
-      const date = new Date(`${monthStr}-01`);
-      return date.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      });
-    } catch {
-      return monthStr;
+  // Get ranking summary for display
+  const getRankingSummary = () => {
+    if (!rankingData || rankingData.length === 0) return null;
+
+    const firstRanking = rankingData[0];
+    const locationCount = rankingData.length;
+
+    console.log("[DashboardOverview] First ranking:", firstRanking);
+
+    return {
+      score: Math.round(firstRanking.rankScore || 0),
+      rank: firstRanking.rankPosition || 0,
+      totalCompetitors: firstRanking.totalCompetitors || 0,
+      locationName:
+        firstRanking.gbpLocationName || firstRanking.domain || "Unknown",
+      locationCount,
+      updatedAt: firstRanking.createdAt,
+    };
+  };
+
+  const rankingSummary = getRankingSummary();
+
+  // Get the latest update date between PMS and ranking
+  const getLatestUpdateDate = () => {
+    const dates: Date[] = [];
+
+    if (pmsData?.stats?.latestJobTimestamp) {
+      dates.push(new Date(pmsData.stats.latestJobTimestamp));
     }
+
+    if (rankingData && rankingData.length > 0 && rankingData[0].createdAt) {
+      dates.push(new Date(rankingData[0].createdAt));
+    }
+
+    if (dates.length === 0) return null;
+
+    const latestDate = dates.reduce((a, b) => (a > b ? a : b));
+    return latestDate.toLocaleDateString();
   };
 
   // Loading state
@@ -295,7 +404,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           )}
         </div>
 
-        {/* PMS Upload Data Card - Dynamic */}
+        {/* Latest Practice Data Card - PMS + Ranking */}
         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200 shadow-sm">
           <div className="flex items-start gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
@@ -303,143 +412,152 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Latest Practice Data
-                <span className="ml-2 text-sm font-normal text-pink-600">
-                  PMS DATA
-                </span>
+                Latest Practice Analysis
               </h3>
-              <p className="text-sm text-gray-600">
-                Monthly summary from your practice management system
-              </p>
             </div>
           </div>
 
-          {pmsLoading ? (
+          {pmsLoading || rankingLoading ? (
             <div className="text-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
               <p className="text-sm text-gray-500">Loading practice data...</p>
             </div>
-          ) : pmsError ? (
+          ) : pmsError && rankingError ? (
             <div className="text-center py-8">
               <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <p className="text-sm text-red-600 mb-1">
-                Failed to load PMS data
+              <p className="text-sm text-red-600 mb-1">Failed to load data</p>
+              <p className="text-xs text-gray-500">
+                {pmsError || rankingError}
               </p>
-              <p className="text-xs text-gray-500">{pmsError}</p>
             </div>
-          ) : pmsMetrics ? (
+          ) : pmsMetrics || rankingSummary ? (
             <div className="space-y-3">
-              <div className="bg-white/60 rounded-lg p-3">
-                <p className="text-xs text-gray-600 mb-2">
-                  Monthly Summary - {formatMonthLabel(pmsMetrics.month)}
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-semibold text-gray-900">
-                        {pmsMetrics.totalReferrals.toLocaleString()}
-                      </span>
-                      {pmsMetrics.referralChange !== 0 && (
-                        <span
-                          className={`text-xs font-medium ${
-                            pmsMetrics.referralChange >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {pmsMetrics.referralChange >= 0 ? "+" : ""}
-                          {pmsMetrics.referralChange.toFixed(0)}%
+              {/* PMS Metrics Section */}
+              {pmsMetrics && (
+                <div className="bg-white/60 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-semibold text-gray-900">
+                          {pmsMetrics.totalReferrals.toLocaleString()}
                         </span>
-                      )}
+                        {pmsMetrics.referralChange !== 0 && (
+                          <span
+                            className={`text-xs font-medium ${
+                              pmsMetrics.referralChange >= 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {pmsMetrics.referralChange >= 0 ? "+" : ""}
+                            {pmsMetrics.referralChange.toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600">Total Referrals</p>
                     </div>
-                    <p className="text-xs text-gray-600">Total Referrals</p>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-semibold text-gray-900">
-                        {pmsMetrics.selfReferrals.toLocaleString()}
-                      </span>
-                      {pmsMetrics.selfReferralChange !== 0 && (
-                        <span
-                          className={`text-xs font-medium ${
-                            pmsMetrics.selfReferralChange >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {pmsMetrics.selfReferralChange >= 0 ? "+" : ""}
-                          {pmsMetrics.selfReferralChange.toFixed(0)}%
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-semibold text-gray-900">
+                          ${(pmsMetrics.production / 1000).toFixed(0)}K
                         </span>
-                      )}
+                        {pmsMetrics.productionChange !== 0 && (
+                          <span
+                            className={`text-xs font-medium ${
+                              pmsMetrics.productionChange >= 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {pmsMetrics.productionChange >= 0 ? "+" : ""}
+                            {pmsMetrics.productionChange.toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600">Production</p>
                     </div>
-                    <p className="text-xs text-gray-600">Self Referrals</p>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-semibold text-gray-900">
-                        ${(pmsMetrics.production / 1000).toFixed(0)}K
-                      </span>
-                      {pmsMetrics.productionChange !== 0 && (
-                        <span
-                          className={`text-xs font-medium ${
-                            pmsMetrics.productionChange >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {pmsMetrics.productionChange >= 0 ? "+" : ""}
-                          {pmsMetrics.productionChange.toFixed(0)}%
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600">Production</p>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-semibold text-gray-900">
-                        {pmsMetrics.doctorReferrals.toLocaleString()}
-                      </span>
-                      {pmsMetrics.doctorReferralChange !== 0 && (
-                        <span
-                          className={`text-xs font-medium ${
-                            pmsMetrics.doctorReferralChange >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {pmsMetrics.doctorReferralChange >= 0 ? "+" : ""}
-                          {pmsMetrics.doctorReferralChange.toFixed(0)}%
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600">Doctor Referrals</p>
                   </div>
                 </div>
-              </div>
+              )}
 
+              {/* Ranking Summary Section */}
+              {rankingSummary && (
+                <div className="bg-white/60 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Trophy className="w-4 h-4 text-yellow-500" />
+                        <span className="text-2xl font-semibold text-gray-900">
+                          #{rankingSummary.rank}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          of {rankingSummary.totalCompetitors}
+                        </span>
+                      </div>
+                      <div className="h-8 w-px bg-gray-300" />
+                      <div>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {rankingSummary.score}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          score
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {rankingSummary.locationCount > 1 ? (
+                    <button
+                      onClick={() => navigate("/rankings")}
+                      className="mt-2 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      <span>
+                        {rankingSummary.locationCount} locations ranked
+                      </span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  ) : (
+                    <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {rankingSummary.locationName}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Footer with latest update date */}
               <div className="flex items-center justify-between pt-1">
                 <span className="text-xs text-purple-600">
-                  {pmsData?.stats?.latestJobTimestamp
-                    ? `Updated ${new Date(
-                        pmsData.stats.latestJobTimestamp
-                      ).toLocaleDateString()}`
+                  {getLatestUpdateDate()
+                    ? `Updated ${getLatestUpdateDate()}`
                     : "Data available"}
                 </span>
               </div>
 
-              <button
-                onClick={() => navigate("/pmsStatistics")}
-                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
-              >
-                View Full PMS Report
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              {/* CTA Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => navigate("/pmsStatistics")}
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
+                >
+                  Full PMS Report
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => navigate("/rankings")}
+                  className="bg-gradient-to-r from-pink-500 to-pink-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all flex items-center justify-center gap-2"
+                >
+                  Full Ranking Report
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500">No practice data available yet.</p>
               <p className="text-sm text-gray-400 mt-2">
-                Upload PMS data to see your practice metrics.
+                Upload PMS data or run ranking analysis to see your practice
+                metrics.
               </p>
             </div>
           )}

@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Bot,
   Info,
+  TrendingUp,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -98,6 +99,8 @@ export function NotificationPopover({
         return "/tasks";
       case "agent":
         return "/dashboard";
+      case "ranking":
+        return "/rankings";
       default:
         return "/dashboard";
     }
@@ -186,6 +189,11 @@ export function NotificationPopover({
         Icon: Bot,
         color: "text-purple-600",
         bgColor: "bg-purple-100",
+      },
+      ranking: {
+        Icon: TrendingUp,
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-100",
       },
       system: {
         Icon: Info,

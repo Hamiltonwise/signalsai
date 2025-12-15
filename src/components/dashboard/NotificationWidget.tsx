@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   Bot,
   Info,
+  TrendingUp,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +72,8 @@ export function NotificationWidget({
         return "/tasks";
       case "agent":
         return "/dashboard";
+      case "ranking":
+        return "/rankings";
       default:
         return "/dashboard";
     }
@@ -147,6 +150,11 @@ export function NotificationWidget({
         Icon: Bot,
         color: "text-purple-600",
         bgColor: "bg-purple-100",
+      },
+      ranking: {
+        Icon: TrendingUp,
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-100",
       },
       system: {
         Icon: Info,

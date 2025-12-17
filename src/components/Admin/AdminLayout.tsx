@@ -8,15 +8,18 @@ export interface AdminLayoutProps extends PropsWithChildren {
 
 export function AdminLayout({ children, actionBar }: AdminLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-alloro-bg font-body text-alloro-navy">
+      {/* Fixed Sidebar */}
       <AdminSidebar />
-      <div className="flex flex-1 flex-col">
+
+      {/* Main Content Area - shifted right to accommodate fixed sidebar */}
+      <div className="flex flex-1 flex-col ml-72 w-[calc(100%-18rem)]">
         <AdminTopBar />
-        <div className="flex flex-1 flex-col gap-4 px-6 py-6">
+        <div className="flex flex-1 flex-col gap-6 px-8 py-8 max-w-[1400px] mx-auto w-full">
           {actionBar ? (
             <div className="flex items-center justify-between">{actionBar}</div>
           ) : null}
-          <div className="flex-1 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
             {children}
           </div>
         </div>

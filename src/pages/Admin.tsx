@@ -51,12 +51,16 @@ export default function Admin() {
     <AdminGuard>
       <AdminLayout
         actionBar={
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-              Control Center
-            </span>
-            <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
-          </div>
+          <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] px-8 py-6 w-full">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold uppercase tracking-wider text-alloro-cobalt">
+                Control Center
+              </span>
+              <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight mt-1">
+                {pageTitle}
+              </h1>
+            </div>
+          </header>
         }
       >
         <Routes>

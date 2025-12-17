@@ -23,10 +23,12 @@ import { formatDistanceToNow } from "date-fns";
 
 interface NotificationPopoverProps {
   googleAccountId: number | null;
+  customTrigger?: React.ReactNode;
 }
 
 export function NotificationPopover({
   googleAccountId,
+  customTrigger,
 }: NotificationPopoverProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -342,19 +344,29 @@ export function NotificationPopover({
   return (
     <>
       {/* Notification Button */}
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-white/30"
-      >
-        <Bell className="h-4 w-4" />
-        <span>Notifications</span>
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 left-3 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+      {customTrigger ? (
+        <div
+          ref={buttonRef as any}
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full"
+        >
+          {customTrigger}
+        </div>
+      ) : (
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-white/30"
+        >
+          <Bell className="h-4 w-4" />
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 left-3 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Popover rendered via Portal */}
       {createPortal(

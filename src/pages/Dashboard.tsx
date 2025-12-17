@@ -51,12 +51,22 @@ export default function Dashboard() {
     | "Referral Engine"
   >("Dashboard");
 
-  // Onboarding state
+  // Onboarding state - initialize from localStorage for instant rendering
   const [onboardingCompleted, setOnboardingCompleted] = useState<
     boolean | null
-  >(null);
-  const [hasProperties, setHasProperties] = useState<boolean>(true);
-  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  >(() => {
+    const cached = localStorage.getItem("onboardingCompleted");
+    return cached === "true" ? true : cached === "false" ? false : null;
+  });
+  const [hasProperties, setHasProperties] = useState<boolean>(() => {
+    const cached = localStorage.getItem("hasProperties");
+    return cached !== "false"; // Default to true unless explicitly false
+  });
+  const [checkingOnboarding, setCheckingOnboarding] = useState(() => {
+    // Skip initial loading screen if we have cached status
+    const cached = localStorage.getItem("onboardingCompleted");
+    return cached === null;
+  });
 
   // Map between tabs and routes
   const tabFromPath = (path: string): typeof activeTab => {
@@ -83,7 +93,9 @@ export default function Dashboard() {
 
         // Backend returns { success: true, onboardingCompleted: boolean, hasPropertyIds: boolean }
         if (response.success || response.successful) {
-          setOnboardingCompleted(response.onboardingCompleted === true);
+          const isCompleted = response.onboardingCompleted === true;
+          setOnboardingCompleted(isCompleted);
+          localStorage.setItem("onboardingCompleted", String(isCompleted));
 
           // Check if properties are actually connected (parsing the JSON if needed)
           let hasProps = false;
@@ -100,6 +112,7 @@ export default function Dashboard() {
             );
           }
           setHasProperties(hasProps);
+          localStorage.setItem("hasProperties", String(hasProps));
 
           console.log(
             "[Dashboard] Onboarding completed:",
@@ -110,11 +123,14 @@ export default function Dashboard() {
         } else {
           // If check fails, assume onboarding is needed
           setOnboardingCompleted(false);
+          localStorage.setItem("onboardingCompleted", "false");
         }
       } catch (error) {
         console.error("Failed to check onboarding status:", error);
-        // Assume onboarding is needed if check fails
-        setOnboardingCompleted(false);
+        // Only reset to false if we don't have a cached value
+        if (localStorage.getItem("onboardingCompleted") === null) {
+          setOnboardingCompleted(false);
+        }
       } finally {
         setCheckingOnboarding(false);
       }
@@ -145,11 +161,13 @@ export default function Dashboard() {
     try {
       const response = await onboarding.getOnboardingStatus();
       console.log("[Dashboard] Re-checked status after completion:", response);
-      setOnboardingCompleted(
-        response.onboardingCompleted === true || response.success === true
-      );
+      const isCompleted =
+        response.onboardingCompleted === true || response.success === true;
+      setOnboardingCompleted(isCompleted);
+      localStorage.setItem("onboardingCompleted", String(isCompleted));
       // After simplified onboarding, properties are NOT connected yet
       setHasProperties(false);
+      localStorage.setItem("hasProperties", "false");
     } catch (error) {
       console.error("Failed to re-check status:", error);
       setOnboardingCompleted(true); // Assume success
@@ -171,21 +189,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-3 md:p-6 lg:p-8">
-      <div className="mx-auto max-w-[1400px] flex gap-6">
-        {/* Detached Glass Sidebar */}
-        <Sidebar
-          userProfile={userProfile}
-          onboardingCompleted={onboardingCompleted}
-          disconnect={disconnect}
-          selectedDomain={selectedDomain}
-        />
+    <div className="flex bg-alloro-bg min-h-screen font-body text-alloro-navy">
+      {/* Fixed Sidebar */}
+      <Sidebar
+        userProfile={userProfile}
+        onboardingCompleted={onboardingCompleted}
+        disconnect={disconnect}
+        selectedDomain={selectedDomain}
+      />
 
-        {/* Main glass content area */}
-        <main className="flex-1 glass rounded-3xl overflow-hidden">
+      {/* Main Content Area - shifted right to accommodate fixed sidebar */}
+      <main className="flex-1 ml-72 w-[calc(100%-18rem)]">
+        <div className="max-w-[1600px] mx-auto min-h-screen flex flex-col">
           {/* Show loading state while checking onboarding */}
           {!ready || checkingOnboarding ? (
-            <div className="h-full flex items-center justify-center bg-gray-50/50">
+            <div className="flex-1 flex items-center justify-center bg-gray-50/50">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">
@@ -223,7 +241,7 @@ export default function Dashboard() {
               </div>
             </div>
           ) : !clientId ? (
-            <div className="h-full flex items-center justify-center bg-gray-50/50">
+            <div className="flex-1 flex items-center justify-center bg-gray-50/50">
               <div className="max-w-md w-full mx-4">
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 text-center">
                   <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -246,11 +264,13 @@ export default function Dashboard() {
               </div>
             </div>
           ) : onboardingCompleted === false ? (
-            <OnboardingContainer onComplete={handleOnboardingComplete} />
+            <div className="p-8">
+              <OnboardingContainer onComplete={handleOnboardingComplete} />
+            </div>
           ) : onboardingCompleted === true ? (
             !hasProperties ? (
               // Empty State
-              <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                 <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
                   <Settings className="w-12 h-12 text-blue-600" />
                 </div>
@@ -270,7 +290,7 @@ export default function Dashboard() {
               </div>
             ) : (
               // Dashboard Content
-              <div className="px-4 sm:px-6 lg:px-8 py-6">
+              <div className="px-8 py-8 w-full max-w-[1200px] mx-auto space-y-8 pb-20">
                 <div className="space-y-8">
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -373,7 +393,7 @@ export default function Dashboard() {
             )
           ) : (
             // Loading state while preparing dashboard after onboarding
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4]">
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4]">
               <div className="text-center space-y-8">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -404,8 +424,8 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

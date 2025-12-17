@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2, Search } from "lucide-react";
 
 interface PropertyItem {
   id: string;
@@ -41,11 +41,13 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
   multiSelect = false,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Sync initial selections when modal opens
   useEffect(() => {
     if (isOpen) {
       setSelectedIds(initialSelections);
+      setSearchQuery("");
     }
   }, [isOpen, initialSelections]);
 
@@ -68,7 +70,7 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
 
   const handleConfirm = () => {
     const selectedItems = items.filter((item) => selectedIds.includes(item.id));
-    
+
     if (multiSelect && onMultiSelect) {
       onMultiSelect(selectedItems);
     } else if (!multiSelect && onSelect && selectedItems.length > 0) {
@@ -76,44 +78,96 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
     }
   };
 
+  // Filter items based on search
+  const filteredItems = items.filter(
+    (item) =>
+      item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.account?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", duration: 0.3 }}
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-alloro-navy font-heading">
+                {title}
+              </h3>
               <button
                 onClick={onClose}
                 disabled={isSaving}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
 
+            {/* Search */}
+            {!isLoading && items.length > 0 && (
+              <div className="px-6 py-3 border-b border-slate-100">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search properties..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt outline-none transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-3">
               {isLoading ? (
-                <div className="flex justify-center items-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="flex flex-col justify-center items-center h-40 gap-3">
+                  <Loader2 className="w-8 h-8 text-alloro-cobalt animate-spin" />
+                  <p className="text-sm text-slate-500 font-medium">
+                    Loading properties...
+                  </p>
                 </div>
               ) : items.length === 0 ? (
                 <div className="text-center py-12 px-6">
-                  <p className="text-gray-500">No properties found.</p>
-                  <p className="text-sm text-gray-400 mt-2">
+                  <div className="p-3 bg-slate-100 rounded-xl w-fit mx-auto mb-3">
+                    <Search className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <p className="text-alloro-navy font-bold">
+                    No properties found
+                  </p>
+                  <p className="text-sm text-slate-500 mt-1">
                     Make sure you have access to the correct Google account.
                   </p>
                 </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="text-center py-12 px-6">
+                  <p className="text-slate-500">
+                    No properties match your search
+                  </p>
+                </div>
               ) : (
-                <div className="space-y-1">
-                  {items.map((item) => {
+                <div className="space-y-2">
+                  {filteredItems.map((item) => {
                     const isSelected = selectedIds.includes(item.id);
                     return (
                       <button
@@ -122,21 +176,25 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
                         disabled={isSaving}
                         className={`w-full text-left p-4 rounded-xl transition-all group flex items-center justify-between border ${
                           isSelected
-                            ? "bg-blue-50 border-blue-200 ring-1 ring-blue-200"
-                            : "bg-white border-transparent hover:bg-gray-50"
+                            ? "bg-alloro-cobalt/5 border-alloro-cobalt/30 ring-1 ring-alloro-cobalt/20"
+                            : "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                         }`}
                       >
                         <div className="flex-1 min-w-0 mr-4">
                           <div
-                            className={`font-medium truncate ${
-                              isSelected ? "text-blue-900" : "text-gray-900"
+                            className={`font-bold truncate ${
+                              isSelected
+                                ? "text-alloro-cobalt"
+                                : "text-alloro-navy"
                             }`}
                           >
                             {item.name || item.id}
                           </div>
                           <div
-                            className={`text-xs mt-0.5 truncate ${
-                              isSelected ? "text-blue-600" : "text-gray-500"
+                            className={`text-xs mt-0.5 truncate font-medium ${
+                              isSelected
+                                ? "text-alloro-cobalt/70"
+                                : "text-slate-500"
                             }`}
                           >
                             {type === "ga4" && item.account}
@@ -146,17 +204,17 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
                         </div>
                         <div className="shrink-0">
                           {isSaving && !multiSelect && isSelected ? (
-                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                            <Loader2 className="w-5 h-5 text-alloro-cobalt animate-spin" />
                           ) : (
                             <div
-                              className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                              className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
                                 isSelected
-                                  ? "bg-blue-600 border-blue-600"
-                                  : "border-gray-300 group-hover:border-gray-400"
+                                  ? "bg-alloro-cobalt border-alloro-cobalt"
+                                  : "border-slate-300 group-hover:border-slate-400"
                               }`}
                             >
                               {isSelected && (
-                                <Check className="w-3 h-3 text-white" />
+                                <Check className="w-4 h-4 text-white" />
                               )}
                             </div>
                           )}
@@ -170,22 +228,27 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
 
             {/* Footer - Always show if items exist */}
             {items.length > 0 && (
-              <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSaving}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={isSaving || selectedIds.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Confirm Selection {multiSelect && `(${selectedIds.length})`}
-                </button>
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-3">
+                <span className="text-sm text-slate-500 font-medium">
+                  {selectedIds.length} selected
+                </span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={onClose}
+                    disabled={isSaving}
+                    className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={isSaving || selectedIds.length === 0}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-alloro-cobalt hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md"
+                  >
+                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Confirm Selection
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>

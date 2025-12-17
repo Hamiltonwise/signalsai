@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   ArrowUpRight,
-  ExternalLink,
   RefreshCw,
   AlertCircle,
   Loader2,
@@ -291,12 +290,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     return (
       <div className="space-y-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-32 bg-gray-200 rounded-2xl"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-48 bg-gray-200 rounded-2xl"></div>
-            <div className="h-48 bg-gray-200 rounded-2xl"></div>
+          <div className="h-20 bg-slate-200 rounded-xl"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-5 space-y-6">
+              <div className="h-24 bg-slate-200 rounded-xl"></div>
+              <div className="h-48 bg-slate-200 rounded-xl"></div>
+            </div>
+            <div className="lg:col-span-7 h-72 bg-slate-200 rounded-xl"></div>
           </div>
-          <div className="h-96 bg-gray-200 rounded-2xl"></div>
+          <div className="h-64 bg-slate-200 rounded-xl"></div>
         </div>
       </div>
     );
@@ -305,12 +307,17 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   // Error state
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-        <p className="text-red-700 mb-4">Failed to load agent data: {error}</p>
+      <div className="bg-white border border-red-200 rounded-xl p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8 text-red-600" />
+        </div>
+        <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+          Failed to Load Data
+        </h3>
+        <p className="text-slate-600 mb-6">{error}</p>
         <button
           onClick={refetch}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto"
+          className="px-6 py-2.5 bg-alloro-cobalt text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto font-bold text-sm"
         >
           <RefreshCw className="w-4 h-4" />
           Try Again
@@ -342,409 +349,475 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-normal text-gray-900">
-            Hi Dr. {userProfile?.lastName || "Smith"}
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight">
+              Hi Dr. {userProfile?.lastName || "Smith"}
+            </h1>
+            <p className="text-slate-500 text-sm mt-0.5 font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              System Operational • Your practice runs itself.
+            </p>
+          </div>
           <button
             onClick={refetch}
             disabled={loading}
-            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 text-sm font-bold text-alloro-navy hover:text-alloro-cobalt transition-all bg-white border border-slate-200 hover:border-alloro-cobalt/30 shadow-sm hover:shadow active:scale-95 px-4 py-2 rounded-lg"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            {loading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
-        <p className="text-base text-gray-600">
-          Your practice runs itself. Focus on patients.
-        </p>
       </div>
 
       {/* Top Cards Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Fresh Insight Card - Notification Widget + Proofline Data */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 border border-blue-200 shadow-sm">
-          {/* Notification Widget - Above Proofline */}
-          <div className="mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Status & Insights (Span 4) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          {/* Notification Widget Card */}
+          <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
             <NotificationWidget googleAccountId={googleAccountId ?? null} />
           </div>
 
-          {prooflineData ? (
-            <>
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <ArrowUpRight className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          {/* Featured Insight Card */}
+          <div className="bg-gradient-to-br from-alloro-cobalt to-[#1a3dbf] rounded-xl p-6 shadow-lg shadow-blue-900/20 text-white relative overflow-hidden group flex-1">
+            <div className="absolute top-0 right-0 p-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-white/10 transition-colors"></div>
+
+            {prooflineData ? (
+              <>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3 opacity-90">
+                    <div className="flex items-center gap-2">
+                      <ArrowUpRight size={16} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest border border-white/20 px-2 py-0.5 rounded-full">
+                        Fresh Insight
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold font-heading tracking-tight mb-2">
                     {prooflineData.title}
                   </h3>
+                  <p className="text-blue-100 text-sm leading-relaxed opacity-90">
+                    {prooflineData.explanation}
+                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {prooflineData.explanation}
-                </p>
-
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-xs text-blue-700 font-medium">
+                <div className="relative z-10 flex items-center justify-between text-xs font-medium text-blue-200 border-t border-white/10 pt-4 mt-4">
+                  <span>
                     Updated{" "}
                     {formatTimeAgo(data?.agents?.proofline?.lastUpdated)}
                   </span>
                 </div>
+              </>
+            ) : (
+              <div className="relative z-10 text-center py-4">
+                <p className="text-blue-100 opacity-90">
+                  No proofline data available yet.
+                </p>
+                <p className="text-xs text-blue-200 mt-2 opacity-70">
+                  Data will appear after the first agent run completes.
+                </p>
               </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No proofline data available yet.</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Data will appear after the first agent run completes.
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Latest Practice Data Card - PMS + Ranking */}
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200 shadow-sm">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center flex-shrink-0">
-              <ArrowUpRight className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Latest Practice Analysis
-              </h3>
-            </div>
-          </div>
-
-          {pmsLoading || rankingLoading ? (
-            <div className="text-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Loading practice data...</p>
-            </div>
-          ) : pmsError && rankingError ? (
-            <div className="text-center py-8">
-              <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <p className="text-sm text-red-600 mb-1">Failed to load data</p>
-              <p className="text-xs text-gray-500">
-                {pmsError || rankingError}
-              </p>
-            </div>
-          ) : pmsMetrics || rankingSummary ? (
-            <div className="space-y-3">
-              {/* PMS Metrics Section */}
-              {pmsMetrics && (
-                <div className="bg-white/60 rounded-lg p-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-semibold text-gray-900">
-                          {pmsMetrics.totalReferrals.toLocaleString()}
-                        </span>
-                        {pmsMetrics.referralChange !== 0 && (
-                          <span
-                            className={`text-xs font-medium ${
-                              pmsMetrics.referralChange >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {pmsMetrics.referralChange >= 0 ? "+" : ""}
-                            {pmsMetrics.referralChange.toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600">Total Referrals</p>
-                    </div>
-                    <div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-semibold text-gray-900">
-                          ${(pmsMetrics.production / 1000).toFixed(0)}K
-                        </span>
-                        {pmsMetrics.productionChange !== 0 && (
-                          <span
-                            className={`text-xs font-medium ${
-                              pmsMetrics.productionChange >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {pmsMetrics.productionChange >= 0 ? "+" : ""}
-                            {pmsMetrics.productionChange.toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600">Production</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Ranking Summary Section */}
-              {rankingSummary && (
-                <div className="bg-white/60 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <Trophy className="w-4 h-4 text-yellow-500" />
-                        <span className="text-2xl font-semibold text-gray-900">
-                          #{rankingSummary.rank}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          of {rankingSummary.totalCompetitors}
-                        </span>
-                      </div>
-                      <div className="h-8 w-px bg-gray-300" />
-                      <div>
-                        <span className="text-lg font-semibold text-gray-900">
-                          {rankingSummary.score}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-1">
-                          score
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {rankingSummary.locationCount > 1 ? (
-                    <button
-                      onClick={() => navigate("/rankings")}
-                      className="mt-2 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
-                    >
-                      <MapPin className="w-3 h-3" />
-                      <span>
-                        {rankingSummary.locationCount} locations ranked
-                      </span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  ) : (
-                    <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {rankingSummary.locationName}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Footer with latest update date */}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-purple-600">
-                  {getLatestUpdateDate()
-                    ? `Updated ${getLatestUpdateDate()}`
-                    : "Data available"}
+        {/* Right Column: Practice Performance (Span 7) */}
+        <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col">
+          <div className="p-6 flex-1">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-alloro-navy font-heading tracking-tight">
+                  Practice Performance
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  Live from PMS • {pmsMetrics?.month || "Current Month"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <span className="px-2.5 py-1 bg-green-50 text-green-700 text-[10px] uppercase font-bold tracking-wide rounded-md border border-green-100 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>{" "}
+                  Live
                 </span>
               </div>
+            </div>
 
-              {/* CTA Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => navigate("/pmsStatistics")}
-                  className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
-                >
-                  Full PMS Report
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => navigate("/rankings")}
-                  className="bg-gradient-to-r from-pink-500 to-pink-600 text-white text-sm font-medium py-2.5 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all flex items-center justify-center gap-2"
-                >
-                  Full Ranking Report
-                  <ExternalLink className="w-4 h-4" />
-                </button>
+            {pmsLoading || rankingLoading ? (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-alloro-cobalt mx-auto mb-2" />
+                <p className="text-sm text-slate-500">
+                  Loading practice data...
+                </p>
               </div>
+            ) : pmsError && rankingError ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                <p className="text-sm text-red-600 mb-1">Failed to load data</p>
+                <p className="text-xs text-slate-500">
+                  {pmsError || rankingError}
+                </p>
+              </div>
+            ) : pmsMetrics || rankingSummary ? (
+              <>
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-4 gap-4 divide-x divide-slate-100">
+                  {pmsMetrics && (
+                    <>
+                      <div className="p-4">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Total Referrals
+                        </div>
+                        <div className="text-2xl font-bold font-heading tabular-nums tracking-tight text-alloro-navy">
+                          {pmsMetrics.totalReferrals.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          {pmsMetrics.referralChange !== 0 && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                                pmsMetrics.referralChange >= 0
+                                  ? "text-green-700 bg-green-50"
+                                  : "text-red-700 bg-red-50"
+                              }`}
+                            >
+                              {pmsMetrics.referralChange >= 0 ? "+" : ""}
+                              {pmsMetrics.referralChange.toFixed(0)}%
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 ml-1">
+                            vs last mo
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-alloro-cobalt/5 rounded-lg">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Self Referrals
+                        </div>
+                        <div className="text-2xl font-bold font-heading tabular-nums tracking-tight text-alloro-cobalt">
+                          {pmsMetrics.selfReferrals.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          {pmsMetrics.selfReferralChange !== 0 && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                                pmsMetrics.selfReferralChange >= 0
+                                  ? "text-green-700 bg-green-50"
+                                  : "text-red-700 bg-red-50"
+                              }`}
+                            >
+                              {pmsMetrics.selfReferralChange >= 0 ? "+" : ""}
+                              {pmsMetrics.selfReferralChange.toFixed(0)}%
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 ml-1">
+                            vs last mo
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Production
+                        </div>
+                        <div className="text-2xl font-bold font-heading tabular-nums tracking-tight text-alloro-navy">
+                          ${(pmsMetrics.production / 1000).toFixed(0)}K
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          {pmsMetrics.productionChange !== 0 && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                                pmsMetrics.productionChange >= 0
+                                  ? "text-green-700 bg-green-50"
+                                  : "text-red-700 bg-red-50"
+                              }`}
+                            >
+                              {pmsMetrics.productionChange >= 0 ? "+" : ""}
+                              {pmsMetrics.productionChange.toFixed(0)}%
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 ml-1">
+                            vs last mo
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Doc Referrals
+                        </div>
+                        <div className="text-2xl font-bold font-heading tabular-nums tracking-tight text-alloro-navy">
+                          {pmsMetrics.doctorReferrals.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          {pmsMetrics.doctorReferralChange !== 0 ? (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                                pmsMetrics.doctorReferralChange >= 0
+                                  ? "text-green-700 bg-green-50"
+                                  : "text-red-700 bg-red-50"
+                              }`}
+                            >
+                              {pmsMetrics.doctorReferralChange >= 0 ? "+" : ""}
+                              {pmsMetrics.doctorReferralChange.toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                              Stable
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Ranking Summary */}
+                {rankingSummary && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Trophy className="w-4 h-4 text-yellow-500" />
+                          <span className="text-xl font-bold font-heading text-alloro-navy">
+                            #{rankingSummary.rank}
+                          </span>
+                          <span className="text-sm text-slate-500">
+                            of {rankingSummary.totalCompetitors}
+                          </span>
+                        </div>
+                        <div className="h-6 w-px bg-slate-200" />
+                        <div>
+                          <span className="text-lg font-bold text-alloro-navy">
+                            {rankingSummary.score}
+                          </span>
+                          <span className="text-xs text-slate-500 ml-1">
+                            score
+                          </span>
+                        </div>
+                      </div>
+                      {rankingSummary.locationCount > 1 ? (
+                        <button
+                          onClick={() => navigate("/rankings")}
+                          className="flex items-center gap-1 text-xs text-alloro-cobalt hover:text-blue-700 font-medium"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          <span>
+                            {rankingSummary.locationCount} locations ranked
+                          </span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {rankingSummary.locationName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-slate-500">
+                  No practice data available yet.
+                </p>
+                <p className="text-sm text-slate-400 mt-2">
+                  Upload PMS data or run ranking analysis to see your practice
+                  metrics.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="bg-slate-50/50 px-6 py-3 border-t border-slate-200 flex justify-between items-center">
+            <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+              {getLatestUpdateDate()
+                ? `Updated ${getLatestUpdateDate()}`
+                : "Data available"}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate("/pmsStatistics")}
+                className="text-alloro-cobalt hover:text-blue-700 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide"
+              >
+                Full Report <ArrowRight size={12} />
+              </button>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No practice data available yet.</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Upload PMS data or run ranking analysis to see your practice
-                metrics.
-              </p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Monthly Summary Section */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+          <div>
+            <h2 className="text-lg font-bold text-alloro-navy font-heading tracking-tight">
+              Monthly Snapshot
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold text-alloro-teal bg-cyan-50 px-2 py-1 rounded border border-cyan-100">
+              AI Analysis
+            </span>
+            <span className="text-xs text-slate-400 tabular-nums">
+              {formatTimeAgo(data?.agents?.summary?.lastUpdated)}
+            </span>
+          </div>
+        </div>
+
         {summaryData || opportunityData ? (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Monthly Summary
-                </h2>
-                <p className="text-sm text-gray-600">
-                  15-second snapshot of key changes
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+            {/* Wins */}
+            <div className="p-8 hover:bg-green-50/10 transition-colors">
+              <h4 className="flex items-center gap-2 text-sm font-bold text-alloro-navy mb-5 uppercase tracking-wider">
+                <span className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                  <ArrowUpRight size={14} />
+                </span>
+                Wins
+              </h4>
+              {summaryData?.wins && summaryData.wins.length > 0 ? (
+                <ul className="space-y-4">
+                  {summaryData.wins.map((win: string, index: number) => (
+                    <li key={index} className="flex gap-3 items-start group">
+                      <div className="mt-1.5 w-1 h-1 rounded-full bg-green-400 group-hover:scale-150 transition-transform"></div>
+                      <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
+                        {win}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  No wins data available yet.
                 </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500">Generated</p>
-                <p className="text-sm font-medium text-purple-600">
-                  {formatTimeAgo(data?.agents?.summary?.lastUpdated)}
-                </p>
-              </div>
+              )}
             </div>
 
-            {/* Wins Section */}
-            {summaryData?.wins && summaryData.wins.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                    <span className="text-green-600 text-sm">✓</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Wins:
-                  </h3>
-                </div>
-                <div className="space-y-2">
-                  {summaryData.wins.map((win: string, index: number) => (
-                    <div
-                      key={index}
-                      className="bg-green-50 border border-green-200 rounded-lg p-3"
-                    >
-                      <p className="text-sm text-gray-700">{win}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Risks Section */}
-            {summaryData?.risks && summaryData.risks.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center">
-                    <span className="text-orange-600 text-sm">!</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Risks:
-                  </h3>
-                </div>
-                <div className="space-y-2">
+            {/* Risks */}
+            <div className="p-8 hover:bg-orange-50/10 transition-colors">
+              <h4 className="flex items-center gap-2 text-sm font-bold text-alloro-navy mb-5 uppercase tracking-wider">
+                <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <AlertCircle size={14} />
+                </span>
+                Risks
+              </h4>
+              {summaryData?.risks && summaryData.risks.length > 0 ? (
+                <ul className="space-y-4">
                   {summaryData.risks.map((risk: string, index: number) => (
-                    <div
-                      key={index}
-                      className="bg-orange-50 border border-orange-200 rounded-lg p-3"
-                    >
-                      <p className="text-sm text-gray-700">{risk}</p>
-                    </div>
+                    <li key={index} className="flex gap-3 items-start group">
+                      <div className="mt-1.5 w-1 h-1 rounded-full bg-orange-400 group-hover:scale-150 transition-transform"></div>
+                      <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
+                        {risk}
+                      </span>
+                    </li>
                   ))}
-                </div>
-              </div>
-            )}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400">No risks identified.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 px-8">
+            <p className="text-slate-500">No summary data available yet.</p>
+            <p className="text-sm text-slate-400 mt-2">
+              Monthly summaries will appear after the first monthly agent run.
+            </p>
+          </div>
+        )}
+      </section>
 
-            {/* Next Steps Section - Now using approved tasks from database */}
+      {/* Next Steps Section - Tasks */}
+      {(tasks.length > 0 || tasksLoading || tasksError) && (
+        <section className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+          <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+            <div>
+              <h2 className="text-lg font-bold text-alloro-navy font-heading tracking-tight">
+                Next Steps
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Action items from your opportunity analysis
+              </p>
+            </div>
+            {allUserTasks.length > 0 && (
+              <button
+                onClick={() => navigate("/tasks")}
+                className="text-alloro-cobalt hover:text-blue-700 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide"
+              >
+                View All ({allUserTasks.length}) <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="p-6">
             {tasksLoading ? (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 text-sm">→</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Next Steps:
-                  </h3>
-                </div>
-                <div className="text-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Loading tasks...</p>
-                </div>
+              <div className="text-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-alloro-cobalt mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Loading tasks...</p>
               </div>
             ) : tasksError ? (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 text-sm">→</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Next Steps:
-                  </h3>
-                </div>
-                <div className="text-center py-4">
-                  <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
-                  <p className="text-sm text-red-600">{tasksError}</p>
-                </div>
+              <div className="text-center py-8">
+                <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+                <p className="text-sm text-red-600">{tasksError}</p>
               </div>
-            ) : tasks.length > 0 ? (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 text-sm">→</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Next Steps:
-                  </h3>
-                </div>
-                <div className="space-y-2">
-                  {tasks.map((task) => {
-                    // Parse metadata to get urgency
-                    let urgency = "Normal";
-                    try {
-                      const metadata =
-                        typeof task.metadata === "string"
-                          ? JSON.parse(task.metadata)
-                          : task.metadata;
-                      urgency = metadata?.urgency || "Normal";
-                    } catch {
-                      // If parsing fails, use default
-                    }
+            ) : (
+              <div className="space-y-3">
+                {tasks.map((task) => {
+                  // Parse metadata to get urgency
+                  let urgency = "Normal";
+                  try {
+                    const metadata =
+                      typeof task.metadata === "string"
+                        ? JSON.parse(task.metadata)
+                        : task.metadata;
+                    urgency = metadata?.urgency || "Normal";
+                  } catch {
+                    // If parsing fails, use default
+                  }
 
-                    return (
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100/80 transition-colors group cursor-pointer"
+                    >
                       <div
-                        key={task.id}
-                        className="bg-blue-50 border border-blue-200 rounded-lg p-3"
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                          urgency === "Immediate"
+                            ? "bg-red-100 text-red-600 border border-red-200"
+                            : "bg-alloro-cobalt/10 text-alloro-cobalt border border-alloro-cobalt/20"
+                        }`}
                       >
+                        <ArrowRight size={14} />
+                      </div>
+                      <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-semibold text-gray-900">
+                          <p className="text-sm font-bold text-alloro-navy group-hover:text-alloro-cobalt transition-colors">
                             {task.title}
                           </p>
                           <span
-                            className={`text-xs px-2 py-1 rounded ${
+                            className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
                               urgency === "Immediate"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-blue-100 text-blue-700"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
                             }`}
                           >
                             {urgency}
                           </span>
                         </div>
                         {task.description && (
-                          <p className="text-sm text-gray-700">
+                          <p className="text-sm text-slate-600 leading-relaxed">
                             {task.description}
                           </p>
                         )}
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-slate-400 mt-1">
                           Category: {task.category}
                         </p>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* View all action items link */}
-                {allUserTasks.length > 0 && (
-                  <button
-                    onClick={() => navigate("/tasks")}
-                    className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1.5 hover:gap-2 transition-all"
-                  >
-                    <span>
-                      View {allUserTasks.length} action item
-                      {allUserTasks.length !== 1 ? "s" : ""}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
+                    </div>
+                  );
+                })}
               </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No summary data available yet.</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Monthly summaries will appear after the first monthly agent run.
-            </p>
+            )}
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
       {/* Referral Engine Dashboard Content - Without Heading */}
       <div className="mt-8">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import {
   CheckSquare,
   Square,
@@ -6,6 +7,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  RefreshCw,
+  ClipboardList,
 } from "lucide-react";
 import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems } from "../../types/tasks";
@@ -149,25 +152,50 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
 
   if (!googleAccountId) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p>No account selected. Please log in to view tasks.</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-center py-16"
+      >
+        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-8">
+          <div className="p-3 bg-slate-100 rounded-xl w-fit mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+            No Account Selected
+          </h3>
+          <p className="text-slate-600 text-sm">
+            Please log in to view your tasks.
+          </p>
+        </div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-        <p className="text-red-600 mb-4">{error}</p>
-        <button
-          onClick={loadTasks}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-center py-16"
+      >
+        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-8">
+          <div className="p-3 bg-red-50 rounded-xl w-fit mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+            Unable to Load Tasks
+          </h3>
+          <p className="text-slate-600 text-sm mb-6">{error}</p>
+          <button
+            onClick={loadTasks}
+            className="px-5 py-2.5 bg-alloro-cobalt text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm flex items-center gap-2 mx-auto"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      </motion.div>
     );
   }
 
@@ -175,74 +203,165 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const userTasks = tasks?.USER || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-thin text-gray-900 mb-1">
-            Action Items
-          </h2>
-          <p className="text-base font-thin text-gray-600">
-            Manage your tasks and track progress
-          </p>
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+        <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-alloro-cobalt/10 rounded-xl">
+              <ClipboardList className="w-6 h-6 text-alloro-cobalt" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight">
+                Action Items
+              </h1>
+              <p className="text-slate-500 text-sm mt-0.5 font-medium flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-alloro-cobalt"></span>
+                Manage your tasks and track progress
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={loadTasks}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:text-alloro-cobalt hover:border-alloro-cobalt/30 transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh
+          </button>
         </div>
-        <button
-          onClick={loadTasks}
-          disabled={loading}
-          className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50"
-        >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          Refresh
-        </button>
-      </div>
+      </header>
 
       {loading && tasks === null && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <div className="flex items-center justify-center gap-2 text-blue-700">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Loading your tasks...</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse">
+          {/* Left Column Skeleton */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-slate-200" />
+                <div className="h-5 w-28 bg-slate-200 rounded" />
+              </div>
+              <div className="h-7 w-16 bg-slate-200 rounded-full" />
+            </div>
+            <div className="h-16 bg-slate-200 rounded-xl" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-slate-200 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 bg-slate-200 rounded mt-1" />
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="h-5 w-48 bg-slate-200 rounded" />
+                        <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                      </div>
+                      <div className="h-4 w-full bg-slate-200 rounded mb-1" />
+                      <div className="h-4 w-3/4 bg-slate-200 rounded mb-3" />
+                      <div className="flex items-center gap-4">
+                        <div className="h-3 w-24 bg-slate-200 rounded" />
+                        <div className="h-3 w-20 bg-slate-200 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column Skeleton */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-slate-200" />
+                <div className="h-5 w-24 bg-slate-200 rounded" />
+              </div>
+              <div className="h-7 w-16 bg-slate-200 rounded-full" />
+            </div>
+            <div className="h-16 bg-slate-200 rounded-xl" />
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-slate-200 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 bg-slate-200 rounded mt-1" />
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="h-5 w-44 bg-slate-200 rounded" />
+                        <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                      </div>
+                      <div className="h-4 w-full bg-slate-200 rounded mb-1" />
+                      <div className="h-4 w-2/3 bg-slate-200 rounded mb-3" />
+                      <div className="flex items-center gap-4">
+                        <div className="h-3 w-24 bg-slate-200 rounded" />
+                        <div className="h-3 w-28 bg-slate-200 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ALLORO Tasks Column (Left) - Read Only */}
-        <div className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-4"
+        >
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-alloro-navy font-heading flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-purple-500"></div>
               Alloro Tasks
             </h3>
-            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-bold">
               {alloroTasks.length} tasks
             </span>
           </div>
 
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
             <p className="text-sm text-purple-800">
-              <strong>Note:</strong> These tasks are managed by Alloro and are
-              read-only. Track their status here.
+              <strong className="font-bold">Note:</strong> These tasks are
+              managed by Alloro and are read-only. Track their status here.
             </p>
           </div>
 
           <div className="space-y-3">
             {alloroTasks.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-                <CheckSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500">No Alloro tasks at the moment</p>
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="p-3 bg-slate-100 rounded-xl w-fit mx-auto mb-3">
+                  <CheckSquare className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-500 font-medium">
+                  No Alloro tasks at the moment
+                </p>
               </div>
             ) : (
-              alloroTasks.map((task) => (
-                <div
+              alloroTasks.map((task, index) => (
+                <motion.div
                   key={task.id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-1">{getStatusIcon(task.status)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <h4 className="font-medium text-gray-900 line-clamp-2">
+                        <h4 className="font-bold text-alloro-navy line-clamp-2">
                           {task.title}
                         </h4>
                         {getStatusBadge(task.status)}
@@ -262,11 +381,11 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                                 );
                               }
                             }}
-                            className={`text-sm text-gray-600 transition-colors ${
+                            className={`text-sm text-slate-600 transition-colors ${
                               expandedTaskId === task.id ? "" : "line-clamp-2"
                             } ${
                               clampedTasks.has(task.id)
-                                ? "cursor-pointer hover:text-gray-800"
+                                ? "cursor-pointer hover:text-slate-800"
                                 : ""
                             }`}
                             title={
@@ -284,7 +403,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                                   expandedTaskId === task.id ? null : task.id
                                 )
                               }
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+                              className="text-xs text-alloro-cobalt hover:text-blue-700 font-bold mt-1"
                             >
                               {expandedTaskId === task.id
                                 ? "Show less"
@@ -293,7 +412,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                           )}
                         </div>
                       )}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
                         <span>Created {formatDate(task.created_at)}</span>
                         {task.due_date && (
                           <span className="flex items-center gap-1">
@@ -304,45 +423,51 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* USER Tasks Column (Right) - Interactive */}
-        <div className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4"
+        >
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <h3 className="text-lg font-bold text-alloro-navy font-heading flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-alloro-cobalt"></div>
               Your Tasks
             </h3>
-            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-bold">
               {userTasks.length} tasks
             </span>
           </div>
 
           <div
-            className={`border rounded-lg p-3 ${
+            className={`border rounded-xl p-4 ${
               canEditTasks
-                ? "bg-blue-50 border-blue-200"
+                ? "bg-alloro-cobalt/5 border-alloro-cobalt/20"
                 : "bg-amber-50 border-amber-200"
             }`}
           >
             <p
               className={`text-sm ${
-                canEditTasks ? "text-blue-800" : "text-amber-800"
+                canEditTasks ? "text-alloro-navy" : "text-amber-800"
               }`}
             >
               {canEditTasks ? (
                 <>
-                  <strong>Tip:</strong> Check off tasks as you complete them to
-                  keep track of your progress.
+                  <strong className="font-bold">Tip:</strong> Check off tasks as
+                  you complete them to keep track of your progress.
                 </>
               ) : (
                 <>
-                  <strong>View Only:</strong> You can view tasks but cannot edit
-                  them. Contact an admin or manager to update task status.
+                  <strong className="font-bold">View Only:</strong> You can view
+                  tasks but cannot edit them. Contact an admin or manager to
+                  update task status.
                 </>
               )}
             </p>
@@ -350,20 +475,25 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
 
           <div className="space-y-3">
             {userTasks.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-500">
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                <div className="p-3 bg-green-50 rounded-xl w-fit mx-auto mb-3">
+                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                </div>
+                <p className="text-slate-500 font-medium">
                   All caught up! No tasks pending.
                 </p>
               </div>
             ) : (
-              userTasks.map((task) => (
-                <div
+              userTasks.map((task, index) => (
+                <motion.div
                   key={task.id}
-                  className={`bg-white border rounded-lg p-4 transition-all ${
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 + 0.1 }}
+                  className={`bg-white border rounded-2xl p-5 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${
                     task.status === "complete"
                       ? "border-green-200 bg-green-50/30"
-                      : "border-gray-200 hover:shadow-md"
+                      : "border-slate-200 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -379,11 +509,11 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                         }
                       >
                         {completingTaskId === task.id ? (
-                          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                          <Loader2 className="w-5 h-5 animate-spin text-alloro-cobalt" />
                         ) : task.status === "complete" ? (
                           <CheckSquare className="w-5 h-5 text-green-600 hover:text-green-700" />
                         ) : (
-                          <Square className="w-5 h-5 text-gray-400 hover:text-blue-600" />
+                          <Square className="w-5 h-5 text-slate-400 hover:text-alloro-cobalt" />
                         )}
                       </button>
                     ) : (
@@ -391,17 +521,17 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                         {task.status === "complete" ? (
                           <CheckSquare className="w-5 h-5 text-green-600" />
                         ) : (
-                          <Square className="w-5 h-5 text-gray-400" />
+                          <Square className="w-5 h-5 text-slate-400" />
                         )}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h4
-                          className={`font-medium line-clamp-2 ${
+                          className={`font-bold line-clamp-2 ${
                             task.status === "complete"
-                              ? "text-gray-500 line-through"
-                              : "text-gray-900"
+                              ? "text-slate-400 line-through"
+                              : "text-alloro-navy"
                           }`}
                         >
                           {task.title}
@@ -427,8 +557,8 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                               expandedTaskId === task.id ? "" : "line-clamp-2"
                             } ${
                               task.status === "complete"
-                                ? "text-gray-400"
-                                : "text-gray-600"
+                                ? "text-slate-400"
+                                : "text-slate-600"
                             } ${
                               clampedTasks.has(task.id)
                                 ? "cursor-pointer hover:opacity-80"
@@ -449,10 +579,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                                   expandedTaskId === task.id ? null : task.id
                                 )
                               }
-                              className={`text-xs font-medium mt-1 ${
+                              className={`text-xs font-bold mt-1 ${
                                 task.status === "complete"
-                                  ? "text-gray-400 hover:text-gray-500"
-                                  : "text-blue-600 hover:text-blue-800"
+                                  ? "text-slate-400 hover:text-slate-500"
+                                  : "text-alloro-cobalt hover:text-blue-700"
                               }`}
                             >
                               {expandedTaskId === task.id
@@ -462,7 +592,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                           )}
                         </div>
                       )}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
                         <span>Created {formatDate(task.created_at)}</span>
                         {task.completed_at && (
                           <span className="text-green-600 flex items-center gap-1">
@@ -479,36 +609,44 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Summary Footer */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-6">
-            <span className="text-gray-600">
-              <strong className="text-gray-900">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="bg-white border border-slate-200 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-6">
+            <span className="text-slate-600">
+              <strong className="text-alloro-navy font-bold tabular-nums">
                 {alloroTasks.filter((t) => t.status !== "complete").length}
               </strong>{" "}
               Alloro tasks active
             </span>
-            <span className="text-gray-600">
-              <strong className="text-gray-900">
+            <span className="text-slate-600">
+              <strong className="text-alloro-navy font-bold tabular-nums">
                 {userTasks.filter((t) => t.status !== "complete").length}
               </strong>{" "}
-              of <strong className="text-gray-900">{userTasks.length}</strong>{" "}
+              of{" "}
+              <strong className="text-alloro-navy font-bold tabular-nums">
+                {userTasks.length}
+              </strong>{" "}
               your tasks remaining
             </span>
           </div>
-          <span className="text-gray-500">
+          <span className="text-slate-400 text-xs font-medium">
             Last updated: {new Date().toLocaleTimeString()}
           </span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ReactElement } from "react";
 import type { ActionItem } from "../../types/tasks";
 import { AgentTypePill } from "./AgentTypePill";
@@ -28,10 +29,11 @@ export function TaskDetailsModal({
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pending: "border-yellow-200 bg-yellow-50 text-yellow-700",
-      in_progress: "border-blue-200 bg-blue-50 text-blue-700",
+      pending: "border-amber-200 bg-amber-50 text-amber-700",
+      in_progress:
+        "border-alloro-cobalt/20 bg-alloro-cobalt/5 text-alloro-cobalt",
       complete: "border-green-200 bg-green-50 text-green-700",
-      archived: "border-gray-200 bg-gray-50 text-gray-600",
+      archived: "border-slate-200 bg-slate-50 text-slate-600",
     };
     return styles[status as keyof typeof styles] || styles.pending;
   };
@@ -39,7 +41,7 @@ export function TaskDetailsModal({
   const getCategoryBadge = (category: string) => {
     return category === "ALLORO"
       ? "border-purple-200 bg-purple-50 text-purple-700"
-      : "border-blue-200 bg-blue-50 text-blue-700";
+      : "border-alloro-cobalt/20 bg-alloro-cobalt/5 text-alloro-cobalt";
   };
 
   // Enhanced markdown rendering for description
@@ -82,7 +84,7 @@ export function TaskDetailsModal({
         parts.push(
           <code
             key={`code-${keyCounter++}`}
-            className="rounded bg-gray-200 px-1 py-0.5 text-sm font-mono text-gray-800"
+            className="rounded-md bg-slate-100 px-1.5 py-0.5 text-sm font-mono text-alloro-navy"
           >
             {fullMatch.slice(1, -1)}
           </code>
@@ -95,7 +97,7 @@ export function TaskDetailsModal({
             href={match[3]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline hover:text-blue-800"
+            className="text-alloro-cobalt font-medium underline hover:text-blue-700"
           >
             {match[2]}
           </a>
@@ -130,11 +132,11 @@ export function TaskDetailsModal({
       if (para.trim().startsWith("- ") || para.trim().startsWith("* ")) {
         const items = para.split("\n").filter((line) => line.trim());
         return (
-          <ul key={idx} className="list-disc pl-5 space-y-1 mb-4">
+          <ul key={idx} className="list-disc pl-5 space-y-1.5 mb-4">
             {items.map((item, itemIdx) => {
               const cleanedItem = item.replace(/^[-*]\s+/, "");
               return (
-                <li key={itemIdx} className="text-gray-700">
+                <li key={itemIdx} className="text-slate-700">
                   {renderMarkdownText(cleanedItem)}
                 </li>
               );
@@ -146,11 +148,11 @@ export function TaskDetailsModal({
       if (/^\d+\.\s/.test(para.trim())) {
         const items = para.split("\n").filter((line) => line.trim());
         return (
-          <ol key={idx} className="list-decimal pl-5 space-y-1 mb-4">
+          <ol key={idx} className="list-decimal pl-5 space-y-1.5 mb-4">
             {items.map((item, itemIdx) => {
               const cleanedItem = item.replace(/^\d+\.\s+/, "");
               return (
-                <li key={itemIdx} className="text-gray-700">
+                <li key={itemIdx} className="text-slate-700">
                   {renderMarkdownText(cleanedItem)}
                 </li>
               );
@@ -163,7 +165,7 @@ export function TaskDetailsModal({
         return (
           <h3
             key={idx}
-            className="text-lg font-semibold text-gray-900 mb-3 mt-4"
+            className="text-lg font-bold text-alloro-navy font-heading mb-3 mt-4"
           >
             {para.trim().substring(4)}
           </h3>
@@ -173,7 +175,7 @@ export function TaskDetailsModal({
         return (
           <h2
             key={idx}
-            className="text-xl font-semibold text-gray-900 mb-3 mt-4"
+            className="text-xl font-bold text-alloro-navy font-heading mb-3 mt-4"
           >
             {para.trim().substring(3)}
           </h2>
@@ -181,14 +183,17 @@ export function TaskDetailsModal({
       }
       if (para.trim().startsWith("# ")) {
         return (
-          <h1 key={idx} className="text-2xl font-bold text-gray-900 mb-4 mt-4">
+          <h1
+            key={idx}
+            className="text-2xl font-bold text-alloro-navy font-heading mb-4 mt-4"
+          >
             {para.trim().substring(2)}
           </h1>
         );
       }
       // Regular paragraph with inline markdown
       return (
-        <p key={idx} className="text-gray-700 mb-4">
+        <p key={idx} className="text-slate-700 mb-4 leading-relaxed">
           {renderMarkdownText(para)}
         </p>
       );
@@ -196,124 +201,146 @@ export function TaskDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-2xl">
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex-1 pr-4">
-            <h2 className="text-2xl font-bold text-gray-900">{task.title}</h2>
-            <p className="mt-1 text-sm text-gray-500">{task.domain_name}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
-        {/* Content */}
-        <div className="space-y-6 px-6 py-6">
-          {/* Badges Section */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Status:
-              </span>
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadge(
-                  task.status
-                )}`}
-              >
-                {task.status.replace("_", " ")}
-              </span>
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", duration: 0.3 }}
+          className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        >
+          {/* Header */}
+          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white/95 backdrop-blur-md px-6 py-5 rounded-t-2xl">
+            <div className="flex-1 pr-4">
+              <h2 className="text-2xl font-bold text-alloro-navy font-heading">
+                {task.title}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 font-medium">
+                {task.domain_name}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Category:
-              </span>
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${getCategoryBadge(
-                  task.category
-                )}`}
-              >
-                {task.category}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Agent Type:
-              </span>
-              <AgentTypePill agentType={task.agent_type ?? null} />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Approval:
-              </span>
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
-                  task.is_approved
-                    ? "border-green-200 bg-green-50 text-green-700"
-                    : "border-yellow-200 bg-yellow-50 text-yellow-700"
-                }`}
-              >
-                {task.is_approved ? "Approved" : "Pending"}
-              </span>
-            </div>
-          </div>
-
-          {/* Description */}
-          {task.description && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Description
-              </h3>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                {renderDescription(task.description)}
-              </div>
-            </div>
-          )}
-
-          {/* Metadata - Only show completed and due dates if they exist */}
-          {(task.completed_at || task.due_date) && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {task.completed_at && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Completed
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    {formatDate(task.completed_at)}
-                  </p>
-                </div>
-              )}
-              {task.due_date && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                    Due Date
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    {formatDate(task.due_date)}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-4">
-          <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="flex-shrink-0 rounded-xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Close modal"
             >
-              Close
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
+
+          {/* Content */}
+          <div className="space-y-6 px-6 py-6">
+            {/* Badges Section */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Status:
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold capitalize ${getStatusBadge(
+                    task.status
+                  )}`}
+                >
+                  {task.status.replace("_", " ")}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Category:
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold ${getCategoryBadge(
+                    task.category
+                  )}`}
+                >
+                  {task.category}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Agent Type:
+                </span>
+                <AgentTypePill agentType={task.agent_type ?? null} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Approval:
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold ${
+                    task.is_approved
+                      ? "border-green-200 bg-green-50 text-green-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {task.is_approved ? "Approved" : "Pending"}
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            {task.description && (
+              <div>
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Description
+                </h3>
+                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5">
+                  {renderDescription(task.description)}
+                </div>
+              </div>
+            )}
+
+            {/* Metadata - Only show completed and due dates if they exist */}
+            {(task.completed_at || task.due_date) && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {task.completed_at && (
+                  <div className="rounded-xl border border-green-100 bg-green-50/50 p-4">
+                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-green-600">
+                      Completed
+                    </h3>
+                    <p className="text-sm text-alloro-navy font-medium">
+                      {formatDate(task.completed_at)}
+                    </p>
+                  </div>
+                )}
+                {task.due_date && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Due Date
+                    </h3>
+                    <p className="text-sm text-alloro-navy font-medium">
+                      {formatDate(task.due_date)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 backdrop-blur-md px-6 py-4 rounded-b-2xl">
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:border-slate-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }

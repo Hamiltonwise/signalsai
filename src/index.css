@@ -4,21 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 html, body {
-  background: url('/bg.jpg') ;
-  background-size: cover;
-  background-attachment: fixed !important; ;
+  font-family: 'Inter', sans-serif;
+  background-color: #F3F6F8;
 }
 
-/* Reusable glassmorphism helpers */
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Alloro Utility Classes */
 @layer components {
   .glass {
-    @apply backdrop-blur-xl bg-white/60 dark:bg-white/10 border border-white/20 dark:border-white/10 shadow-xl;
+    @apply bg-white border border-slate-200 shadow-sm;
   }
   .glass-card {
-    @apply rounded-2xl p-4;
+    @apply rounded-xl p-4;
   }
   .glass-hover {
-    @apply transition-colors hover:bg-white/70 dark:hover:bg-white/15;
+    @apply transition-colors hover:bg-slate-50;
   }
 }
 
@@ -155,6 +158,12 @@ html, body {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-alloro-navy: #0D1321;
+  --color-alloro-cobalt: #244EE6;
+  --color-alloro-teal: #06B6D4;
+  --color-alloro-bg: #F3F6F8;
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -266,6 +275,3 @@ html, body {
   }
 }
 
-*, * *{
-  font-family: "Poppins", sans-serif;
-}

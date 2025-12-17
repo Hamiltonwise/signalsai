@@ -1,22 +1,27 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutGrid,
-  BarChart3,
+  LayoutDashboard,
+  Activity,
   CheckSquare,
-  Settings,
   Trophy,
+  Bell,
+  LogOut,
+  ChevronRight,
+  Settings,
+  AlertTriangle,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { NotificationPopover } from "./NotificationPopover";
-import { LogoutButton } from "./LogoutButton";
 
 type UserRole = "admin" | "manager" | "viewer";
 
 interface SidebarProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   userProfile: any;
   onboardingCompleted: boolean | null;
   disconnect: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   selectedDomain?: any;
 }
 
@@ -29,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Get user role from localStorage
   useEffect(() => {
@@ -36,12 +42,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setUserRole(role);
   }, []);
 
+  const handleLogout = () => {
+    disconnect();
+    window.location.href = "/signin";
+  };
+
   const canSeeSettings = userRole !== "viewer";
   const canSeeNotifications = userRole !== "viewer";
 
   const navItems = [
-    { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
-    { label: "PMS Statistics", icon: BarChart3, path: "/pmsStatistics" },
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "PMS Statistics", icon: Activity, path: "/pmsStatistics" },
     { label: "Rankings", icon: Trophy, path: "/rankings" },
     { label: "Tasks", icon: CheckSquare, path: "/tasks" },
   ];
@@ -53,106 +64,178 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="hidden lg:flex w-72 shrink-0 flex-col gap-4 glass rounded-3xl p-4 sticky top-6 h-[calc(100vh-3rem)]">
-      {/* Brand / Profile quick area */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-2xl bg-blue-500/20 border border-white/30 flex items-center justify-center">
-            <span className="text-blue-700 font-bold">
-              {onboardingCompleted
-                ? userProfile?.practiceName?.charAt(0)?.toUpperCase() || "S"
-                : "A"}
-            </span>
+    <aside className="w-72 bg-alloro-navy text-white h-screen fixed left-0 top-0 flex flex-col z-20 border-r border-slate-800 shadow-xl font-body">
+      {/* Brand Header */}
+      <div className="p-8 border-b border-slate-800/50">
+        <div className="flex items-center gap-4 mb-1">
+          <div className="w-12 h-12 bg-alloro-cobalt rounded-xl flex items-center justify-center text-2xl font-bold font-heading shadow-lg shadow-blue-900/20">
+            {onboardingCompleted
+              ? userProfile?.practiceName?.charAt(0)?.toUpperCase() || "A"
+              : "A"}
           </div>
-          {onboardingCompleted ? (
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">
-                {userProfile?.practiceName ||
-                  selectedDomain?.displayName ||
-                  "Signals AI"}
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                {userProfile?.domainName || selectedDomain?.domain || ""}
-              </p>
-            </div>
-          ) : (
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">Alloro</p>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Setup in progress
-              </p>
-            </div>
-          )}
+          <div>
+            <h1 className="font-heading font-bold text-xl leading-tight tracking-tight">
+              {onboardingCompleted
+                ? userProfile?.practiceName || "Alloro"
+                : "Alloro"}
+            </h1>
+            <p className="text-xs text-slate-400 font-body tracking-wide opacity-80">
+              {onboardingCompleted
+                ? "Growth you can see."
+                : "Setup in progress"}
+            </p>
+          </div>
         </div>
-        {onboardingCompleted && canSeeSettings && (
-          <button
-            onClick={() => navigate("/settings")}
-            className={`p-1 rounded-lg transition-colors ${
-              location.pathname === "/settings"
-                ? "bg-blue-100 text-blue-600"
-                : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Settings className="h-5 w-5 cursor-pointer" />
-          </button>
-        )}
       </div>
 
-      <div className="h-px bg-white/30 dark:bg-white/10 my-2" />
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-2">
+        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider px-4 mb-4">
+          Practice Overview
+        </div>
 
-      {/* Primary nav */}
-      <nav className="space-y-1">
         {navItems.map(({ label, icon: Icon, path }) => {
           const active = isActive(path);
           return (
-            <button
+            <div
               key={label}
               onClick={() => navigate(path)}
-              className="relative w-full rounded-xl px-3 py-2 text-sm"
-              aria-current={active ? "page" : undefined}
+              className={`
+                flex items-center justify-between px-4 py-3.5 rounded-xl cursor-pointer transition-all duration-200 group
+                ${
+                  active
+                    ? "bg-alloro-cobalt text-white shadow-lg shadow-blue-900/20 translate-x-1"
+                    : "text-slate-400 hover:bg-white/5 hover:text-white"
+                }
+              `}
             >
-              {active && (
-                <motion.span
-                  layoutId="sidebarActive"
-                  className="absolute inset-0 rounded-xl bg-white/70 dark:bg-white/15 border border-white/30 dark:border-white/10"
-                  transition={{
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 30,
-                  }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-3">
-                <Icon className="h-4 w-4 text-gray-700 dark:text-gray-200" />
-                <span className="truncate">{label}</span>
-              </span>
-            </button>
+              <div className="flex items-center gap-3.5">
+                <Icon size={20} />
+                <span className="text-[15px] font-medium">{label}</span>
+              </div>
+              {active && <ChevronRight size={16} className="text-white/80" />}
+            </div>
           );
         })}
       </nav>
 
-      <div className="mt-auto space-y-3">
+      {/* Footer / User Profile */}
+      <div className="p-6 border-t border-slate-800/50 space-y-6 bg-slate-900/30">
         {onboardingCompleted && canSeeNotifications && (
-          <NotificationPopover
-            googleAccountId={userProfile?.googleAccountId ?? null}
-          />
-        )}
-
-        {/* Logout Button with Animated Confirmation */}
-        <LogoutButton
-          onLogout={() => {
-            disconnect();
-            // Force full page reload to clear all state
-            window.location.href = "/signin";
-          }}
-        />
-
-        {onboardingCompleted && (
-          <div className="text-[10px] text-gray-500 text-center">
-            Logged in as {userProfile?.email || "user"}
+          <div className="flex items-center justify-between text-slate-400 hover:text-white cursor-pointer transition-colors px-2 group">
+            <div className="flex items-center gap-3 w-full">
+              <NotificationPopover
+                googleAccountId={userProfile?.googleAccountId ?? null}
+                customTrigger={
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Bell size={18} />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-alloro-navy"></span>
+                    </div>
+                    <span className="text-[15px] font-medium group-hover:translate-x-1 transition-transform">
+                      Notifications
+                    </span>
+                  </div>
+                }
+              />
+            </div>
           </div>
         )}
+
+        <div>
+          <div className="flex items-center gap-3 mb-3 px-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-600 flex items-center justify-center text-xs font-bold text-white">
+              {userProfile?.email?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {userProfile?.practiceName || "Practice"}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {userProfile?.domainName ||
+                  selectedDomain?.domain ||
+                  userProfile?.email ||
+                  ""}
+              </p>
+            </div>
+            {onboardingCompleted && canSeeSettings && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate("/settings");
+                }}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <Settings size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Custom Logout Button implementation to match design */}
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="flex items-center gap-3 text-slate-400 hover:text-red-400 transition-colors w-full px-2 py-2 rounded-lg hover:bg-white/5 group"
+          >
+            <LogOut size={18} />
+            <span className="text-[15px] font-medium">Log Out</span>
+          </button>
+        </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
+              onClick={() => setShowLogoutConfirm(false)}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-red-50 text-red-600">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-alloro-navy font-heading">
+                    Log Out?
+                  </h3>
+                </div>
+
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  Are you sure you want to log out of your account?
+                </p>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => setShowLogoutConfirm(false)}
+                    className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-md"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </aside>
   );
 };

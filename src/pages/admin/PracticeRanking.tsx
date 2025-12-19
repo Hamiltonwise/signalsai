@@ -784,10 +784,39 @@ interface RankingResult {
     top_recommendations?: Array<{
       priority: number;
       title: string;
+      description?: string;
+      expected_outcome?: string;
+      impact?: string;
+      effort?: string;
+      timeline?: string;
     }>;
     verdict: string;
     confidence: number;
   } | null;
+}
+
+// Ranking Task from the tasks endpoint
+interface RankingTask {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  category: string;
+  agentType: string;
+  isApproved: boolean;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  metadata: {
+    practiceRankingId: number | null;
+    gbpLocationId: string | null;
+    gbpLocationName: string | null;
+    priority: string | null;
+    impact: string | null;
+    effort: string | null;
+    timeline: string | null;
+  };
 }
 
 const SPECIALTIES = [
@@ -824,6 +853,9 @@ export function PracticeRanking() {
   const [jobResults, setJobResults] = useState<Record<number, RankingResult>>(
     {}
   );
+  const [rankingTasks, setRankingTasks] = useState<
+    Record<number, RankingTask[]>
+  >({});
   const [loadingResults, setLoadingResults] = useState<number | null>(null);
   const [pollingJobs, setPollingJobs] = useState<Set<number>>(new Set());
   const [pollingBatches, setPollingBatches] = useState<Set<string>>(new Set());
@@ -1105,10 +1137,35 @@ export function PracticeRanking() {
       const data = await response.json();
       // Extract the ranking object from the response
       setJobResults((prev) => ({ ...prev, [jobId]: data.ranking }));
+
+      // Also fetch approved ranking tasks for this ranking
+      fetchRankingTasks(jobId);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoadingResults(null);
+    }
+  };
+
+  const fetchRankingTasks = async (practiceRankingId: number) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(
+        `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to fetch ranking tasks");
+        return;
+      }
+
+      const data = await response.json();
+      setRankingTasks((prev) => ({ ...prev, [practiceRankingId]: data.tasks }));
+    } catch (error) {
+      console.error("Error fetching ranking tasks:", error);
     }
   };
 
@@ -1590,6 +1647,7 @@ export function PracticeRanking() {
                         deletingJob={deletingJob}
                         loadingResults={loadingResults}
                         jobResults={jobResults}
+                        rankingTasks={rankingTasks}
                         refreshingCompetitors={refreshingCompetitors}
                         onRefreshCompetitors={() =>
                           refreshCompetitors(job.specialty, job.location || "")
@@ -1622,6 +1680,7 @@ export function PracticeRanking() {
                     deletingJob={deletingJob}
                     loadingResults={loadingResults}
                     jobResults={jobResults}
+                    rankingTasks={rankingTasks}
                     refreshingCompetitors={refreshingCompetitors}
                     onRefreshCompetitors={() =>
                       refreshCompetitors(job.specialty, job.location || "")
@@ -1649,6 +1708,7 @@ function JobRow({
   deletingJob,
   loadingResults,
   jobResults,
+  rankingTasks,
   refreshingCompetitors,
   onRefreshCompetitors,
   getStatusBadge,
@@ -1662,6 +1722,7 @@ function JobRow({
   deletingJob: number | null;
   loadingResults: number | null;
   jobResults: Record<number, RankingResult>;
+  rankingTasks: Record<number, RankingTask[]>;
   refreshingCompetitors: boolean;
   onRefreshCompetitors: () => void;
   getStatusBadge: (status: string) => React.ReactNode;
@@ -1773,6 +1834,7 @@ function JobRow({
                 result={jobResults[job.id]}
                 onRefreshCompetitors={onRefreshCompetitors}
                 refreshingCompetitors={refreshingCompetitors}
+                rankingTasks={rankingTasks}
               />
             ) : (
               <div className="text-center text-gray-500">
@@ -1989,10 +2051,12 @@ function RankingResultsView({
   result,
   onRefreshCompetitors,
   refreshingCompetitors,
+  rankingTasks,
 }: {
   result: RankingResult;
   onRefreshCompetitors?: () => void;
   refreshingCompetitors?: boolean;
+  rankingTasks?: Record<number, RankingTask[]>;
 }) {
   const factors = result.rankingFactors;
   const competitors =
@@ -2075,6 +2139,76 @@ function RankingResultsView({
           </p>
         </div>
       )}
+
+      {/* Action Plans Card - Shows approved tasks from the tasks table */}
+      {rankingTasks &&
+        rankingTasks[result.id] &&
+        rankingTasks[result.id].length > 0 && (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <h4 className="mb-3 font-semibold text-green-900 flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Action Plans ({rankingTasks[result.id].length})
+            </h4>
+            <div className="space-y-3">
+              {rankingTasks[result.id].map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-start justify-between gap-4 rounded-lg border border-green-100 bg-white p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h5 className="font-medium text-gray-900">
+                        {task.title}
+                      </h5>
+                      {task.metadata?.priority && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            task.metadata.priority === "1" ||
+                            task.metadata.priority === "high"
+                              ? "bg-red-100 text-red-700"
+                              : task.metadata.priority === "2" ||
+                                task.metadata.priority === "medium"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          Priority {task.metadata.priority}
+                        </span>
+                      )}
+                      {task.metadata?.impact && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          {task.metadata.impact} impact
+                        </span>
+                      )}
+                      {task.metadata?.effort && (
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                          {task.metadata.effort} effort
+                        </span>
+                      )}
+                    </div>
+                    {task.description && (
+                      <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
+                        {task.description}
+                      </p>
+                    )}
+                    {task.metadata?.timeline && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Timeline: {task.metadata.timeline}
+                      </p>
+                    )}
+                  </div>
+                  <a
+                    href={`/admin/action-items?taskId=${task.id}`}
+                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Start Task
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Ranking Factors Breakdown */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">

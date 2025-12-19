@@ -19,13 +19,13 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             <div
               className={`
                 w-10 h-10 rounded-full flex items-center justify-center
-                transition-all duration-300 font-semibold text-sm
+                transition-all duration-300 font-bold text-sm
                 ${
                   isCompleted
-                    ? "bg-gradient-to-r from-[#6fa3eb] to-[#86b4ef] text-white"
+                    ? "bg-alloro-cobalt text-white"
                     : isActive
-                    ? "bg-gradient-to-r from-[#5a8ed9] to-[#6fa3eb] text-white scale-110"
-                    : "bg-white/20 backdrop-blur-sm text-gray-600 border-2 border-white/30"
+                    ? "bg-alloro-cobalt text-white scale-110 shadow-lg shadow-blue-900/20"
+                    : "bg-slate-100 text-slate-400 border-2 border-slate-200"
                 }
               `}
             >
@@ -36,11 +36,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
               <div
                 className={`
                   w-12 h-1 rounded-full transition-all duration-300
-                  ${
-                    isCompleted
-                      ? "bg-gradient-to-r from-[#6fa3eb] to-[#86b4ef]"
-                      : "bg-white/30"
-                  }
+                  ${isCompleted ? "bg-alloro-cobalt" : "bg-slate-200"}
                 `}
               />
             )}

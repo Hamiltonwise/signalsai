@@ -50,12 +50,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canSeeSettings = userRole !== "viewer";
   const canSeeNotifications = userRole !== "viewer";
 
-  const navItems = [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { label: "PMS Statistics", icon: Activity, path: "/pmsStatistics" },
-    { label: "Rankings", icon: Trophy, path: "/rankings" },
-    { label: "Tasks", icon: CheckSquare, path: "/tasks" },
+  // Filter nav items based on onboarding status
+  const allNavItems = [
+    {
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+      showDuringOnboarding: true,
+    },
+    {
+      label: "PMS Statistics",
+      icon: Activity,
+      path: "/pmsStatistics",
+      showDuringOnboarding: false,
+    },
+    {
+      label: "Rankings",
+      icon: Trophy,
+      path: "/rankings",
+      showDuringOnboarding: false,
+    },
+    {
+      label: "Tasks",
+      icon: CheckSquare,
+      path: "/tasks",
+      showDuringOnboarding: false,
+    },
   ];
+
+  // Only show Dashboard during onboarding, show all items after completion
+  const navItems = onboardingCompleted
+    ? allNavItems
+    : allNavItems.filter((item) => item.showDuringOnboarding);
 
   const isActive = (path: string) => {
     if (path === "/dashboard" && location.pathname === "/dashboard")
@@ -143,33 +169,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         <div>
-          <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-600 flex items-center justify-center text-xs font-bold text-white">
-              {userProfile?.email?.charAt(0).toUpperCase() || "U"}
+          {/* Only show practice info after onboarding is complete */}
+          {onboardingCompleted && (
+            <div className="flex items-center gap-3 mb-3 px-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-600 flex items-center justify-center text-xs font-bold text-white">
+                {userProfile?.email?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {userProfile?.practiceName || "Practice"}
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  {userProfile?.domainName ||
+                    selectedDomain?.domain ||
+                    userProfile?.email ||
+                    ""}
+                </p>
+              </div>
+              {canSeeSettings && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/settings");
+                  }}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <Settings size={16} />
+                </button>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {userProfile?.practiceName || "Practice"}
-              </p>
-              <p className="text-xs text-slate-500 truncate">
-                {userProfile?.domainName ||
-                  selectedDomain?.domain ||
-                  userProfile?.email ||
-                  ""}
-              </p>
-            </div>
-            {onboardingCompleted && canSeeSettings && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate("/settings");
-                }}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <Settings size={16} />
-              </button>
-            )}
-          </div>
+          )}
 
           {/* Custom Logout Button implementation to match design */}
           <button

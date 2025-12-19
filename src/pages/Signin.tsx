@@ -103,39 +103,29 @@ export default function SignIn() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundImage: "url(/bg.jpg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 bg-alloro-bg font-body">
       <div className="max-w-md w-full">
-        {/* Glass Effect Card with Alloro Mascot */}
-        <div className="relative p-8 rounded-2xl bg-white/30 backdrop-blur-lg border border-white/40 shadow-2xl">
-          {/* Alloro Mascot */}
-          <div className="absolute -top-[115px] left-2 w-32 h-32 z-10">
-            <img
-              src="/alloro-pointing-down.png"
-              alt="Alloro Pointing"
-              className="w-full h-full object-contain drop-shadow-2xl"
-            />
+        {/* Main Card */}
+        <div className="relative p-8 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+          {/* Logo/Brand */}
+          <div className="flex justify-center mb-6">
+            <div className="w-14 h-14 bg-alloro-cobalt rounded-xl flex items-center justify-center text-2xl font-bold font-heading text-white shadow-lg shadow-blue-900/20">
+              A
+            </div>
           </div>
 
           {/* Welcome Message */}
-          <div className="text-center mb-6">
-            <h2 className="text-4xl font-thin text-gray-900 mb-2">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold font-heading text-alloro-navy tracking-tight mb-2">
               Welcome to Alloro
-            </h2>
-            <p className="text-gray-700 text-sm">
-              Grow your practice with data-driven decisions
+            </h1>
+            <p className="text-slate-500 text-sm">
+              Growth you can see. Sign in to get started.
             </p>
           </div>
 
           {/* Tab Selector */}
-          <div className="flex gap-2 mb-6 p-1 bg-white/50 rounded-xl">
+          <div className="flex gap-2 mb-6 p-1.5 bg-slate-100 rounded-xl">
             <button
               onClick={() => {
                 setMode("owner");
@@ -145,8 +135,8 @@ export default function SignIn() {
               }}
               className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
                 mode === "owner"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-alloro-navy"
               }`}
             >
               <Shield className="w-4 h-4" />
@@ -161,8 +151,8 @@ export default function SignIn() {
               }}
               className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
                 mode === "collaborator"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-alloro-navy"
               }`}
             >
               <Mail className="w-4 h-4" />
@@ -179,8 +169,8 @@ export default function SignIn() {
                 exit={{ opacity: 0, y: -10 }}
                 className={`mb-4 p-3 rounded-lg text-center text-sm ${
                   error
-                    ? "bg-red-50/80 text-red-700 border border-red-200"
-                    : "bg-blue-50/80 text-blue-700 border border-blue-200"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-green-50 text-green-700 border border-green-200"
                 }`}
               >
                 {error || message}
@@ -200,7 +190,7 @@ export default function SignIn() {
                 className="space-y-4"
               >
                 <div className="text-center space-y-6">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-slate-600">
                     Sign in with your Google account to access full analytics
                     and management features
                   </p>
@@ -222,14 +212,16 @@ export default function SignIn() {
                 <div className="flex items-center justify-center gap-2 mb-6">
                   <div
                     className={`flex items-center gap-2 ${
-                      otpStep === "email" ? "text-blue-600" : "text-gray-400"
+                      otpStep === "email"
+                        ? "text-alloro-cobalt"
+                        : "text-slate-400"
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                         otpStep === "email"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200"
+                          ? "bg-alloro-cobalt text-white"
+                          : "bg-slate-200 text-slate-500"
                       }`}
                     >
                       1
@@ -238,19 +230,19 @@ export default function SignIn() {
                       Email
                     </span>
                   </div>
-                  <div className="w-8 h-px bg-gray-300" />
+                  <div className="w-8 h-px bg-slate-300" />
                   <div
                     className={`flex items-center gap-2 ${
                       otpStep === "code" || otpStep === "verifying"
-                        ? "text-blue-600"
-                        : "text-gray-400"
+                        ? "text-alloro-cobalt"
+                        : "text-slate-400"
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                         otpStep === "code" || otpStep === "verifying"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200"
+                          ? "bg-alloro-cobalt text-white"
+                          : "bg-slate-200 text-slate-500"
                       }`}
                     >
                       {otpStep === "verifying" ? (
@@ -277,7 +269,7 @@ export default function SignIn() {
                       <div>
                         <label
                           htmlFor="email"
-                          className="block text-sm font-medium text-gray-700 mb-2"
+                          className="block text-sm font-medium text-alloro-navy mb-2"
                         >
                           Email Address
                         </label>
@@ -290,7 +282,7 @@ export default function SignIn() {
                             handleKeyPress(e, handleRequestOTP)
                           }
                           placeholder="Enter your work email"
-                          className="w-full px-4 py-3 bg-white/80 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400"
+                          className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt outline-none transition-all placeholder:text-slate-400"
                           disabled={isLoading}
                           autoFocus
                         />
@@ -302,7 +294,7 @@ export default function SignIn() {
                           !email ||
                           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
                         }
-                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                        className="w-full py-3 px-4 bg-alloro-cobalt hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
                       >
                         {isLoading ? (
                           <>
@@ -316,7 +308,7 @@ export default function SignIn() {
                           </>
                         )}
                       </button>
-                      <p className="text-xs text-center text-gray-500">
+                      <p className="text-xs text-center text-slate-500">
                         You'll receive a 6-digit code to verify your identity
                       </p>
                     </motion.div>
@@ -329,16 +321,18 @@ export default function SignIn() {
                       className="space-y-4"
                     >
                       <div className="text-center mb-4">
-                        <p className="text-sm text-gray-700 font-medium">
+                        <p className="text-sm text-slate-600 font-medium">
                           Code sent to
                         </p>
-                        <p className="text-sm text-blue-600">{email}</p>
+                        <p className="text-sm text-alloro-cobalt font-semibold">
+                          {email}
+                        </p>
                       </div>
 
                       <div>
                         <label
                           htmlFor="otp"
-                          className="block text-sm font-medium text-gray-700 mb-2"
+                          className="block text-sm font-medium text-alloro-navy mb-2"
                         >
                           Verification Code
                         </label>
@@ -365,7 +359,7 @@ export default function SignIn() {
                           onKeyPress={(e) => handleKeyPress(e, handleVerifyOTP)}
                           placeholder="000000"
                           maxLength={6}
-                          className="w-full px-4 py-4 bg-white/80 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center tracking-[0.5em] font-mono text-2xl font-bold placeholder:tracking-normal placeholder:text-base"
+                          className="w-full px-4 py-4 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt outline-none transition-all text-center tracking-[0.5em] font-mono text-2xl font-bold placeholder:tracking-normal placeholder:text-base text-alloro-navy"
                           disabled={isLoading}
                           autoFocus
                         />
@@ -374,7 +368,7 @@ export default function SignIn() {
                       <button
                         onClick={handleVerifyOTP}
                         disabled={isLoading || otp.length !== 6}
-                        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                        className="w-full py-3 px-4 bg-alloro-cobalt hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
                       >
                         {otpStep === "verifying" ? (
                           <>
@@ -392,7 +386,7 @@ export default function SignIn() {
                       <button
                         onClick={handleRequestOTP}
                         disabled={isLoading}
-                        className="w-full text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+                        className="w-full text-sm text-slate-500 hover:text-alloro-cobalt transition-colors disabled:opacity-50"
                       >
                         Didn't receive code? Resend
                       </button>
@@ -406,7 +400,7 @@ export default function SignIn() {
 
         {/* Help Text */}
         <div className="text-center mt-6">
-          <p className="text-black text-sm drop-shadow">
+          <p className="text-slate-500 text-sm">
             By signing in, you agree to our Terms of Service
           </p>
         </div>

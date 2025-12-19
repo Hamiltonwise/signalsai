@@ -35,6 +35,11 @@ export function AgentTypePill({ agentType }: AgentTypePillProps) {
           label: "Referral Engine",
           className: "border-orange-200 bg-orange-50 text-orange-700",
         };
+      case "RANKING":
+        return {
+          label: "Practice Ranking",
+          className: "border-indigo-200 bg-indigo-50 text-indigo-700",
+        };
       case "MANUAL":
         return {
           label: "Manual",

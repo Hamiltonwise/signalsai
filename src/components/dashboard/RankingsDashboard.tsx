@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
   Star,
@@ -17,9 +17,160 @@ import {
   Building,
   Layers,
   TrendingUp,
+  TrendingDown,
   RefreshCw,
   BarChart3,
+  ArrowRight,
+  HelpCircle,
 } from "lucide-react";
+
+// Tooltip component with animation
+function Tooltip({
+  text,
+  children,
+}: {
+  text: string;
+  children: React.ReactNode;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div className="relative inline-flex items-center">
+      {children}
+      <button
+        className="ml-1 text-slate-400 hover:text-slate-600 transition-colors"
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        onFocus={() => setIsVisible(true)}
+        onBlur={() => setIsVisible(false)}
+      >
+        <HelpCircle className="h-3 w-3" />
+      </button>
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: -5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 text-xs font-medium text-white bg-slate-800 rounded-lg shadow-lg w-48 text-center"
+          >
+            {text}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-1px]">
+              <div className="border-4 border-transparent border-b-slate-800" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// TrendIndicator component - shows trend compared to previous analysis
+function TrendIndicator({
+  currentValue,
+  previousValue,
+  lowerIsBetter = false,
+  format = "percent",
+  colorClassName,
+}: {
+  currentValue: number | null | undefined;
+  previousValue: number | null | undefined;
+  lowerIsBetter?: boolean;
+  format?: "percent" | "points" | "rank";
+  colorClassName?: string; // Fallback color when no trend data
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  // If no previous value, show decorative circle
+  if (
+    previousValue === null ||
+    previousValue === undefined ||
+    currentValue === null ||
+    currentValue === undefined
+  ) {
+    return (
+      <div
+        className={`absolute top-0 right-0 w-20 h-20 ${
+          colorClassName || "bg-slate-100/50"
+        } rounded-full -mr-10 -mt-10`}
+      />
+    );
+  }
+
+  // Calculate change
+  const change = currentValue - previousValue;
+
+  // For rank, show absolute change; for others, calculate percentage
+  let displayValue: string;
+  if (format === "rank") {
+    // For rank: negative change is improvement (went from #3 to #2)
+    displayValue = change === 0 ? "0" : change > 0 ? `+${change}` : `${change}`;
+  } else if (format === "points") {
+    displayValue =
+      change === 0
+        ? "0"
+        : change > 0
+        ? `+${change.toFixed(0)}`
+        : `${change.toFixed(0)}`;
+  } else {
+    // Percentage change
+    const percentChange =
+      previousValue !== 0 ? (change / previousValue) * 100 : 0;
+    displayValue =
+      percentChange === 0
+        ? "0%"
+        : percentChange > 0
+        ? `+${percentChange.toFixed(1)}%`
+        : `${percentChange.toFixed(1)}%`;
+  }
+
+  // Determine if this is an improvement
+  const isImprovement = lowerIsBetter ? change < 0 : change > 0;
+  const noChange = change === 0;
+
+  return (
+    <div
+      className="absolute top-2 right-2 z-10"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <div
+        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold transition-all cursor-default ${
+          noChange
+            ? "bg-slate-100 text-slate-500"
+            : isImprovement
+            ? "bg-green-100 text-green-700"
+            : "bg-red-100 text-red-700"
+        }`}
+      >
+        {!noChange &&
+          (isImprovement ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          ))}
+        <span>{displayValue}</span>
+      </div>
+      <AnimatePresence>
+        {showTooltip && (
+          <motion.div
+            initial={{ opacity: 0, y: -5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute z-50 top-full right-0 mt-2 px-3 py-2 text-xs font-medium text-white bg-slate-800 rounded-lg shadow-lg whitespace-nowrap"
+          >
+            Compared to previous analysis
+            <div className="absolute bottom-full right-3 mb-[-1px]">
+              <div className="border-4 border-transparent border-b-slate-800" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // Type for client GBP data
 interface ClientGbpData {
@@ -142,10 +293,47 @@ interface RankingResult {
     top_recommendations?: Array<{
       priority: number;
       title: string;
+      description?: string;
+      expected_outcome?: string;
     }>;
     verdict: string;
     confidence: number;
   } | null;
+  // Previous analysis data for trend comparison
+  previousAnalysis: {
+    id: number;
+    observedAt: string;
+    rankScore: number | string;
+    rankPosition: number;
+    totalCompetitors: number;
+    rawData: {
+      client_gbp: ClientGbpData | null;
+    } | null;
+  } | null;
+}
+
+// Ranking Task from the tasks endpoint (approved tasks only)
+interface RankingTask {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  category: string;
+  agentType: string;
+  isApproved: boolean;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  metadata: {
+    practiceRankingId: number | null;
+    gbpLocationId: string | null;
+    gbpLocationName: string | null;
+    priority: string | null;
+    impact: string | null;
+    effort: string | null;
+    timeline: string | null;
+  };
 }
 
 interface RankingsDashboardProps {
@@ -159,6 +347,9 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [rankingTasks, setRankingTasks] = useState<
+    Record<number, RankingTask[]>
+  >({});
 
   useEffect(() => {
     if (googleAccountId) {
@@ -217,6 +408,41 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       setLoading(false);
     }
   };
+
+  // Fetch approved tasks for a specific ranking
+  const fetchRankingTasks = async (practiceRankingId: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to fetch ranking tasks");
+        return;
+      }
+
+      const data = await response.json();
+      setRankingTasks((prev) => ({ ...prev, [practiceRankingId]: data.tasks }));
+    } catch (error) {
+      console.error("Error fetching ranking tasks:", error);
+    }
+  };
+
+  // Fetch tasks when rankings are loaded
+  useEffect(() => {
+    if (rankings.length > 0) {
+      // Fetch tasks for all rankings
+      rankings.forEach((ranking) => {
+        if (!rankingTasks[ranking.id]) {
+          fetchRankingTasks(ranking.id);
+        }
+      });
+    }
+  }, [rankings]);
 
   if (loading) {
     return (
@@ -327,7 +553,12 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
 
   // If only one location, show the full dashboard directly
   if (rankings.length === 1) {
-    return <PerformanceDashboard result={rankings[0]} />;
+    return (
+      <PerformanceDashboard
+        result={rankings[0]}
+        tasks={rankingTasks[rankings[0].id] || []}
+      />
+    );
   }
 
   // Multiple locations - show overview with location cards
@@ -394,7 +625,10 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
           animate={{ opacity: 1, y: 0 }}
           className="border-t border-slate-200 pt-8"
         >
-          <PerformanceDashboard result={selectedRanking} />
+          <PerformanceDashboard
+            result={selectedRanking}
+            tasks={rankingTasks[selectedRanking.id] || []}
+          />
         </motion.div>
       )}
     </div>
@@ -562,7 +796,35 @@ function extractPerformanceMetrics(
 }
 
 // Performance Dashboard View Component
-function PerformanceDashboard({ result }: { result: RankingResult }) {
+function PerformanceDashboard({
+  result,
+  tasks,
+}: {
+  result: RankingResult;
+  tasks: RankingTask[];
+}) {
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [clampedTasks, setClampedTasks] = useState<Set<number>>(new Set());
+  const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
+
+  // Check which descriptions are clamped after tasks load
+  useEffect(() => {
+    if (!tasks || tasks.length === 0) return;
+
+    const checkClamped = () => {
+      const newClampedTasks = new Set<number>();
+      descriptionRefs.current.forEach((element, taskId) => {
+        if (element && element.scrollHeight > element.clientHeight) {
+          newClampedTasks.add(taskId);
+        }
+      });
+      setClampedTasks(newClampedTasks);
+    };
+
+    // Small delay to ensure DOM is rendered
+    setTimeout(checkClamped, 100);
+  }, [tasks]);
+
   const factors = result.rankingFactors;
   const competitors = result.rawData?.competitors || [];
 
@@ -605,7 +867,13 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
           transition={{ delay: 0.1 }}
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-alloro-cobalt/5 rounded-full -mr-10 -mt-10 group-hover:bg-alloro-cobalt/10 transition-colors"></div>
+          <TrendIndicator
+            currentValue={result.rankPosition}
+            previousValue={result.previousAnalysis?.rankPosition}
+            lowerIsBetter={true}
+            format="rank"
+            colorClassName="bg-alloro-cobalt/5 group-hover:bg-alloro-cobalt/10 transition-colors"
+          />
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Current Rank
           </h3>
@@ -624,7 +892,14 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
           transition={{ delay: 0.15 }}
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/5 rounded-full -mr-10 -mt-10 group-hover:bg-green-500/10 transition-colors"></div>
+          <TrendIndicator
+            currentValue={Number(clientRating)}
+            previousValue={
+              result.previousAnalysis?.rawData?.client_gbp?.averageRating
+            }
+            format="points"
+            colorClassName="bg-green-500/5 group-hover:bg-green-500/10 transition-colors"
+          />
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Patient Satisfaction
           </h3>
@@ -684,7 +959,16 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
           transition={{ delay: 0.25 }}
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-alloro-cobalt/5 rounded-full -mr-10 -mt-10 group-hover:bg-alloro-cobalt/10 transition-colors"></div>
+          <TrendIndicator
+            currentValue={Number(result.rankScore)}
+            previousValue={
+              result.previousAnalysis?.rankScore
+                ? Number(result.previousAnalysis.rankScore)
+                : undefined
+            }
+            format="points"
+            colorClassName="bg-alloro-cobalt/5 group-hover:bg-alloro-cobalt/10 transition-colors"
+          />
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Visibility Score
           </h3>
@@ -796,22 +1080,30 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
             </div>
             Top Competitors
           </h3>
-          <div className="overflow-x-auto">
+          <div className="overflow-visible">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-2 font-bold text-slate-400 uppercase tracking-wider text-[11px]"></th>
-                  <th className="text-left py-3 px-2 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
-                    Practice
+                  <th className="text-left py-3 px-2 font-bold text-slate-400 text-xs"></th>
+                  <th className="text-left py-3 px-2 font-bold text-slate-400 text-xs">
+                    <Tooltip text="Business name of the competitor">
+                      <span>Practice</span>
+                    </Tooltip>
                   </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
-                    Rank
+                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
+                    <Tooltip text="Position in local search rankings">
+                      <span>Rank</span>
+                    </Tooltip>
                   </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
-                    Reviews
+                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
+                    <Tooltip text="Total number of Google reviews">
+                      <span>Reviews</span>
+                    </Tooltip>
                   </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 uppercase tracking-wider text-[11px]">
-                    Pace
+                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
+                    <Tooltip text="New reviews in the last 30 days">
+                      <span>Monthly</span>
+                    </Tooltip>
                   </th>
                 </tr>
               </thead>
@@ -910,7 +1202,7 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
                         {comp.totalReviews}
                       </td>
                       <td className="py-3 px-2 text-center text-slate-500 tabular-nums">
-                        {comp.reviewsLast30d || 0}/mo
+                        +{comp.reviewsLast30d || 0}
                       </td>
                     </tr>
                   ));
@@ -933,69 +1225,150 @@ function PerformanceDashboard({ result }: { result: RankingResult }) {
             </div>
             Your Action Plan
           </h3>
-          <ol className="space-y-4">
-            {result.llmAnalysis?.top_recommendations &&
-            result.llmAnalysis.top_recommendations.length > 0 ? (
-              result.llmAnalysis.top_recommendations.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-alloro-cobalt flex items-center justify-center text-sm font-bold text-white shadow-sm">
-                    {idx + 1}
+          <div className="space-y-3">
+            {/* Show approved tasks from tasks table if available */}
+            {tasks && tasks.length > 0 ? (
+              tasks.map((task, idx) => (
+                <div
+                  key={task.id}
+                  className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="font-bold text-alloro-navy text-sm line-clamp-2">
+                          {task.title}
+                        </h4>
+                        {task.metadata?.priority && (
+                          <span
+                            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              task.metadata.priority === "1" ||
+                              task.metadata.priority === "high"
+                                ? "bg-red-100 text-red-700"
+                                : task.metadata.priority === "2" ||
+                                  task.metadata.priority === "medium"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            P{task.metadata.priority}
+                          </span>
+                        )}
+                      </div>
+                      {task.description && (
+                        <div className="mb-2">
+                          <p
+                            ref={(el) => {
+                              if (el) {
+                                descriptionRefs.current.set(task.id, el);
+                              }
+                            }}
+                            className={`text-xs text-slate-600 leading-relaxed ${
+                              expandedTaskId === task.id ? "" : "line-clamp-2"
+                            }`}
+                          >
+                            {task.description}
+                          </p>
+                          {clampedTasks.has(task.id) && (
+                            <button
+                              onClick={() =>
+                                setExpandedTaskId(
+                                  expandedTaskId === task.id ? null : task.id
+                                )
+                              }
+                              className="text-xs text-alloro-cobalt hover:text-blue-700 font-bold mt-1"
+                            >
+                              {expandedTaskId === task.id
+                                ? "Show less"
+                                : "Read more"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+                          {task.metadata?.impact && (
+                            <span>{task.metadata.impact} impact</span>
+                          )}
+                          {task.metadata?.timeline && (
+                            <span>{task.metadata.timeline}</span>
+                          )}
+                        </div>
+                        <a
+                          href={`/tasks?taskId=${task.id}`}
+                          className="flex items-center gap-1 text-xs font-bold text-alloro-cobalt hover:text-blue-700 transition-colors"
+                        >
+                          Start task
+                          <ArrowRight className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2 pt-1">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-700 font-medium leading-tight">
-                      {rec.title}
-                    </span>
-                  </div>
-                </li>
+                </div>
               ))
+            ) : result.llmAnalysis?.top_recommendations &&
+              result.llmAnalysis.top_recommendations.length > 0 ? (
+              // Fallback: Show recommendations from LLM analysis (not yet approved as tasks)
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 text-amber-700 text-sm font-medium mb-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Recommendations pending approval
+                </div>
+                <p className="text-xs text-amber-600">
+                  Your action plan recommendations are being reviewed. They will
+                  appear here once approved by your administrator.
+                </p>
+              </div>
             ) : (
               // Fallback to generated recommendations based on gaps
               <>
                 {reviewGap > 50 && (
-                  <li className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-alloro-cobalt flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
                       1
                     </div>
-                    <div className="flex items-start gap-2 pt-1">
+                    <div className="flex items-start gap-2 pt-0.5">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700 font-medium leading-tight">
                         Launch Aggressive Review Generation Campaign
                       </span>
                     </div>
-                  </li>
+                  </div>
                 )}
                 {(result.rawData?.client_gbp?.postsLast90d || 0) < 4 && (
-                  <li className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-alloro-cobalt flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
                       {reviewGap > 50 ? 2 : 1}
                     </div>
-                    <div className="flex items-start gap-2 pt-1">
+                    <div className="flex items-start gap-2 pt-0.5">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-slate-700 font-medium leading-tight">
                         Establish Weekly GBP Posting Routine
                       </span>
                     </div>
-                  </li>
+                  </div>
                 )}
-                <li className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-alloro-cobalt flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
                     {(reviewGap > 50 ? 1 : 0) +
                       ((result.rawData?.client_gbp?.postsLast90d || 0) < 4
                         ? 1
                         : 0) +
                       1}
                   </div>
-                  <div className="flex items-start gap-2 pt-1">
+                  <div className="flex items-start gap-2 pt-0.5">
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-slate-700 font-medium leading-tight">
                       Deploy Local and Review Schema Markup
                     </span>
                   </div>
-                </li>
+                </div>
               </>
             )}
-          </ol>
+          </div>
         </motion.div>
       </div>
     </motion.div>

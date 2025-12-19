@@ -5,7 +5,7 @@ import { ProgressIndicator } from "./ProgressIndicator";
 import { Step0UserInfo } from "./Step0_UserInfo";
 import { Step1PracticeInfo } from "./Step1_PracticeInfo";
 import { Step2DomainInfo } from "./Step2_DomainInfo";
-import { BootMessages } from "./BootMessages";
+import { Loader2 } from "lucide-react";
 
 interface OnboardingContainerProps {
   onComplete?: () => void;
@@ -31,7 +31,6 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     completeOnboarding,
   } = useOnboarding();
 
-  const [showBootMessages, setShowBootMessages] = useState(true);
   const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
 
   // Handle onboarding completion
@@ -82,12 +81,10 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     previousStep();
   };
 
-
-
   // Show "Preparing your dashboard" after completion
   if (isCompletingOnboarding) {
     return (
-      <div className="flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-alloro-bg font-body">
         <div className="text-center space-y-8">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -99,50 +96,27 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-full h-full rounded-2xl bg-gradient-to-br from-[#86b4ef] to-[#6fa3eb] flex items-center justify-center shadow-2xl"
+                className="w-full h-full rounded-2xl bg-alloro-cobalt flex items-center justify-center shadow-lg shadow-blue-900/20"
               >
-                <svg
-                  className="w-12 h-12 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+                <Loader2 className="w-10 h-10 text-white" />
               </motion.div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-thin text-gray-800">
-              Alloro is preparing your dashboard
+            <h1 className="text-3xl md:text-4xl font-bold font-heading text-alloro-navy tracking-tight">
+              Preparing your dashboard...
             </h1>
+            <p className="text-slate-500">This will only take a moment</p>
           </motion.div>
         </div>
       </div>
     );
   }
 
-  // Show boot messages while loading properties
-  if (showBootMessages) {
-    return (
-      <BootMessages
-        isLoadingComplete={true}
-        onComplete={() => {
-          setShowBootMessages(false);
-        }}
-      />
-    );
-  }
-
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4] p-4">
-        <div className="max-w-md w-full p-8 rounded-2xl bg-white/30 backdrop-blur-lg border border-white/40">
+      <div className="min-h-[60vh] flex items-center justify-center bg-alloro-bg p-4 font-body">
+        <div className="max-w-md w-full p-8 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-500/30 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
               <svg
                 className="w-8 h-8 text-red-600"
                 fill="none"
@@ -157,13 +131,13 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                 />
               </svg>
             </div>
-            <h2 className="text-gray-800 text-xl font-bold">
+            <h2 className="text-alloro-navy text-xl font-bold font-heading">
               Oops! Something went wrong
             </h2>
-            <p className="text-gray-700">{error}</p>
+            <p className="text-slate-600">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#6fa3eb] to-[#86b4ef] text-white font-semibold hover:from-[#5a8ed9] hover:to-[#6fa3eb] transition-all"
+              className="px-6 py-3 rounded-xl bg-alloro-cobalt text-white font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
             >
               Try Again
             </button>
@@ -174,18 +148,10 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
   }
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4] p-4 flex items-center justify-center">
-      <div className="max-w-3xl w-full max-h-[90vh]Alloro Pointing">
+    <div className="min-h-[60vh] bg-alloro-bg p-4 flex items-center justify-center font-body">
+      <div className="max-w-xl w-full">
         {/* Main Card */}
-        <div className="p-8 rounded-2xl bg-white/30 backdrop-blur-lg border border-white/40 shadow-2xl relative">
-          {/* Alloro Pointing Down Mascot - Standing on Top Left of Card */}
-          <div className="absolute -top-[115px] left-2 w-32 h-32 z-10">
-            <img
-              src="/alloro-pointing-down.png"
-              alt="Alloro Pointing"
-              className="w-full h-full object-contain drop-shadow-2xl"
-            />
-          </div>
+        <div className="p-8 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           {/* Progress Indicator */}
           <ProgressIndicator
             currentStep={currentStep}
@@ -234,16 +200,20 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   onBack={handlePreviousStep}
                 />
               )}
-
-
             </motion.div>
           </AnimatePresence>
         </div>
 
         {/* Help Text */}
         <div className="text-center mt-6">
-          <p className="text-gray-600 text-sm">
-            Need help? Contact support at support@signalsai.com
+          <p className="text-slate-500 text-sm">
+            Need help? Contact us at{" "}
+            <a
+              href="mailto:info@getalloro.com"
+              className="text-alloro-cobalt hover:underline font-medium"
+            >
+              info@getalloro.com
+            </a>
           </p>
         </div>
       </div>

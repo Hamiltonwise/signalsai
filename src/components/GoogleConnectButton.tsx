@@ -60,7 +60,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
         ) : (
           <>
             <GoogleIcon className="w-5 h-5" />
-            <span>Connect Google Account</span>
+            <span>Continue with Google</span>
           </>
         )}
       </button>

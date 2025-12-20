@@ -19,6 +19,7 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isTestAccount, setIsTestAccount] = useState(false);
 
   // Auto-redirect to dashboard if authenticated
   useEffect(() => {
@@ -32,6 +33,8 @@ export default function SignIn() {
     setIsLoading(true);
     setError("");
     setMessage("");
+    setIsTestAccount(false);
+
     try {
       const response = await fetch("/api/auth/otp/request", {
         method: "POST",
@@ -43,7 +46,14 @@ export default function SignIn() {
 
       if (data.success) {
         setOtpStep("code");
-        setMessage("");
+
+        // Check if this is a test account
+        if (data.isTestAccount) {
+          setIsTestAccount(true);
+          setMessage("You are a tester, type anything and proceed");
+        } else {
+          setMessage("");
+        }
       } else {
         setError(data.error || "Failed to send code");
       }
@@ -321,12 +331,20 @@ export default function SignIn() {
                       className="space-y-4"
                     >
                       <div className="text-center mb-4">
-                        <p className="text-sm text-slate-600 font-medium">
-                          Code sent to
-                        </p>
-                        <p className="text-sm text-alloro-cobalt font-semibold">
-                          {email}
-                        </p>
+                        {isTestAccount ? (
+                          <p className="text-sm text-green-600 font-semibold">
+                            You are a tester, type anything and proceed
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-sm text-slate-600 font-medium">
+                              Code sent to
+                            </p>
+                            <p className="text-sm text-alloro-cobalt font-semibold">
+                              {email}
+                            </p>
+                          </>
+                        )}
                       </div>
 
                       <div>

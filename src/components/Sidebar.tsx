@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { fetchClientTasks } from "../api/tasks";
+import { fetchNotifications } from "../api/notifications";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -105,12 +107,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [userTaskCount, setUserTaskCount] = useState<number>(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] =
+    useState<number>(0);
 
   // Get user role from localStorage
   useEffect(() => {
     const role = localStorage.getItem("user_role") as UserRole | null;
     setUserRole(role);
   }, []);
+
+  // Fetch user task count (manual/USER type tasks only)
+  const loadTaskCount = useCallback(async () => {
+    const googleAccountId = userProfile?.googleAccountId;
+    if (!googleAccountId || !onboardingCompleted) return;
+
+    try {
+      const response = await fetchClientTasks(googleAccountId);
+      if (response?.success && response.tasks) {
+        // Count only pending USER tasks
+        const pendingUserTasks =
+          response.tasks.USER?.filter(
+            (task) => task.status !== "complete" && task.status !== "archived"
+          ) || [];
+        setUserTaskCount(pendingUserTasks.length);
+      }
+    } catch (err) {
+      console.error("Failed to fetch task count for sidebar:", err);
+    }
+  }, [userProfile?.googleAccountId, onboardingCompleted]);
+
+  // Initial load of task count
+  useEffect(() => {
+    loadTaskCount();
+  }, [loadTaskCount]);
+
+  // Listen for task updates from TasksView
+  useEffect(() => {
+    const handleTasksUpdated = () => {
+      loadTaskCount();
+    };
+
+    window.addEventListener("tasks:updated", handleTasksUpdated);
+    return () => {
+      window.removeEventListener("tasks:updated", handleTasksUpdated);
+    };
+  }, [loadTaskCount]);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      const googleAccountId = userProfile?.googleAccountId;
+      if (!googleAccountId || !onboardingCompleted) return;
+
+      try {
+        const response = await fetchNotifications(googleAccountId);
+        if (response?.success) {
+          setUnreadNotificationCount(response.unreadCount || 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notification count for sidebar:", err);
+      }
+    };
+
+    loadNotificationCount();
+  }, [userProfile?.googleAccountId, onboardingCompleted]);
 
   const handleLogout = () => {
     disconnect();
@@ -142,23 +203,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  // Execution & Alerts items
-  const executionNavItems = [
-    {
-      label: "Strategic Tasks",
-      icon: <CheckSquare size={20} />,
-      path: "/tasks",
-      showDuringOnboarding: false,
-      badge: "3",
-    },
-    {
-      label: "Intelligence Signals",
-      icon: <Bell size={20} />,
-      path: "/notifications",
-      showDuringOnboarding: false,
-      hasNotification: true,
-    },
-  ];
+  // Execution & Alerts items - dynamic badges and notifications
+  const executionNavItems = useMemo(
+    () => [
+      {
+        label: "Strategic Tasks",
+        icon: <CheckSquare size={20} />,
+        path: "/tasks",
+        showDuringOnboarding: false,
+        badge: userTaskCount > 0 ? String(userTaskCount) : undefined,
+      },
+      {
+        label: "Intelligence Signals",
+        icon: <Bell size={20} />,
+        path: "/notifications",
+        showDuringOnboarding: false,
+        hasNotification: unreadNotificationCount > 0,
+      },
+    ],
+    [userTaskCount, unreadNotificationCount]
+  );
 
   // Filter nav items based on onboarding status
   const filteredMainNav = onboardingCompleted

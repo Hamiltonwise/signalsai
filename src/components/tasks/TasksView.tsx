@@ -277,6 +277,9 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
 
       // Reload tasks to get updated state
       await loadTasks();
+
+      // Dispatch custom event to notify Sidebar of task changes
+      window.dispatchEvent(new CustomEvent("tasks:updated"));
     } catch (err) {
       console.error("Failed to toggle task:", err);
       alert(err instanceof Error ? err.message : "Failed to update task");

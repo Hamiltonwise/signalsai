@@ -491,7 +491,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       <div className="max-w-[1400px] mx-auto relative flex flex-col">
         {/* Professional Header - Matching newdesign */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
-          <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
                 <BarChart3 size={20} />
@@ -534,7 +534,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           </div>
         </header>
 
-        <main className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 py-8 lg:py-12 space-y-12 lg:space-y-16">
+        <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-12 lg:space-y-16">
           {/* Processing Notice Banner */}
           {showProcessingNotice && (
             <motion.div

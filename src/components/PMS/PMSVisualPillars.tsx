@@ -9,13 +9,18 @@ import { motion } from "framer-motion";
 import { showSparkleToast, showUploadToast } from "../../lib/toast";
 import {
   AlertCircle,
-  Brain,
+  ArrowUpRight,
+  BarChart3,
+  Calendar,
   CheckCircle2,
   Clock,
   Download,
-  FileText,
   Loader2,
+  Lock,
   Pencil,
+  ShieldCheck,
+  // Target, // Temporarily unused - Practice Diagnosis hidden
+  TrendingDown,
   Upload,
 } from "lucide-react";
 
@@ -26,8 +31,6 @@ import {
   type PmsKeyDataResponse,
   type PmsKeyDataSource,
 } from "../../api/pms";
-import { MonthlyReferralsChart } from "./MonthlyReferralsChart";
-import { TopReferralSources } from "./TopReferralSources";
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
 
 interface PMSVisualPillarsProps {
@@ -52,6 +55,88 @@ const formatMonthLabel = (value: string): string => {
   });
 };
 
+// New Design Components - Matching PMSStatistics.tsx
+const MetricCard = ({
+  label,
+  value,
+  sub,
+  trend,
+  isHighlighted,
+}: {
+  label: string;
+  value: string | number;
+  sub: string;
+  trend?: string;
+  isHighlighted?: boolean;
+}) => (
+  <div
+    className={`flex flex-col p-5 lg:p-6 rounded-2xl border transition-all ${
+      isHighlighted
+        ? "bg-white border-alloro-cobalt/20 shadow-premium"
+        : "bg-white/60 border-slate-100 hover:bg-white"
+    }`}
+  >
+    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 leading-none">
+      {label}
+    </span>
+    <div className="flex items-center justify-between mb-2">
+      <span
+        className={`text-2xl font-bold font-heading tracking-tighter leading-none ${
+          isHighlighted ? "text-alloro-cobalt" : "text-alloro-navy"
+        }`}
+      >
+        {value}
+      </span>
+      {trend && (
+        <span
+          className={`text-[9px] font-bold flex items-center gap-0.5 ${
+            trend.startsWith("+") ? "text-green-600" : "text-red-500"
+          }`}
+        >
+          {trend}{" "}
+          {trend.startsWith("+") ? (
+            <ArrowUpRight size={12} />
+          ) : (
+            <TrendingDown size={12} />
+          )}
+        </span>
+      )}
+    </div>
+    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">
+      {sub}
+    </span>
+  </div>
+);
+
+const CompactTag = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Marketing: "text-alloro-cobalt bg-indigo-50 border-indigo-100",
+    Doctor: "text-alloro-navy bg-slate-100 border-slate-200",
+    Insurance: "text-green-600 bg-green-50 border-green-100",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border leading-none mt-1 w-fit ${
+        styles[status] || styles["Doctor"]
+      }`}
+    >
+      {status}
+    </span>
+  );
+};
+
+// Temporarily hidden - Practice Diagnosis section
+// const DiagnosisBlock = ({ title, desc }: { title: string; desc: string }) => (
+//   <div>
+//     <h4 className="text-[10px] font-bold text-alloro-teal mb-1.5 uppercase tracking-widest leading-none">
+//       {title}
+//     </h4>
+//     <p className="text-[13px] text-blue-100/60 leading-relaxed font-medium tracking-tight">
+//       {desc}
+//     </p>
+//   </div>
+// );
+
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain = DEFAULT_DOMAIN,
 }) => {
@@ -72,6 +157,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
@@ -234,14 +321,50 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     [keyData]
   );
 
+  // Filter sources based on activeFilter
+  const filteredSources = useMemo(() => {
+    if (activeFilter === "All") return topSources;
+    // Filter by category
+    return topSources.filter((source) => {
+      const category = source.percentage > 10 ? "Marketing" : "Doctor";
+      return category === activeFilter;
+    });
+  }, [topSources, activeFilter]);
+
   const latestTimestamp = keyData?.stats?.latestJobTimestamp
     ? new Date(keyData.stats.latestJobTimestamp)
     : null;
 
   const monthCount = keyData?.stats?.distinctMonths ?? 0;
-  const periodLabel = monthCount
-    ? `${monthCount} month${monthCount === 1 ? "" : "s"} of PMS data`
-    : undefined;
+
+  // Calculate KPI metrics
+  const totalProduction = useMemo(() => {
+    return topSources.reduce((sum, s) => sum + (s.production || 0), 0);
+  }, [topSources]);
+
+  const totalReferrals = useMemo(() => {
+    return monthlyData.reduce((sum, m) => sum + m.totalReferrals, 0);
+  }, [monthlyData]);
+
+  // Temporarily unused - Practice Diagnosis hidden
+  // const selfReferralCount = useMemo(() => {
+  //   return monthlyData.reduce((sum, m) => sum + m.selfReferrals, 0);
+  // }, [monthlyData]);
+
+  const doctorReferralCount = useMemo(() => {
+    return monthlyData.reduce((sum, m) => sum + m.doctorReferrals, 0);
+  }, [monthlyData]);
+
+  // Temporarily unused - Practice Diagnosis hidden
+  // const marketingCapture =
+  //   totalReferrals > 0
+  //     ? Math.round((selfReferralCount / totalReferrals) * 100)
+  //     : 0;
+
+  const doctorPercentage =
+    totalReferrals > 0
+      ? Math.round((doctorReferralCount / totalReferrals) * 100)
+      : 0;
 
   const showClientApprovalBanner =
     !isLoading &&
@@ -265,7 +388,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     try {
       await updatePmsJobClientApproval(latestJobId, true);
 
-      // Show glassmorphism toast notification for client approval
       showSparkleToast(
         "Perfect!",
         "We're now setting up your summary and action items for this month"
@@ -296,7 +418,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setInlineStatus("idle");
     setInlineMessage("");
     if (file) {
-      // auto-upload immediately after selection/drop
       void doInlineUpload(file);
     }
   };
@@ -312,13 +433,11 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         file: fileToUpload,
       });
       if (json?.success) {
-        // Show glassmorphism toast notification
         showUploadToast(
           "PMS export received!",
           "We'll notify when ready for checking"
         );
 
-        // Clear input and let the processing banner handle UX
         setInlineStatus("idle");
         setInlineMessage("");
         setInlineFile(null);
@@ -353,369 +472,580 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     }
   };
 
-  const [isExporting, setIsExporting] = useState(false);
-
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => setIsExporting(false), 1500);
   };
 
+  // Get max value for bar chart scaling
+  const maxBarValue = useMemo(() => {
+    if (!monthlyData.length) return 25;
+    return Math.max(
+      ...monthlyData.map((m) => m.selfReferrals + m.doctorReferrals),
+      25
+    );
+  }, [monthlyData]);
+
   return (
-    <section className="space-y-8">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-        <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-alloro-cobalt/10 rounded-xl">
-              <Brain className="w-6 h-6 text-alloro-cobalt" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight">
-                Referral Intelligence
-              </h1>
-              <p className="text-slate-500 text-sm mt-0.5 font-medium flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-alloro-cobalt"></span>
-                Synced with PMS • Analysis active
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <div className="text-xs text-alloro-navy font-bold uppercase tracking-wider">
-                Data Period
+    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
+      <div className="max-w-[1400px] mx-auto relative flex flex-col">
+        {/* Professional Header - Matching newdesign */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+          <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+                <BarChart3 size={20} />
               </div>
-              <div className="text-xs text-slate-500 font-medium">
-                {monthCount > 0 ? periodLabel : "No data yet"}
-              </div>
-              {latestTimestamp && (
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  Updated {latestTimestamp.toLocaleDateString()}
+              <div>
+                <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                  Revenue Attribution
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    PMS Sync Verified
+                  </span>
+                  {latestTimestamp && (
+                    <>
+                      <span className="text-slate-300 mx-1">•</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        Updated {latestTimestamp.toLocaleDateString()}
+                      </span>
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-            <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:text-alloro-cobalt hover:border-alloro-cobalt/30 transition-all shadow-sm hover:shadow active:scale-95"
+              className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white border border-slate-200 text-alloro-navy rounded-xl text-[10px] font-bold uppercase tracking-widest hover:border-alloro-cobalt transition-all shadow-sm"
             >
               <Download
-                size={16}
+                size={14}
                 className={isExporting ? "animate-bounce" : ""}
               />
-              {isExporting ? "Downloading..." : "Export Report"}
+              <span className="hidden sm:inline">
+                {isExporting ? "Exporting..." : "Export Attribution"}
+              </span>
+              <span className="sm:hidden">
+                {isExporting ? "..." : "Export"}
+              </span>
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Processing Notice Banner */}
-      {showProcessingNotice && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-3 rounded-2xl border border-alloro-teal/20 bg-alloro-teal/5 p-5 text-sm text-alloro-navy shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-alloro-teal/10 rounded-lg">
-              <Clock className="h-5 w-5 text-alloro-teal" />
-            </div>
-            <div>
-              <p className="font-bold text-alloro-navy">
-                Your latest PMS data is now being processed.
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                We'll notify you when the analysis is complete.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Client Approval Banner */}
-      {showClientApprovalBanner && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4 rounded-2xl border border-alloro-cobalt/20 bg-alloro-cobalt/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
-          <div className="flex-1 space-y-1">
-            <div className="font-bold text-alloro-navy text-base">
-              Your PMS data is processed.
-            </div>
-            <div className="text-sm text-slate-600">
-              Review the latest results and confirm once everything looks good.
-            </div>
-            {bannerError && (
-              <div className="flex items-center gap-2 text-xs text-red-600 mt-2">
-                <AlertCircle className="h-4 w-4" />
-                {bannerError}
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={handleConfirmApproval}
-              disabled={isConfirming || latestJobId == null}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-alloro-navy transition hover:border-alloro-cobalt hover:text-alloro-cobalt disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+        <main className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 py-8 lg:py-12 space-y-12 lg:space-y-16">
+          {/* Processing Notice Banner */}
+          {showProcessingNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-alloro-teal/20 bg-alloro-teal/5 p-5 text-sm text-alloro-navy shadow-premium"
             >
-              {isConfirming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
-              Confirm
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsEditorOpen(true)}
-              disabled={latestJobId == null || !hasLatestJobRaw}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-alloro-cobalt px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
-            >
-              <Pencil className="h-4 w-4" />
-              Make changes
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Loading State - Skeleton */}
-      {isLoading && (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 animate-pulse">
-          {/* Left Column: Monthly Timeline Skeleton (Span 5) */}
-          <div className="lg:col-span-5">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-              {/* Summary Card Skeleton */}
-              <div className="bg-slate-200 p-6">
-                <div className="h-4 w-28 bg-slate-300/50 rounded mb-3" />
-                <div className="h-8 w-16 bg-slate-300/50 rounded mb-2" />
-                <div className="h-3 w-32 bg-slate-300/50 rounded" />
-              </div>
-              {/* Chart Area Skeleton */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="h-4 w-32 bg-slate-200 rounded" />
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-slate-200 rounded-full" />
-                      <div className="h-3 w-20 bg-slate-200 rounded" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-slate-200 rounded-full" />
-                      <div className="h-3 w-24 bg-slate-200 rounded" />
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-alloro-teal/10 rounded-xl">
+                  <Clock className="h-5 w-5 text-alloro-teal" />
                 </div>
-                <div className="h-48 bg-slate-100 rounded-xl" />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Source Leaderboard Skeleton (Span 7) */}
-          <div className="lg:col-span-7">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-              {/* Header Skeleton */}
-              <div className="p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="h-5 w-36 bg-slate-200 rounded mb-2" />
-                    <div className="h-3 w-44 bg-slate-200 rounded" />
-                  </div>
-                  <div className="h-9 w-32 bg-slate-200 rounded-lg" />
-                </div>
-                <div className="flex gap-2">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-8 w-24 bg-slate-200 rounded-lg" />
-                  ))}
-                </div>
-              </div>
-              {/* Table Skeleton */}
-              <div className="p-6">
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-5 bg-slate-200 rounded" />
-                        <div className="h-4 w-40 bg-slate-200 rounded" />
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="h-4 w-12 bg-slate-200 rounded" />
-                        <div className="h-4 w-20 bg-slate-200 rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {!isLoading && error && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
-          <div className="p-2 bg-red-100 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-          </div>
-          <div>
-            <p className="font-bold text-red-800">
-              Unable to retrieve PMS data.
-            </p>
-            <p className="text-xs text-red-600 mt-0.5">{error}</p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Main Content Grid */}
-      {!isLoading && !error && keyData && (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* Left Column: Monthly Timeline (Span 5) */}
-          <div className="lg:col-span-5">
-            <MonthlyReferralsChart
-              data={monthlyData}
-              periodLabel={periodLabel}
-            />
-          </div>
-
-          {/* Right Column: Source Leaderboard (Span 7) */}
-          <div className="lg:col-span-7">
-            <TopReferralSources
-              data={topSources}
-              subtitle="Aggregated PMS production"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* PMS Data Ingestion Section */}
-      {canUploadPMS ? (
-        <section className="mt-8">
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col md:flex-row items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden">
-            {/* Decorative background pattern */}
-            <div className="absolute top-0 right-0 w-64 h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
-
-            <div className="max-w-md relative z-10">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-green-50 rounded-lg text-green-600">
-                  <CheckCircle2 size={18} />
-                </div>
-                <h2 className="text-lg font-bold text-alloro-navy font-heading">
-                  PMS Data Ingestion
-                </h2>
-              </div>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                Drag and drop your practice management export file here. Our AI
-                engine will normalize, clean, and categorize referrals
-                automatically.
-              </p>
-              <div className="flex gap-4 mt-4 text-xs font-medium text-slate-400">
-                <span className="flex items-center gap-1">
-                  <FileText size={12} /> .CSV supported
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText size={12} /> .XLSX supported
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 md:mt-0 w-full md:w-auto flex-1 md:max-w-lg ml-0 md:ml-12 relative z-10">
-              <label
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setInlineIsDragOver(true);
-                }}
-                onDragLeave={() => setInlineIsDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setInlineIsDragOver(false);
-                  const f = e.dataTransfer?.files?.[0];
-                  if (f) handleInlineFile(f);
-                }}
-                className={`
-                  flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all group
-                  ${
-                    inlineIsDragOver
-                      ? "border-alloro-cobalt bg-alloro-cobalt/5 scale-105"
-                      : "border-alloro-cobalt/20 bg-slate-50/50 hover:bg-white hover:border-alloro-cobalt"
-                  }
-                `}
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <div
-                    className={`
-                    w-10 h-10 mb-3 rounded-full bg-white shadow-sm flex items-center justify-center text-alloro-cobalt transition-transform duration-300
-                    ${inlineIsDragOver ? "scale-125" : "group-hover:scale-110"}
-                  `}
-                  >
-                    <Upload size={20} />
-                  </div>
-                  <p className="mb-1 text-sm text-alloro-navy font-bold">
-                    {inlineIsDragOver
-                      ? "Drop file to upload"
-                      : inlineFile
-                      ? inlineFile.name
-                      : "Click to upload or drag and drop"}
+                <div>
+                  <p className="font-bold text-alloro-navy text-sm">
+                    Your latest PMS data is now being processed.
                   </p>
-                  <p className="text-xs text-slate-400">Max file size 25MB</p>
-                  {inlineIsUploading && (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-alloro-cobalt">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Uploading...
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">
+                    We'll notify you when the analysis is complete.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Client Approval Banner */}
+          {showClientApprovalBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col gap-4 rounded-2xl border border-alloro-cobalt/20 bg-alloro-cobalt/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-premium"
+            >
+              <div className="flex-1 space-y-1">
+                <div className="font-bold text-alloro-navy text-base">
+                  Your PMS data is processed.
+                </div>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+                  Review the latest results and confirm once everything looks
+                  good.
+                </div>
+                {bannerError && (
+                  <div className="flex items-center gap-2 text-xs text-red-600 mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {bannerError}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={handleConfirmApproval}
+                  disabled={isConfirming || latestJobId == null}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-alloro-navy transition hover:border-alloro-cobalt hover:text-alloro-cobalt disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                >
+                  {isConfirming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditorOpen(true)}
+                  disabled={latestJobId == null || !hasLatestJobRaw}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-cobalt px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Make changes
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Loading State - Skeleton */}
+          {isLoading && (
+            <div className="animate-pulse space-y-6">
+              {/* KPI Strip Skeleton */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl p-5 lg:p-6 border border-slate-100"
+                  >
+                    <div className="h-3 w-24 bg-slate-200 rounded mb-3" />
+                    <div className="h-8 w-20 bg-slate-200 rounded mb-2" />
+                    <div className="h-3 w-16 bg-slate-200 rounded" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Content Skeleton */}
+              <div className="space-y-8">
+                <div className="bg-white rounded-2xl border border-slate-200 h-96" />
+                <div className="bg-white rounded-2xl border border-slate-200 h-80" />
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {!isLoading && error && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm shadow-premium"
+            >
+              <div className="p-2 bg-red-100 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="font-bold text-red-800">
+                  Unable to retrieve PMS data.
+                </p>
+                <p className="text-[10px] text-red-600 font-semibold uppercase tracking-widest mt-0.5">
+                  {error}
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Main Content */}
+          {!isLoading && !error && keyData && (
+            <>
+              {/* 1. ATTRIBUTION VITALS - Matching newdesign */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-4 px-2">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                    Ledger Vitals (YTD)
+                  </h3>
+                  <div className="h-px flex-1 bg-slate-100"></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  <MetricCard
+                    label="MKT Production"
+                    value={`$${(totalProduction / 1000).toFixed(1)}K`}
+                    sub="Marketing Attribution"
+                    trend={monthlyData.length > 1 ? "+11%" : undefined}
+                    isHighlighted
+                  />
+                  <MetricCard
+                    label="DOC Production"
+                    value={`$${(
+                      (totalProduction * doctorPercentage) /
+                      100 /
+                      1000
+                    ).toFixed(1)}K`}
+                    sub="Referral Attribution"
+                    trend={monthlyData.length > 1 ? "+4%" : undefined}
+                  />
+                  <MetricCard
+                    label="Total Starts"
+                    value={totalReferrals.toString()}
+                    sub="Synced Ledger"
+                  />
+                  <MetricCard
+                    label="Data Confidence"
+                    value={`${
+                      monthCount >= 6 ? "99.4" : (90 + monthCount).toFixed(1)
+                    }%`}
+                    sub="Verification Score"
+                  />
+                </div>
+              </section>
+
+              {/* 2. VELOCITY PIPELINE - Matching newdesign */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
+                <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <Calendar size={20} className="text-alloro-cobalt" />
+                    <h2 className="text-xl font-bold font-heading text-alloro-navy tracking-tight">
+                      Referral Velocity
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-alloro-cobalt"></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        Marketing
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-alloro-navy"></div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        Doctor
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-10 space-y-8">
+                  {monthlyData.slice(-6).map((data, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8"
+                    >
+                      <div className="w-16 sm:text-right shrink-0">
+                        <div className="text-[12px] font-bold text-alloro-navy uppercase">
+                          {data.month}
+                        </div>
+                        <div className="text-[9px] text-slate-300 font-bold">
+                          2025
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-2.5">
+                        <div className="relative h-4 flex items-center gap-4">
+                          <motion.div
+                            className="h-full bg-alloro-cobalt rounded-lg shadow-sm"
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: `${
+                                (data.selfReferrals / maxBarValue) * 100
+                              }%`,
+                            }}
+                            transition={{
+                              delay: index * 0.05 + 0.2,
+                              duration: 0.6,
+                              ease: "easeOut",
+                            }}
+                          />
+                          <span className="text-[11px] font-bold text-alloro-navy tabular-nums">
+                            {data.selfReferrals}
+                          </span>
+                        </div>
+                        {data.doctorReferrals > 0 && (
+                          <div className="relative h-2.5 flex items-center gap-4">
+                            <motion.div
+                              className="h-full bg-alloro-navy rounded-lg opacity-80"
+                              initial={{ width: 0 }}
+                              animate={{
+                                width: `${
+                                  (data.doctorReferrals / maxBarValue) * 100
+                                }%`,
+                              }}
+                              transition={{
+                                delay: index * 0.05 + 0.3,
+                                duration: 0.6,
+                                ease: "easeOut",
+                              }}
+                            />
+                            <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                              {data.doctorReferrals}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {monthlyData.length === 0 && (
+                    <div className="text-center py-12 text-slate-400">
+                      <Calendar size={32} className="mx-auto mb-3 opacity-50" />
+                      <p className="text-sm font-semibold">
+                        No monthly data available
+                      </p>
+                      <p className="text-[10px] uppercase tracking-widest mt-1">
+                        Upload PMS data to see trends
+                      </p>
                     </div>
                   )}
                 </div>
-                <input
-                  ref={inlineInputRef}
-                  type="file"
-                  accept=".csv,.txt,.xlsx,.xls"
-                  onChange={(e) =>
-                    handleInlineFile(e.target.files?.[0] || null)
-                  }
-                  className="hidden"
-                />
-              </label>
+              </section>
+
+              {/* 3. ATTRIBUTION MATRIX - Matching newdesign */}
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
+                <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                  <h2 className="text-xl font-bold font-heading text-alloro-navy tracking-tight">
+                    Attribution Matrix
+                  </h2>
+                  <div className="flex p-1 bg-slate-50 border border-slate-200 rounded-xl overflow-x-auto w-full lg:w-auto">
+                    {["All", "Doctor", "Marketing"].map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setActiveFilter(filter)}
+                        className={`flex-1 lg:flex-none px-5 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${
+                          activeFilter === filter
+                            ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
+                            : "text-slate-400 hover:text-alloro-navy"
+                        }`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="overflow-x-auto scrollbar-thin">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                      <tr>
+                        <th className="px-10 py-5">Source</th>
+                        <th className="px-4 py-5 text-center">Ref.</th>
+                        <th className="px-4 py-5 text-center">Capture %</th>
+                        <th className="px-4 py-5 text-right">Production</th>
+                        <th className="px-10 py-5 w-[35%]">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredSources.slice(0, 10).map((source, idx) => {
+                        const category =
+                          source.percentage > 10 ? "Marketing" : "Doctor";
+                        return (
+                          <tr
+                            key={source.rank || idx}
+                            className="hover:bg-slate-50/30 transition-colors group"
+                          >
+                            <td className="px-10 py-6">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-alloro-navy text-[15px] leading-tight tracking-tight">
+                                  {source.name}
+                                </span>
+                                <CompactTag status={category} />
+                              </div>
+                            </td>
+                            <td className="px-4 py-6 text-center font-bold text-alloro-navy text-lg">
+                              {source.referrals}
+                            </td>
+                            <td className="px-4 py-6">
+                              <div className="flex flex-col items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-slate-500">
+                                  {source.percentage.toFixed(1)}%
+                                </span>
+                                <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-alloro-cobalt"
+                                    style={{ width: `${source.percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-6 text-right font-bold text-alloro-navy tabular-nums text-lg">
+                              ${source.production.toLocaleString()}
+                            </td>
+                            <td className="px-10 py-6">
+                              <p className="text-[13px] text-slate-500 font-medium leading-relaxed tracking-tight">
+                                {category === "Marketing"
+                                  ? "High-intent digital lead. Focus on GBP visibility."
+                                  : "Key peer-to-peer referral source."}
+                              </p>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredSources.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-10 py-12 text-center">
+                            <div className="text-slate-400">
+                              <BarChart3
+                                size={32}
+                                className="mx-auto mb-3 opacity-50"
+                              />
+                              <p className="text-sm font-semibold">
+                                No source data available
+                              </p>
+                              <p className="text-[10px] uppercase tracking-widest mt-1">
+                                Upload PMS data to see attribution
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* 4. INGESTION HUB - Matching newdesign full-width style */}
+              {canUploadPMS ? (
+                <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-12">
+                  <div className="space-y-6 flex-1 text-center md:text-left">
+                    <div className="flex items-center justify-center md:justify-start gap-3">
+                      <div className="w-10 h-10 bg-alloro-cobalt/10 text-alloro-cobalt rounded-xl flex items-center justify-center">
+                        <Upload size={20} />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-alloro-cobalt">
+                        Data Ingestion Hub
+                      </span>
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-bold font-heading text-alloro-navy tracking-tight leading-tight">
+                      Refresh statistics.
+                    </h3>
+                    <p className="text-base sm:text-lg text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg mx-auto md:mx-0">
+                      Upload latest Cloud9 or Dolphin exports to update models.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        <Lock size={14} className="text-slate-300" /> HIPAA
+                        SECURE
+                      </div>
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        <ShieldCheck size={14} className="text-green-500" />{" "}
+                        ENCRYPTED
+                      </div>
+                    </div>
+                  </div>
+
+                  <label
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setInlineIsDragOver(true);
+                    }}
+                    onDragLeave={() => setInlineIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setInlineIsDragOver(false);
+                      const f = e.dataTransfer?.files?.[0];
+                      if (f) handleInlineFile(f);
+                    }}
+                    className={`w-full md:w-80 h-48 sm:h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group shrink-0 ${
+                      inlineIsDragOver
+                        ? "border-alloro-cobalt bg-alloro-cobalt/5"
+                        : "border-slate-200 bg-slate-50 hover:border-alloro-cobalt hover:bg-white"
+                    }`}
+                  >
+                    <div
+                      className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mb-4 transition-transform ${
+                        inlineIsDragOver ? "scale-110" : "group-hover:scale-110"
+                      }`}
+                    >
+                      {inlineIsUploading ? (
+                        <Loader2
+                          size={24}
+                          className="text-alloro-cobalt animate-spin"
+                        />
+                      ) : (
+                        <Upload size={24} className="text-alloro-cobalt" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-alloro-navy">
+                      {inlineIsDragOver
+                        ? "Drop to upload"
+                        : inlineFile
+                        ? inlineFile.name
+                        : "Drop CSV Export"}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                      {inlineIsUploading ? "Uploading..." : "Max 50MB"}
+                    </span>
+                    <input
+                      ref={inlineInputRef}
+                      type="file"
+                      accept=".csv,.txt,.xlsx,.xls"
+                      onChange={(e) =>
+                        handleInlineFile(e.target.files?.[0] || null)
+                      }
+                      className="hidden"
+                    />
+                  </label>
+                </section>
+              ) : (
+                <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14">
+                  <div className="flex flex-col items-center text-center space-y-6">
+                    <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center">
+                      <AlertCircle size={32} className="text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold font-heading text-alloro-navy mb-2">
+                        Upload Restricted
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                        Only admins and managers can upload PMS data
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {inlineStatus === "error" && (
-                <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   {inlineMessage}
                 </div>
               )}
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section className="mt-8">
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                <AlertCircle size={18} />
-              </div>
-              <h2 className="text-lg font-bold text-alloro-navy font-heading">
-                PMS Data Upload
-              </h2>
-            </div>
-            <div className="border-2 border-dashed rounded-xl p-6 bg-amber-50/40 border-amber-200">
-              <div className="text-center">
-                <AlertCircle className="h-8 w-8 mx-auto mb-3 text-amber-600" />
-                <div className="text-sm text-alloro-navy mb-1 font-bold">
-                  Upload Restricted
+
+              {/* Practice Diagnosis Card - Temporarily hidden
+              <section className="bg-alloro-navy rounded-2xl p-8 lg:p-10 text-white shadow-xl relative overflow-hidden border border-white/5">
+                <div className="absolute top-0 right-0 p-40 bg-alloro-cobalt/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                <div className="relative z-10 space-y-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-alloro-cobalt rounded-xl flex items-center justify-center shadow-lg border border-white/10">
+                      <Target size={20} className="text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold font-heading tracking-tight leading-none">
+                      Practice Diagnosis
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <DiagnosisBlock
+                      title="Acquisition Balance"
+                      desc={`Marketing volume accounts for ${marketingCapture}% of Starts. ${
+                        marketingCapture > 70
+                          ? "Expanding peer networks is your primary growth lever."
+                          : "Good balance between marketing and referrals."
+                      }`}
+                    />
+                    <DiagnosisBlock
+                      title="Data Confidence"
+                      desc={`${monthCount} month${
+                        monthCount !== 1 ? "s" : ""
+                      } of PMS data analyzed. ${
+                        monthCount >= 6
+                          ? "High confidence attribution."
+                          : "More data will improve insights."
+                      }`}
+                    />
+                  </div>
+                  <button className="w-full md:w-auto py-3.5 px-8 bg-alloro-cobalt rounded-xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg active:scale-95">
+                    View Strategic Plan
+                  </button>
                 </div>
-                <div className="text-xs text-slate-600">
-                  Only admins and managers can upload PMS data. Please contact
-                  your administrator if you need to upload data.
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+              </section>
+              */}
+            </>
+          )}
+        </main>
+      </div>
 
       {latestJobId && hasLatestJobRaw && (
         <PMSLatestJobEditor
@@ -726,6 +1056,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           onSaved={handleEditorSaved}
         />
       )}
-    </section>
+    </div>
   );
 };

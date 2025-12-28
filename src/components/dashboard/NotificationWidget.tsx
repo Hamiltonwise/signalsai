@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import {
-  CheckCircle,
-  Check,
   Loader2,
   AlertCircle,
-  FileSpreadsheet,
-  Bot,
   Info,
   TrendingUp,
+  Clock,
+  Zap,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -126,47 +126,75 @@ export function NotificationWidget({
     }
   };
 
-  // Get icon for notification type
-  const getNotificationIcon = (type: string) => {
-    const iconMap: Record<
+  // Get icon and styling for notification type
+  const getNotificationStyle = (type: string) => {
+    const styleMap: Record<
       string,
       {
-        Icon: React.ComponentType<{ className?: string }>;
-        color: string;
-        bgColor: string;
+        Icon: React.ComponentType<{ size?: number; className?: string }>;
+        iconBg: string;
+        iconColor: string;
+        impactBg: string;
+        impactText: string;
+        impactBorder: string;
+        impactLabel: string;
       }
     > = {
       pms: {
-        Icon: FileSpreadsheet,
-        color: "text-blue-600",
-        bgColor: "bg-blue-100",
+        Icon: CheckCircle2,
+        iconBg: "bg-green-50",
+        iconColor: "text-green-600",
+        impactBg: "bg-indigo-50",
+        impactText: "text-alloro-cobalt",
+        impactBorder: "border-indigo-100",
+        impactLabel: "Verified",
       },
       task: {
-        Icon: CheckCircle,
-        color: "text-green-600",
-        bgColor: "bg-green-100",
+        Icon: Zap,
+        iconBg: "bg-amber-50",
+        iconColor: "text-amber-600",
+        impactBg: "bg-amber-50",
+        impactText: "text-amber-600",
+        impactBorder: "border-amber-100",
+        impactLabel: "High Priority",
       },
       agent: {
-        Icon: Bot,
-        color: "text-purple-600",
-        bgColor: "bg-purple-100",
+        Icon: CheckCircle2,
+        iconBg: "bg-purple-50",
+        iconColor: "text-purple-600",
+        impactBg: "bg-indigo-50",
+        impactText: "text-alloro-cobalt",
+        impactBorder: "border-indigo-100",
+        impactLabel: "Strategic",
       },
       ranking: {
         Icon: TrendingUp,
-        color: "text-indigo-600",
-        bgColor: "bg-indigo-100",
+        iconBg: "bg-green-50",
+        iconColor: "text-green-600",
+        impactBg: "bg-indigo-50",
+        impactText: "text-alloro-cobalt",
+        impactBorder: "border-indigo-100",
+        impactLabel: "Strategic",
       },
       system: {
-        Icon: Info,
-        color: "text-orange-600",
-        bgColor: "bg-orange-100",
+        Icon: AlertCircle,
+        iconBg: "bg-red-50",
+        iconColor: "text-red-600",
+        impactBg: "bg-red-50",
+        impactText: "text-red-600",
+        impactBorder: "border-red-100",
+        impactLabel: "Critical",
       },
     };
     return (
-      iconMap[type] || {
+      styleMap[type] || {
         Icon: Info,
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
+        iconBg: "bg-slate-50",
+        iconColor: "text-slate-600",
+        impactBg: "bg-slate-50",
+        impactText: "text-slate-600",
+        impactBorder: "border-slate-100",
+        impactLabel: "Info",
       }
     );
   };
@@ -174,9 +202,9 @@ export function NotificationWidget({
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white/60 rounded-lg p-3 border border-gray-200">
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-premium">
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-alloro-cobalt" />
         </div>
       </div>
     );
@@ -185,12 +213,16 @@ export function NotificationWidget({
   // Error state
   if (error) {
     return (
-      <div className="bg-red-50/50 rounded-lg p-3 border border-red-200">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+      <div className="bg-red-50 rounded-2xl p-4 border border-red-200 shadow-premium">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center border border-red-200">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+          </div>
           <div>
-            <p className="text-xs font-medium text-gray-900">Error Loading</p>
-            <p className="text-xs text-gray-600 mt-0.5">{error}</p>
+            <p className="text-sm font-bold text-red-800">Error Loading</p>
+            <p className="text-[10px] text-red-600 font-semibold uppercase tracking-widest mt-0.5">
+              {error}
+            </p>
           </div>
         </div>
       </div>
@@ -200,12 +232,16 @@ export function NotificationWidget({
   // Empty state - no unread notifications
   if (!latestUnread) {
     return (
-      <div className="bg-white/60 rounded-lg p-3 border border-gray-200">
-        <div className="flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-600" />
+      <div className="bg-white rounded-2xl p-6 shadow-premium border border-slate-100">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center border border-green-100 shadow-sm">
+            <CheckCircle2 className="w-6 h-6 text-green-600" />
+          </div>
           <div>
-            <p className="text-xs font-medium text-gray-900">All caught up</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">
+            <p className="text-base font-bold text-alloro-navy font-heading tracking-tight">
+              All caught up
+            </p>
+            <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest mt-1">
               No unread notifications
             </p>
           </div>
@@ -214,52 +250,61 @@ export function NotificationWidget({
     );
   }
 
-  // Render notification
-  const { Icon, color, bgColor } = getNotificationIcon(latestUnread.type);
+  // Render notification - newdesign pattern
+  const style = getNotificationStyle(latestUnread.type);
+  const Icon = style.Icon;
 
   return (
     <div
       onClick={handleNotificationClick}
-      className="bg-white/60 rounded-lg p-3 border border-gray-200 cursor-pointer hover:bg-white/80 transition-colors"
+      className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden cursor-pointer hover:shadow-xl transition-all group relative"
     >
-      <div className="flex items-start gap-2 mb-2">
-        <div className={`${bgColor} rounded p-1.5 flex-shrink-0`}>
-          <Icon className={`w-3 h-3 ${color}`} />
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-alloro-cobalt opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div className="p-6 lg:p-8 flex flex-col sm:flex-row gap-6">
+        <div
+          className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-all group-hover:scale-105 shadow-sm ${style.iconBg} ${style.iconColor} border-opacity-50`}
+        >
+          <Icon size={24} />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-gray-900 mb-1">
-            {latestUnread.title}
-          </p>
+        <div className="flex-1 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-lg font-bold text-alloro-navy font-heading tracking-tight leading-none">
+              {latestUnread.title}
+            </h3>
+            <span
+              className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shrink-0 w-fit ${style.impactBg} ${style.impactText} ${style.impactBorder}`}
+            >
+              {style.impactLabel}
+            </span>
+          </div>
           {latestUnread.message && (
-            <p className="text-[11px] text-gray-600 leading-relaxed mb-1.5 line-clamp-2">
+            <p className="text-sm lg:text-base text-slate-500 font-medium leading-relaxed tracking-tight line-clamp-2">
               {latestUnread.message}
             </p>
           )}
-          <p className="text-[10px] text-gray-500">
-            {formatDistanceToNow(new Date(latestUnread.created_at), {
-              addSuffix: true,
-            })}
-          </p>
+          <div className="flex items-center justify-between pt-3">
+            <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="flex items-center gap-2">
+                <Clock size={14} className="opacity-40" />
+                {formatDistanceToNow(new Date(latestUnread.created_at), {
+                  addSuffix: true,
+                })}
+              </span>
+              <button
+                onClick={handleMarkAsRead}
+                disabled={isMarking}
+                className="text-alloro-cobalt hover:underline disabled:opacity-50"
+              >
+                {isMarking ? "Marking..." : "Acknowledge"}
+              </button>
+            </div>
+            <ChevronRight
+              size={20}
+              className="text-slate-200 group-hover:text-alloro-cobalt transition-all group-hover:translate-x-2"
+            />
+          </div>
         </div>
       </div>
-
-      <button
-        onClick={handleMarkAsRead}
-        disabled={isMarking}
-        className="text-xs text-gray-600 hover:text-gray-900 py-1.5 px-2 rounded hover:bg-gray-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isMarking ? (
-          <>
-            <Loader2 className="w-3 h-3 animate-spin" />
-            <span>Marking as read...</span>
-          </>
-        ) : (
-          <>
-            <Check className="w-3 h-3" />
-            <span>Mark as read</span>
-          </>
-        )}
-      </button>
     </div>
   );
 }

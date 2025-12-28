@@ -5,13 +5,13 @@ import SignIn from "./pages/Signin";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import { Settings } from "./pages/Settings";
-
+import { Notifications } from "./pages/Notifications";
+import { PageWrapper } from "./components/PageWrapper";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GSCProvider } from "./contexts/GSCContext.tsx";
 import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
-import { MondayProvider } from "./contexts/MondayContext.tsx";
 import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
@@ -26,9 +26,7 @@ function AppProviders({ children }: { children: ReactNode }) {
       <GSCProvider>
         <GA4Provider>
           <GBPProvider>
-            <ClarityProvider>
-              <MondayProvider>{children}</MondayProvider>
-            </ClarityProvider>
+            <ClarityProvider>{children}</ClarityProvider>
           </GBPProvider>
         </GA4Provider>
       </GSCProvider>
@@ -58,7 +56,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Dashboard />
+                  <PageWrapper>
+                    <Dashboard />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }
@@ -68,7 +68,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Dashboard />
+                  <PageWrapper>
+                    <Dashboard />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }
@@ -78,7 +80,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Dashboard />
+                  <PageWrapper>
+                    <Dashboard />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }
@@ -88,7 +92,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Dashboard />
+                  <PageWrapper>
+                    <Dashboard />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }
@@ -98,7 +104,9 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Dashboard />
+                  <PageWrapper>
+                    <Dashboard />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }
@@ -107,7 +115,9 @@ function App() {
             path="/admin/*"
             element={
               <AppProviders>
-                <Admin />
+                <PageWrapper>
+                  <Admin />
+                </PageWrapper>
               </AppProviders>
             }
           />
@@ -116,7 +126,21 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppProviders>
-                  <Settings />
+                  <PageWrapper>
+                    <Settings />
+                  </PageWrapper>
+                </AppProviders>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <AppProviders>
+                  <PageWrapper>
+                    <Notifications />
+                  </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>
             }

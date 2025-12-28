@@ -33,6 +33,7 @@ import type {
 import { CreateTaskModal } from "./CreateTaskModal";
 import { TaskDetailsModal } from "../tasks/TaskDetailsModal";
 import { AgentTypePill } from "../tasks/AgentTypePill";
+import { parseHighlightTags } from "../../utils/textFormatting";
 
 export function ActionItemsHub() {
   const [tasks, setTasks] = useState<ActionItem[]>([]);
@@ -639,11 +640,11 @@ export function ActionItemsHub() {
               <div className="text-sm text-gray-700">{task.domain_name}</div>
               <div>
                 <div className="text-sm text-gray-900 font-medium">
-                  {task.title}
+                  {parseHighlightTags(task.title, "underline")}
                 </div>
                 {task.description && (
                   <div className="text-xs text-gray-500 line-clamp-1">
-                    {task.description}
+                    {parseHighlightTags(task.description, "underline")}
                   </div>
                 )}
               </div>

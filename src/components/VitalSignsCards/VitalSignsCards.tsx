@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Brain,
   Download,
   Loader2,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
+  Search,
+  Star,
+  MousePointer2,
+  Activity,
+  Lightbulb,
+  Globe,
+  TrendingUp,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Awareness } from "./Awareness";
-import { Research } from "./Research";
-import { Consideration } from "./Consideration";
-import { Decision } from "./Decision";
+import { motion } from "framer-motion";
 import { useGA4 } from "../../hooks/useGA4";
 import { useGBP } from "../../hooks/useGBP";
 import { useGSC } from "../../hooks/useGSC";
@@ -24,41 +26,74 @@ interface VitalSignsCardsProps {
   selectedDomain: string;
 }
 
-const cards = [
+// Stage configuration
+const STAGES = [
   {
     id: "awareness",
     title: "Awareness",
-    component: Awareness,
-    description: "Search Performance & Visibility",
+    iconName: "Search",
+    description:
+      "The first moment potential patients discover your practice exists. Without visibility, even the best dental practice remains unknown.",
+    dataSource: "Google Search Console",
   },
   {
     id: "research",
     title: "Research",
-    component: Research,
-    description: "Website Analytics & Engagement",
+    iconName: "Globe",
+    description:
+      "When patients explore your services and evaluate your expertise. This is where trust begins and confidence builds.",
+    dataSource: "Google Analytics 4",
   },
   {
     id: "consideration",
     title: "Consideration",
-    component: Consideration,
-    description: "Reviews & Reputation Management",
+    iconName: "Star",
+    description:
+      "When patients compare options and evaluate your practice's reputation. Strong social proof and reputation management are crucial.",
+    dataSource: "Google Business Profile",
   },
   {
     id: "decision",
     title: "Decision",
-    component: Decision,
-    description: "User Experience & Conversion",
+    iconName: "MousePointer2",
+    description:
+      "The critical conversion moment. User experience determines whether ready-to-book patients complete their appointment or abandon.",
+    dataSource: "Microsoft Clarity",
   },
 ];
+
+// Helper to format numbers
+const formatNumber = (num: number): string => {
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + "K";
+  }
+  return num.toString();
+};
+
+// Icon renderer
+const getIcon = (name: string, size = 24, className = "") => {
+  switch (name) {
+    case "Search":
+      return <Search size={size} className={className} />;
+    case "Globe":
+      return <Globe size={size} className={className} />;
+    case "Star":
+      return <Star size={size} className={className} />;
+    case "MousePointer2":
+      return <MousePointer2 size={size} className={className} />;
+    default:
+      return <Search size={size} className={className} />;
+  }
+};
 
 export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   className = "",
   selectedDomain,
 }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
+  // selectedDomain is passed for context - data fetching is handled by hooks
+  console.debug("VitalSignsCards selectedDomain:", selectedDomain);
 
-  // AI Ready Data State
+  const [activeTabId, setActiveTabId] = useState("awareness");
   const [isFetchingAIData, setIsFetchingAIData] = useState(false);
   const [aiDataStatus, setAiDataStatus] = useState<{
     ga4: "idle" | "loading" | "success" | "error";
@@ -72,44 +107,237 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
     clarity: "idle",
   });
 
-  // Hooks
-  const { fetchAIReadyData: fetchGA4AIData } = useGA4();
-  const { fetchAIReadyData: fetchGBPAIData } = useGBP();
-  const { fetchAIReadyGscData: fetchGSCAIData } = useGSC();
-  const { fetchAIReadyClarityData: fetchClarityAIData } = useClarity();
+  // Hooks for data
+  const {
+    ga4Data,
+    isLoading: ga4Loading,
+    error: ga4Error,
+    fetchAIReadyData: fetchGA4AIData,
+  } = useGA4();
+  const {
+    gbpData,
+    isLoading: gbpLoading,
+    error: gbpError,
+    fetchAIReadyData: fetchGBPAIData,
+  } = useGBP();
+  const {
+    gscData,
+    isLoading: gscLoading,
+    error: gscError,
+    fetchAIReadyGscData: fetchGSCAIData,
+  } = useGSC();
+  const {
+    clarityData,
+    isLoading: clarityLoading,
+    error: clarityError,
+    fetchAIReadyClarityData: fetchClarityAIData,
+  } = useClarity();
   const { selectedDomain: authDomain } = useAuth();
 
-  const goToCard = (index: number) => {
-    const newDirection = index > activeIndex ? 1 : -1;
-    setDirection(newDirection);
-    setActiveIndex(index);
+  const activeIndex = STAGES.findIndex((s) => s.id === activeTabId);
+  const activeStage = STAGES[activeIndex];
+
+  // Get data status for each integration
+  const integrationStatus = useMemo(
+    () => ({
+      ga4: {
+        connected: !ga4Error && !ga4Loading,
+        loading: ga4Loading,
+        error: ga4Error,
+      },
+      gbp: {
+        connected: !gbpError && !gbpLoading,
+        loading: gbpLoading,
+        error: gbpError,
+      },
+      gsc: {
+        connected: !gscError && !gscLoading,
+        loading: gscLoading,
+        error: gscError,
+      },
+      clarity: {
+        connected: !clarityError && !clarityLoading,
+        loading: clarityLoading,
+        error: clarityError,
+      },
+    }),
+    [
+      ga4Loading,
+      ga4Error,
+      gbpLoading,
+      gbpError,
+      gscLoading,
+      gscError,
+      clarityLoading,
+      clarityError,
+    ]
+  );
+
+  // Get metrics for active stage
+  const getStageMetrics = () => {
+    switch (activeTabId) {
+      case "awareness":
+        return [
+          {
+            label: "Search Impressions",
+            value: gscLoading
+              ? "..."
+              : formatNumber(gscData.impressions.currMonth),
+            subtext: "Monthly searches",
+          },
+          {
+            label: "Avg. Position",
+            value: gscLoading
+              ? "..."
+              : gscData.avgPosition.currMonth.toFixed(1),
+            subtext: "Search ranking",
+          },
+          {
+            label: "Total Clicks",
+            value: gscLoading ? "..." : formatNumber(gscData.clicks.currMonth),
+            subtext: "Click-throughs",
+          },
+        ];
+      case "research":
+        return [
+          {
+            label: "Active Users",
+            value: ga4Loading
+              ? "..."
+              : formatNumber(ga4Data.activeUsers.currMonth),
+            subtext: "Website visitors",
+          },
+          {
+            label: "Engagement Rate",
+            value: ga4Loading
+              ? "..."
+              : (ga4Data.engagementRate.currMonth * 100).toFixed(1) + "%",
+            subtext: "Interaction rate",
+          },
+          {
+            label: "Conversions",
+            value: ga4Loading
+              ? "..."
+              : ga4Data.conversions.currMonth.toString(),
+            subtext: "Goal completions",
+          },
+        ];
+      case "consideration":
+        return [
+          {
+            label: "New Reviews",
+            value: gbpLoading ? "..." : gbpData.newReviews.currMonth.toString(),
+            subtext: "This month",
+          },
+          {
+            label: "Avg. Rating",
+            value: gbpLoading ? "..." : gbpData.avgRating.currMonth.toFixed(1),
+            subtext: "Star rating",
+          },
+          {
+            label: "Call Clicks",
+            value: gbpLoading
+              ? "..."
+              : formatNumber(gbpData.callClicks.currMonth),
+            subtext: "Phone taps",
+          },
+        ];
+      case "decision":
+        return [
+          {
+            label: "User Sessions",
+            value: clarityLoading
+              ? "..."
+              : formatNumber(clarityData.sessions.currMonth),
+            subtext: "Site visits",
+          },
+          {
+            label: "Bounce Rate",
+            value: clarityLoading
+              ? "..."
+              : (clarityData.bounceRate.currMonth * 100).toFixed(1) + "%",
+            subtext: "Exit rate",
+          },
+          {
+            label: "Dead Clicks",
+            value: clarityLoading
+              ? "..."
+              : clarityData.deadClicks.currMonth.toString(),
+            subtext: "UX issues",
+          },
+        ];
+      default:
+        return [];
+    }
   };
 
-  const paginate = (newDirection: number) => {
-    const newIndex =
-      newDirection > 0
-        ? (activeIndex + 1) % cards.length
-        : (activeIndex - 1 + cards.length) % cards.length;
-
-    setDirection(newDirection);
-    setActiveIndex(newIndex);
+  // Get insight for active stage
+  const getStageInsight = () => {
+    switch (activeTabId) {
+      case "awareness":
+        return gscLoading
+          ? "Loading search performance data..."
+          : gscError
+          ? "Error loading search performance. Check GSC integration."
+          : `Your practice has ${formatNumber(
+              gscData.impressions.currMonth
+            )} search impressions with ${formatNumber(
+              gscData.clicks.currMonth
+            )} clicks. Average position: ${gscData.avgPosition.currMonth.toFixed(
+              1
+            )}.`;
+      case "research":
+        return ga4Loading
+          ? "Loading website analytics data..."
+          : ga4Error
+          ? "Error loading analytics. Check GA4 integration."
+          : `Your website had ${formatNumber(
+              ga4Data.activeUsers.currMonth
+            )} active users with ${(
+              ga4Data.engagementRate.currMonth * 100
+            ).toFixed(1)}% engagement rate. ${
+              ga4Data.conversions.currMonth
+            } goal completions this month.`;
+      case "consideration":
+        return gbpLoading
+          ? "Loading business profile data..."
+          : gbpError
+          ? "Error loading reviews. Check GBP integration."
+          : `Your practice has ${
+              gbpData.newReviews.currMonth
+            } new reviews this month with ${gbpData.avgRating.currMonth.toFixed(
+              1
+            )}-star average rating. ${
+              gbpData.callClicks.currMonth
+            } call clicks generated.`;
+      case "decision":
+        return clarityLoading
+          ? "Loading user behavior data..."
+          : clarityError
+          ? "Error loading UX data. Check Clarity integration."
+          : `Your site had ${formatNumber(
+              clarityData.sessions.currMonth
+            )} user sessions with ${(
+              clarityData.bounceRate.currMonth * 100
+            ).toFixed(1)}% bounce rate. ${
+              clarityData.deadClicks.currMonth
+            } dead clicks detected this month.`;
+      default:
+        return "";
+    }
   };
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") {
-        paginate(-1);
-      } else if (event.key === "ArrowRight") {
-        paginate(1);
-      }
-    };
+  const nextStage = () => {
+    if (activeIndex < STAGES.length - 1) {
+      setActiveTabId(STAGES[activeIndex + 1].id);
+    }
+  };
 
-    document.addEventListener("keydown", handleKeyPress);
-    return () => {
-      document.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [activeIndex]);
+  const prevStage = () => {
+    if (activeIndex > 0) {
+      setActiveTabId(STAGES[activeIndex - 1].id);
+    }
+  };
 
   // Handler for fetching all AI Ready Data
   const handleFetchAIReadyData = async () => {
@@ -122,9 +350,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
     });
 
     try {
-      // Fetch all 4 endpoints concurrently
-      const results = await Promise.allSettled([
-        // GA4
+      await Promise.allSettled([
         (async () => {
           try {
             await fetchGA4AIData();
@@ -134,8 +360,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
             setAiDataStatus((prev) => ({ ...prev, ga4: "error" }));
           }
         })(),
-
-        // GBP
         (async () => {
           try {
             if (authDomain?.gbp_accountId && authDomain?.gbp_locationId) {
@@ -152,8 +376,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
             setAiDataStatus((prev) => ({ ...prev, gbp: "error" }));
           }
         })(),
-
-        // GSC
         (async () => {
           try {
             await fetchGSCAIData();
@@ -163,8 +385,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
             setAiDataStatus((prev) => ({ ...prev, gsc: "error" }));
           }
         })(),
-
-        // Clarity
         (async () => {
           try {
             await fetchClarityAIData();
@@ -175,8 +395,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
           }
         })(),
       ]);
-
-      console.log("All AI Ready Data fetched:", results);
     } catch (error) {
       console.error("Error fetching AI Ready Data:", error);
     } finally {
@@ -184,280 +402,327 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
     }
   };
 
-  const ActiveComponent = cards[activeIndex].component;
+  const metrics = getStageMetrics();
+  const insight = getStageInsight();
 
-  // Animation variants for framer-motion
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 300 : -300,
-      opacity: 0,
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1,
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 300 : -300,
-      opacity: 0,
-    }),
+  // Check if current stage has error
+  const hasCurrentStageError = () => {
+    switch (activeTabId) {
+      case "awareness":
+        return gscError;
+      case "research":
+        return ga4Error;
+      case "consideration":
+        return gbpError;
+      case "decision":
+        return clarityError;
+      default:
+        return false;
+    }
   };
 
   return (
-    <div className={`${className}`}>
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-thin text-gray-900">
-              Patient Journey Insights
-            </h1>
-            <p className="text-base text-gray-600 flex items-center gap-2">
-              <Brain className="w-4 h-4 text-blue-500" />
-              <span>AI-powered practice analytics • {cards.length} stages</span>
-            </p>
-          </div>
+    <div
+      className={`min-h-screen bg-alloro-bg flex flex-col pb-24 ${className}`}
+    >
+      <div className="max-w-[1600px] w-full mx-auto relative flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+          <div className="max-w-[1200px] mx-auto px-6 sm:px-12 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-2xl font-black font-heading text-alloro-navy tracking-tight">
+                Patient Journey Insights
+              </h1>
+              <p className="text-slate-400 font-medium text-[11px] uppercase tracking-wider flex items-center gap-2 mt-1">
+                <Activity size={14} className="text-alloro-cobalt" />
+                AI-powered practice analytics • {STAGES.length} stages
+              </p>
+            </div>
 
-          <div className="flex items-center gap-4">
-            {/* Get AI Ready Data Button */}
             <button
               onClick={handleFetchAIReadyData}
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3 bg-alloro-cobalt text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-blue-900/10 active:scale-95 transition-all hover:bg-alloro-navy disabled:opacity-60"
               disabled={isFetchingAIData}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isFetchingAIData
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
             >
               {isFetchingAIData ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Fetching...</span>
+                  <Loader2 size={16} className="animate-spin" />
+                  Analyzing Systems...
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4" />
-                  <span>Get AI Ready Data</span>
+                  <Download size={16} />
+                  Get AI Ready Data
                 </>
               )}
             </button>
-
-            {/* Card Navigation Indicators */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100/50">
-                {cards.map((card, index) => (
-                  <button
-                    key={card.id}
-                    onClick={() => goToCard(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      index === activeIndex
-                        ? "bg-blue-600 scale-125"
-                        : "bg-gray-300 hover:bg-gray-400"
-                    }`}
-                    aria-label={`Go to ${card.title} stage`}
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-gray-500">
-                {activeIndex + 1} / {cards.length}
-              </span>
-            </div>
           </div>
-        </div>
+        </header>
 
-        {/* AI Data Status Indicators */}
-        {(aiDataStatus.ga4 !== "idle" ||
-          aiDataStatus.gbp !== "idle" ||
-          aiDataStatus.gsc !== "idle" ||
-          aiDataStatus.clarity !== "idle") && (
-          <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
-            <span className="text-sm text-gray-500">Status:</span>
-            <div className="flex items-center gap-3">
-              {/* GA4 Status */}
-              {aiDataStatus.ga4 === "loading" && (
-                <div className="flex items-center gap-1 text-xs text-blue-600">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>GA4</span>
-                </div>
-              )}
-              {aiDataStatus.ga4 === "success" && (
-                <div className="flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>GA4</span>
-                </div>
-              )}
-              {aiDataStatus.ga4 === "error" && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
-                  <XCircle className="w-3 h-3" />
-                  <span>GA4</span>
-                </div>
-              )}
+        <main className="w-full max-w-[1200px] mx-auto px-6 sm:px-12 py-10 space-y-10">
+          {/* Engine Status Bar */}
+          <div className="bg-white border border-slate-200 rounded-2xl px-8 py-5 flex flex-wrap items-center gap-x-12 gap-y-3 text-[10px] font-bold text-slate-400 shadow-sm">
+            <span className="uppercase tracking-[0.2em] opacity-60">
+              Engine Status:
+            </span>
 
-              {/* GBP Status */}
-              {aiDataStatus.gbp === "loading" && (
-                <div className="flex items-center gap-1 text-xs text-blue-600">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>GBP</span>
-                </div>
-              )}
-              {aiDataStatus.gbp === "success" && (
-                <div className="flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>GBP</span>
-                </div>
-              )}
-              {aiDataStatus.gbp === "error" && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
-                  <XCircle className="w-3 h-3" />
-                  <span>GBP</span>
-                </div>
-              )}
-
-              {/* GSC Status */}
-              {aiDataStatus.gsc === "loading" && (
-                <div className="flex items-center gap-1 text-xs text-blue-600">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>GSC</span>
-                </div>
-              )}
-              {aiDataStatus.gsc === "success" && (
-                <div className="flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>GSC</span>
-                </div>
-              )}
-              {aiDataStatus.gsc === "error" && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
-                  <XCircle className="w-3 h-3" />
-                  <span>GSC</span>
-                </div>
-              )}
-
-              {/* Clarity Status */}
-              {aiDataStatus.clarity === "loading" && (
-                <div className="flex items-center gap-1 text-xs text-blue-600">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>Clarity</span>
-                </div>
-              )}
-              {aiDataStatus.clarity === "success" && (
-                <div className="flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>Clarity</span>
-                </div>
-              )}
-              {aiDataStatus.clarity === "error" && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
-                  <XCircle className="w-3 h-3" />
-                  <span>Clarity</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Active Card Title and Description */}
-        <div className="mb-4">
-          <motion.h2
-            key={`title-${activeIndex}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="text-xl font-normal text-gray-900 mb-1"
-          >
-            {cards[activeIndex].title}
-          </motion.h2>
-          <motion.p
-            key={`desc-${activeIndex}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2, delay: 0.05 }}
-            className="text-sm text-gray-500"
-          >
-            {cards[activeIndex].description}
-          </motion.p>
-        </div>
-      </div>
-
-      {/* Carousel Container */}
-      <div className="relative">
-        {/* Navigation Buttons */}
-        <button
-          onClick={() => paginate(-1)}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-all duration-200 group"
-          aria-label="Previous card"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
-        </button>
-
-        <button
-          onClick={() => paginate(1)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full border border-gray-200 flex items-center justify-center hover:bg-white hover:border-gray-300 transition-all duration-200 group"
-          aria-label="Next card"
-        >
-          <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
-        </button>
-
-        {/* Animated Card Container */}
-        <div className="relative min-h-[550px]">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={activeIndex}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-              }}
-              className="absolute inset-0"
-            >
-              <ActiveComponent
-                className="w-full h-full"
-                selectedDomain={selectedDomain}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mt-6 bg-gray-100 rounded-full h-1 overflow-hidden">
-          <motion.div
-            className="h-full bg-blue-600 rounded-full"
-            initial={{ width: "0%" }}
-            animate={{
-              width: `${((activeIndex + 1) / cards.length) * 100}%`,
-            }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-
-        {/* Card Navigation Pills */}
-        <div className="flex justify-center mt-5 gap-2">
-          {cards.map((card, index) => (
-            <button
-              key={card.id}
-              onClick={() => goToCard(index)}
-              className={`px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                index === activeIndex
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            {/* GA4 Status */}
+            <span
+              className={`flex items-center gap-2 ${
+                aiDataStatus.ga4 === "loading"
+                  ? "text-blue-500"
+                  : aiDataStatus.ga4 === "success" ||
+                    integrationStatus.ga4.connected
+                  ? "text-green-600"
+                  : aiDataStatus.ga4 === "error" || integrationStatus.ga4.error
+                  ? "text-red-500"
+                  : "text-slate-400"
               }`}
             >
-              {card.title}
-            </button>
-          ))}
-        </div>
-      </div>
+              {aiDataStatus.ga4 === "loading" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : aiDataStatus.ga4 === "success" ||
+                integrationStatus.ga4.connected ? (
+                <CheckCircle2 size={14} />
+              ) : aiDataStatus.ga4 === "error" ||
+                integrationStatus.ga4.error ? (
+                <XCircle size={14} />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              GA4
+            </span>
 
-      {/* Keyboard Navigation Hint */}
-      <div className="mt-4">
-        <p className="text-xs text-center text-gray-400">
-          Use arrow keys to navigate between stages
-        </p>
+            {/* GBP Status */}
+            <span
+              className={`flex items-center gap-2 ${
+                aiDataStatus.gbp === "loading"
+                  ? "text-blue-500"
+                  : aiDataStatus.gbp === "success" ||
+                    integrationStatus.gbp.connected
+                  ? "text-green-600"
+                  : aiDataStatus.gbp === "error" || integrationStatus.gbp.error
+                  ? "text-red-500"
+                  : "text-slate-400"
+              }`}
+            >
+              {aiDataStatus.gbp === "loading" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : aiDataStatus.gbp === "success" ||
+                integrationStatus.gbp.connected ? (
+                <CheckCircle2 size={14} />
+              ) : aiDataStatus.gbp === "error" ||
+                integrationStatus.gbp.error ? (
+                <XCircle size={14} />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              GBP
+            </span>
+
+            {/* GSC Status */}
+            <span
+              className={`flex items-center gap-2 ${
+                aiDataStatus.gsc === "loading"
+                  ? "text-blue-500"
+                  : aiDataStatus.gsc === "success" ||
+                    integrationStatus.gsc.connected
+                  ? "text-green-600"
+                  : aiDataStatus.gsc === "error" || integrationStatus.gsc.error
+                  ? "text-red-500"
+                  : "text-slate-400"
+              }`}
+            >
+              {aiDataStatus.gsc === "loading" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : aiDataStatus.gsc === "success" ||
+                integrationStatus.gsc.connected ? (
+                <CheckCircle2 size={14} />
+              ) : aiDataStatus.gsc === "error" ||
+                integrationStatus.gsc.error ? (
+                <XCircle size={14} />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              GSC
+            </span>
+
+            {/* Clarity Status */}
+            <span
+              className={`flex items-center gap-2 ${
+                aiDataStatus.clarity === "loading"
+                  ? "text-blue-500"
+                  : aiDataStatus.clarity === "success" ||
+                    integrationStatus.clarity.connected
+                  ? "text-green-600"
+                  : aiDataStatus.clarity === "error" ||
+                    integrationStatus.clarity.error
+                  ? "text-red-500"
+                  : "text-slate-400"
+              }`}
+            >
+              {aiDataStatus.clarity === "loading" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : aiDataStatus.clarity === "success" ||
+                integrationStatus.clarity.connected ? (
+                <CheckCircle2 size={14} />
+              ) : aiDataStatus.clarity === "error" ||
+                integrationStatus.clarity.error ? (
+                <XCircle size={14} />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              Clarity
+            </span>
+          </div>
+
+          {/* Stage Container */}
+          <section className="bg-white rounded-[40px] border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden relative">
+            <div className="p-10 sm:p-14">
+              <div className="flex flex-col lg:flex-row items-start gap-12 mb-14">
+                <div
+                  className={`w-20 h-20 rounded-3xl flex items-center justify-center bg-white border-2 shadow-sm shrink-0 transition-colors ${
+                    activeStage.id === "awareness"
+                      ? "border-indigo-100 text-alloro-cobalt"
+                      : "border-slate-100 text-alloro-navy"
+                  }`}
+                >
+                  {getIcon(activeStage.iconName, 36)}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <span
+                      className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center text-base font-bold font-heading ${
+                        activeStage.id === "awareness"
+                          ? "bg-alloro-cobalt shadow-lg shadow-blue-500/20"
+                          : "bg-alloro-navy"
+                      }`}
+                    >
+                      {activeIndex + 1}
+                    </span>
+                    <h3 className="font-black text-alloro-navy text-2xl sm:text-3xl font-heading tracking-tight">
+                      {activeStage.title}
+                    </h3>
+                  </div>
+                  <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-medium max-w-3xl">
+                    {activeStage.description}
+                  </p>
+                  {hasCurrentStageError() && (
+                    <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-red-500 bg-red-50 px-4 py-1.5 rounded-full border border-red-100 uppercase tracking-widest w-fit">
+                      <TrendingUp size={14} className="rotate-45" /> Error
+                      loading {activeStage.dataSource}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-14">
+                {metrics.map((metric, idx) => (
+                  <motion.div
+                    key={idx}
+                    className="bg-white rounded-[32px] p-10 text-center border border-slate-100 shadow-sm hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1, duration: 0.3 }}
+                  >
+                    <div className="text-4xl sm:text-5xl font-black font-heading text-alloro-navy mb-3 tracking-tighter tabular-nums leading-none">
+                      {metric.value}
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                      {metric.label}
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-bold opacity-70">
+                      {metric.subtext}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Insight Box */}
+              <div className="bg-alloro-navy rounded-[32px] p-10 flex flex-col sm:flex-row items-center gap-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-48 bg-alloro-cobalt/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+                <div className="w-16 h-16 rounded-[20px] bg-alloro-cobalt flex items-center justify-center text-white shadow-xl shadow-blue-500/20 shrink-0 relative z-10">
+                  <Lightbulb size={32} />
+                </div>
+                <div className="relative z-10">
+                  <h4 className="text-alloro-teal font-bold text-[10px] uppercase tracking-[0.25em] mb-2 leading-none">
+                    Algorithmic Observation
+                  </h4>
+                  <p className="text-blue-50/90 text-lg sm:text-xl font-medium leading-relaxed tracking-tight">
+                    {insight}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Stage Navigation Footer */}
+            <div className="px-10 py-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center">
+              <button
+                onClick={prevStage}
+                disabled={activeIndex === 0}
+                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-alloro-navy disabled:opacity-0 transition-all"
+              >
+                <ChevronLeft size={16} /> Previous Stage
+              </button>
+              <button
+                onClick={nextStage}
+                disabled={activeIndex === STAGES.length - 1}
+                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-alloro-cobalt hover:text-alloro-navy disabled:opacity-0 transition-all"
+              >
+                Next Stage <ChevronRight size={16} />
+              </button>
+            </div>
+          </section>
+
+          {/* Stepper Navigation */}
+          <div className="relative pt-10 pb-12 max-w-4xl mx-auto">
+            <div className="absolute top-[3.75rem] left-0 right-0 h-1.5 bg-slate-100 rounded-full"></div>
+            <motion.div
+              className="absolute top-[3.75rem] left-0 h-1.5 bg-alloro-cobalt rounded-full shadow-[0_0_15px_rgba(36,78,230,0.3)]"
+              initial={{ width: 0 }}
+              animate={{
+                width: `${(activeIndex / (STAGES.length - 1)) * 100}%`,
+              }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            />
+
+            <div className="flex justify-between relative z-10">
+              {STAGES.map((stage, idx) => {
+                const isActive = activeTabId === stage.id;
+                const isPassed = activeIndex > idx;
+                return (
+                  <button
+                    key={stage.id}
+                    onClick={() => setActiveTabId(stage.id)}
+                    className={`flex flex-col items-center group transition-all duration-300 ${
+                      isActive ? "scale-110" : ""
+                    }`}
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 transition-all shadow-sm ${
+                        isActive
+                          ? "bg-alloro-cobalt border-white text-white shadow-lg"
+                          : isPassed
+                          ? "bg-alloro-navy border-white text-white"
+                          : "bg-white border-slate-100 text-slate-300 group-hover:border-slate-200"
+                      }`}
+                    >
+                      {getIcon(stage.iconName, 20)}
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-widest mt-4 transition-colors ${
+                        isActive ? "text-alloro-navy" : "text-slate-400"
+                      }`}
+                    >
+                      {stage.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

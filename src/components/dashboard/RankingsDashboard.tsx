@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Trophy,
   Star,
@@ -7,170 +7,16 @@ import {
   Navigation,
   MousePointer,
   AlertTriangle,
-  Rocket,
   Stethoscope,
   MapPin,
-  CheckCircle,
   AlertCircle,
-  ChevronDown,
-  ChevronRight,
-  Building,
-  Layers,
-  TrendingUp,
-  TrendingDown,
+  Building2,
   RefreshCw,
-  BarChart3,
-  ArrowRight,
-  HelpCircle,
+  LayoutGrid,
+  ArrowUpRight,
+  ClipboardList,
+  CheckCircle2,
 } from "lucide-react";
-
-// Tooltip component with animation
-function Tooltip({
-  text,
-  children,
-}: {
-  text: string;
-  children: React.ReactNode;
-}) {
-  const [isVisible, setIsVisible] = useState(false);
-
-  return (
-    <div className="relative inline-flex items-center">
-      {children}
-      <button
-        className="ml-1 text-slate-400 hover:text-slate-600 transition-colors"
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        onFocus={() => setIsVisible(true)}
-        onBlur={() => setIsVisible(false)}
-      >
-        <HelpCircle className="h-3 w-3" />
-      </button>
-      <AnimatePresence>
-        {isVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: -5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 text-xs font-medium text-white bg-slate-800 rounded-lg shadow-lg w-48 text-center"
-          >
-            {text}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-1px]">
-              <div className="border-4 border-transparent border-b-slate-800" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// TrendIndicator component - shows trend compared to previous analysis
-function TrendIndicator({
-  currentValue,
-  previousValue,
-  lowerIsBetter = false,
-  format = "percent",
-  colorClassName,
-}: {
-  currentValue: number | null | undefined;
-  previousValue: number | null | undefined;
-  lowerIsBetter?: boolean;
-  format?: "percent" | "points" | "rank";
-  colorClassName?: string; // Fallback color when no trend data
-}) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  // If no previous value, show decorative circle
-  if (
-    previousValue === null ||
-    previousValue === undefined ||
-    currentValue === null ||
-    currentValue === undefined
-  ) {
-    return (
-      <div
-        className={`absolute top-0 right-0 w-20 h-20 ${
-          colorClassName || "bg-slate-100/50"
-        } rounded-full -mr-10 -mt-10`}
-      />
-    );
-  }
-
-  // Calculate change
-  const change = currentValue - previousValue;
-
-  // For rank, show absolute change; for others, calculate percentage
-  let displayValue: string;
-  if (format === "rank") {
-    // For rank: negative change is improvement (went from #3 to #2)
-    displayValue = change === 0 ? "0" : change > 0 ? `+${change}` : `${change}`;
-  } else if (format === "points") {
-    displayValue =
-      change === 0
-        ? "0"
-        : change > 0
-        ? `+${change.toFixed(0)}`
-        : `${change.toFixed(0)}`;
-  } else {
-    // Percentage change
-    const percentChange =
-      previousValue !== 0 ? (change / previousValue) * 100 : 0;
-    displayValue =
-      percentChange === 0
-        ? "0%"
-        : percentChange > 0
-        ? `+${percentChange.toFixed(1)}%`
-        : `${percentChange.toFixed(1)}%`;
-  }
-
-  // Determine if this is an improvement
-  const isImprovement = lowerIsBetter ? change < 0 : change > 0;
-  const noChange = change === 0;
-
-  return (
-    <div
-      className="absolute top-2 right-2 z-10"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <div
-        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold transition-all cursor-default ${
-          noChange
-            ? "bg-slate-100 text-slate-500"
-            : isImprovement
-            ? "bg-green-100 text-green-700"
-            : "bg-red-100 text-red-700"
-        }`}
-      >
-        {!noChange &&
-          (isImprovement ? (
-            <TrendingUp className="h-3 w-3" />
-          ) : (
-            <TrendingDown className="h-3 w-3" />
-          ))}
-        <span>{displayValue}</span>
-      </div>
-      <AnimatePresence>
-        {showTooltip && (
-          <motion.div
-            initial={{ opacity: 0, y: -5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-50 top-full right-0 mt-2 px-3 py-2 text-xs font-medium text-white bg-slate-800 rounded-lg shadow-lg whitespace-nowrap"
-          >
-            Compared to previous analysis
-            <div className="absolute bottom-full right-3 mb-[-1px]">
-              <div className="border-4 border-transparent border-b-slate-800" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 // Type for client GBP data
 interface ClientGbpData {
@@ -340,6 +186,73 @@ interface RankingsDashboardProps {
   googleAccountId: number | null;
 }
 
+// KPICard Component - Matching newdesign
+const KPICard = ({
+  label,
+  value,
+  sub,
+  trend,
+  dir,
+  rating,
+  suffix,
+  warning,
+}: {
+  label: string;
+  value: string | number;
+  sub: string;
+  trend?: string;
+  dir?: "up" | "down";
+  rating?: boolean;
+  suffix?: string;
+  warning?: boolean;
+}) => (
+  <div className="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-premium flex flex-col transition-all hover:shadow-xl group">
+    <div className="flex justify-between items-start mb-6">
+      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+        {label}
+      </span>
+      {trend && (
+        <span
+          className={`text-[9px] font-bold px-2 py-0.5 rounded border tabular-nums ${
+            dir === "up"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : dir === "down"
+              ? "bg-red-50 text-red-700 border-red-200"
+              : "bg-slate-50 text-slate-600 border-slate-200"
+          }`}
+        >
+          {dir === "up" && "+"}
+          {trend}
+        </span>
+      )}
+    </div>
+
+    <div className="flex items-baseline gap-1 mb-2">
+      <span className="text-3xl sm:text-4xl font-bold font-heading text-alloro-navy tracking-tighter leading-none tabular-nums">
+        {value}
+      </span>
+      {suffix && (
+        <span className="text-sm font-semibold text-slate-300 ml-0.5">
+          {suffix}
+        </span>
+      )}
+      {rating && (
+        <Star size={18} className="text-amber-500 fill-amber-500 ml-1.5 mb-1" />
+      )}
+      {warning && (
+        <AlertTriangle
+          size={18}
+          className="text-amber-600 ml-1.5 mb-1 animate-pulse"
+        />
+      )}
+    </div>
+
+    <div className="mt-auto text-[11px] font-semibold text-slate-500 leading-tight tracking-tight">
+      {sub}
+    </div>
+  </div>
+);
+
 export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [rankings, setRankings] = useState<RankingResult[]>([]);
@@ -446,29 +359,32 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        {/* Header - Always Visible */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-alloro-cobalt/10 rounded-xl">
-                <BarChart3 className="w-6 h-6 text-alloro-cobalt" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight">
-                  Performance Dashboard
-                </h1>
-                <p className="text-slate-500 text-sm mt-0.5 font-medium flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-alloro-cobalt"></span>
-                  Loading rankings data...
-                </p>
+      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
+        <div className="max-w-[1400px] mx-auto relative flex flex-col">
+          {/* Header */}
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+            <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+                  <LayoutGrid size={20} />
+                </div>
+                <div>
+                  <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                    Market Intelligence
+                  </h1>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Loading rankings data...
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Skeleton Content */}
-        <LoadingSkeleton />
+          {/* Skeleton Content */}
+          <main className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 py-8 lg:py-12">
+            <LoadingSkeleton />
+          </main>
+        </div>
       </div>
     );
   }
@@ -478,19 +394,19 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex h-64 items-center justify-center"
+        className="min-h-screen bg-[#F8FAFC] font-body flex items-center justify-center py-16"
       >
-        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-8">
-          <div className="p-3 bg-red-50 rounded-xl w-fit mx-auto mb-4">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
+          <div className="p-4 bg-red-50 rounded-2xl w-fit mx-auto mb-4">
+            <AlertCircle className="h-10 w-10 text-red-500" />
           </div>
-          <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+          <h3 className="text-xl font-bold text-alloro-navy font-heading mb-2 tracking-tight">
             Unable to Load Rankings
           </h3>
-          <p className="text-slate-600 text-sm mb-6">{error}</p>
+          <p className="text-slate-500 text-sm font-medium mb-6">{error}</p>
           <button
             onClick={fetchLatestRankings}
-            className="px-5 py-2.5 bg-alloro-cobalt text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-alloro-cobalt text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-sm flex items-center gap-2 mx-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Try Again
@@ -505,16 +421,16 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex h-64 items-center justify-center"
+        className="min-h-screen bg-[#F8FAFC] font-body flex items-center justify-center py-16"
       >
-        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-8">
-          <div className="p-3 bg-slate-100 rounded-xl w-fit mx-auto mb-4">
-            <Trophy className="h-8 w-8 text-slate-400" />
+        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
+          <div className="p-4 bg-slate-100 rounded-2xl w-fit mx-auto mb-4">
+            <Trophy className="h-10 w-10 text-slate-400" />
           </div>
-          <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+          <h3 className="text-xl font-bold text-alloro-navy font-heading mb-2 tracking-tight">
             No Account Connected
           </h3>
-          <p className="text-slate-600 text-sm">
+          <p className="text-slate-500 text-sm font-medium">
             Please connect your Google account to view ranking data.
           </p>
         </div>
@@ -527,16 +443,16 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex h-64 items-center justify-center"
+        className="min-h-screen bg-[#F8FAFC] font-body flex items-center justify-center py-16"
       >
-        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-8">
-          <div className="p-3 bg-amber-50 rounded-xl w-fit mx-auto mb-4">
-            <Trophy className="h-8 w-8 text-amber-500" />
+        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
+          <div className="p-4 bg-amber-50 rounded-2xl w-fit mx-auto mb-4">
+            <Trophy className="h-10 w-10 text-amber-500" />
           </div>
-          <h3 className="text-lg font-bold text-alloro-navy font-heading mb-2">
+          <h3 className="text-xl font-bold text-alloro-navy font-heading mb-2 tracking-tight">
             No Ranking Data Yet
           </h3>
-          <p className="text-slate-600 text-sm">
+          <p className="text-slate-500 text-sm font-medium">
             Your practice ranking analysis hasn't been completed yet. Please
             check back later or contact your administrator.
           </p>
@@ -554,199 +470,186 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   // If only one location, show the full dashboard directly
   if (rankings.length === 1) {
     return (
-      <PerformanceDashboard
-        result={rankings[0]}
-        tasks={rankingTasks[rankings[0].id] || []}
-      />
+      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
+        <div className="max-w-[1400px] mx-auto relative flex flex-col">
+          {/* Header */}
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+            <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+                  <LayoutGrid size={20} />
+                </div>
+                <div>
+                  <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                    Market Intelligence
+                  </h1>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Real-time Performance
+                  </p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  Location:
+                </span>
+                <span className="text-[10px] font-bold text-alloro-navy">
+                  {rankings[0].gbpLocationName || rankings[0].domain}
+                </span>
+              </div>
+            </div>
+          </header>
+
+          <main className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 py-8 lg:py-12 space-y-12 lg:space-y-16">
+            <PerformanceDashboard
+              result={rankings[0]}
+              tasks={rankingTasks[rankings[0].id] || []}
+            />
+          </main>
+        </div>
+      </div>
     );
   }
 
   // Multiple locations - show overview with location cards
   return (
-    <div className="space-y-8">
-      {/* Dashboard Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-        <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-alloro-cobalt/10 rounded-xl">
-              <BarChart3 className="w-6 h-6 text-alloro-cobalt" />
+    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
+      <div className="max-w-[1400px] mx-auto relative flex flex-col">
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+          <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+                <LayoutGrid size={20} />
+              </div>
+              <div>
+                <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                  Market Intelligence
+                </h1>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Real-time Performance
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight">
-                Performance Dashboard
-              </h1>
-              <p className="text-slate-500 text-sm mt-0.5 font-medium flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-alloro-cobalt"></span>
-                {rankings.length} locations analyzed
-              </p>
+            <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                Locations:
+              </span>
+              <span className="text-[10px] font-bold text-alloro-navy">
+                {rankings.length} Active
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-slate-500">
-            <span className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg font-medium">
-              <Layers className="h-4 w-4" />
-              Multi-Location Overview
-            </span>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Location Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {rankings.map((ranking, index) => {
-          const isSelected =
-            (ranking.gbpLocationId || ranking.id.toString()) ===
-            selectedLocationId;
-          return (
-            <motion.div
-              key={ranking.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <LocationCard
-                ranking={ranking}
-                isSelected={isSelected}
-                onClick={() =>
-                  setSelectedLocationId(
-                    ranking.gbpLocationId || ranking.id.toString()
-                  )
-                }
-              />
-            </motion.div>
-          );
-        })}
-      </div>
+        <main className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 py-8 lg:py-12 space-y-12 lg:space-y-16">
+          {/* 1. LOCATION SELECTION - PARALLEL CARDS */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {rankings.map((ranking, index) => {
+              const isSelected =
+                (ranking.gbpLocationId || ranking.id.toString()) ===
+                selectedLocationId;
+              const locationName = ranking.gbpLocationName || ranking.domain;
+              const clientRating =
+                ranking.rankingFactors?.star_rating?.value ??
+                ranking.rawData?.client_gbp?.averageRating ??
+                0;
 
-      {/* Selected Location Detail */}
-      {selectedRanking && (
-        <motion.div
-          key={selectedLocationId}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="border-t border-slate-200 pt-8"
-        >
-          <PerformanceDashboard
-            result={selectedRanking}
-            tasks={rankingTasks[selectedRanking.id] || []}
-          />
-        </motion.div>
-      )}
-    </div>
-  );
-}
+              return (
+                <motion.div
+                  key={ranking.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() =>
+                    setSelectedLocationId(
+                      ranking.gbpLocationId || ranking.id.toString()
+                    )
+                  }
+                  className={`p-6 lg:p-8 rounded-2xl border-2 cursor-pointer transition-all duration-300 relative group overflow-hidden ${
+                    isSelected
+                      ? "bg-white border-alloro-cobalt shadow-premium"
+                      : "bg-white/60 border-slate-100 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex gap-4">
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                          isSelected
+                            ? "bg-alloro-cobalt text-white shadow-lg"
+                            : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        <Building2 size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold font-heading text-alloro-navy tracking-tight mb-1">
+                          {locationName}
+                        </h3>
+                        {ranking.location && (
+                          <div className="flex items-center gap-1.5 text-slate-400 font-semibold text-[9px] uppercase tracking-widest">
+                            <MapPin size={10} /> {ranking.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle2
+                        className="text-alloro-cobalt shrink-0"
+                        size={24}
+                      />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                        #{ranking.rankPosition}
+                      </p>
+                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                        Rank
+                      </p>
+                    </div>
+                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                        {Number(ranking.rankScore).toFixed(0)}
+                      </p>
+                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                        Score
+                      </p>
+                    </div>
+                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                        {Number(clientRating).toFixed(1)}
+                      </p>
+                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                        Rating
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </section>
 
-// Location Card Component for Multi-Location Overview
-function LocationCard({
-  ranking,
-  isSelected,
-  onClick,
-}: {
-  ranking: RankingResult;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const scoreColor = getScoreColor(Number(ranking.rankScore));
-  const locationName = ranking.gbpLocationName || ranking.domain;
-  const clientRating =
-    ranking.rankingFactors?.star_rating?.value ??
-    ranking.rawData?.client_gbp?.averageRating ??
-    0;
-  const clientReviews = ranking.rawData?.client_gbp?.totalReviewCount || 0;
-
-  return (
-    <div
-      onClick={onClick}
-      className={`cursor-pointer rounded-2xl border-2 p-5 transition-all duration-200 ${
-        isSelected
-          ? "border-alloro-cobalt bg-alloro-cobalt/5 shadow-lg shadow-blue-100"
-          : "border-slate-200 bg-white hover:border-alloro-cobalt/50 hover:shadow-md"
-      }`}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div
-            className={`p-1.5 rounded-lg ${
-              isSelected ? "bg-alloro-cobalt/10" : "bg-slate-100"
-            }`}
-          >
-            <Building
-              className={`h-4 w-4 ${
-                isSelected ? "text-alloro-cobalt" : "text-slate-400"
-              }`}
+          {/* Selected Location Detail */}
+          {selectedRanking && (
+            <PerformanceDashboard
+              result={selectedRanking}
+              tasks={rankingTasks[selectedRanking.id] || []}
             />
-          </div>
-          <h3 className="font-bold text-alloro-navy truncate max-w-[180px]">
-            {locationName}
-          </h3>
-        </div>
-        {isSelected ? (
-          <ChevronDown className="h-5 w-5 text-alloro-cobalt" />
-        ) : (
-          <ChevronRight className="h-5 w-5 text-slate-400" />
-        )}
-      </div>
-
-      {ranking.location && (
-        <div className="flex items-center gap-1 text-xs text-slate-500 mb-3 font-medium">
-          <MapPin className="h-3 w-3" />
-          {ranking.location}
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-2 text-center">
-        {/* Rank Position */}
-        <div className="rounded-xl bg-slate-50 p-2.5">
-          <div className="text-lg font-bold text-alloro-navy tabular-nums">
-            #{ranking.rankPosition}
-          </div>
-          <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-            Rank
-          </div>
-        </div>
-
-        {/* Score */}
-        <div className="rounded-xl bg-slate-50 p-2.5">
-          <div className={`text-lg font-bold tabular-nums ${scoreColor}`}>
-            {Number(ranking.rankScore).toFixed(0)}
-          </div>
-          <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-            Score
-          </div>
-        </div>
-
-        {/* Rating */}
-        <div className="rounded-xl bg-slate-50 p-2.5">
-          <div className="flex items-center justify-center gap-1">
-            <span className="text-lg font-bold text-alloro-navy tabular-nums">
-              {Number(clientRating).toFixed(1)}
-            </span>
-            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-          </div>
-          <div className="text-[10px] text-slate-500 font-medium">
-            {clientReviews} reviews
-          </div>
-        </div>
-      </div>
-
-      {/* Specialty Badge */}
-      <div className="mt-4 flex items-center justify-between">
-        <span className="rounded-full bg-alloro-cobalt/10 px-2.5 py-1 text-xs font-bold text-alloro-cobalt capitalize">
-          {ranking.specialty}
-        </span>
-        <span className="text-xs text-slate-400 font-medium">
-          of {ranking.totalCompetitors}
-        </span>
+          )}
+        </main>
       </div>
     </div>
   );
 }
 
-// Helper function to get score color
-function getScoreColor(score: number): string {
-  if (score >= 80) return "text-green-600";
-  if (score >= 60) return "text-amber-600";
-  return "text-red-600";
-}
+// Helper function to get score color - temporarily unused
+// function getScoreColor(score: number): string {
+//   if (score >= 80) return "text-green-600";
+//   if (score >= 60) return "text-amber-600";
+//   return "text-red-600";
+// }
 
 // Helper function to extract performance metrics from raw GBP data
 function extractPerformanceMetrics(
@@ -852,155 +755,394 @@ function PerformanceDashboard({
   // Performance metrics - extract from raw time series data
   const performance = extractPerformanceMetrics(result.rawData?.client_gbp);
 
+  // Calculate trend directions
+  const getRankTrend = () => {
+    if (!result.previousAnalysis) return undefined;
+    const change = result.rankPosition - result.previousAnalysis.rankPosition;
+    if (change === 0) return undefined;
+    return {
+      value: Math.abs(change).toString(),
+      dir: change < 0 ? "up" : ("down" as "up" | "down"),
+    };
+  };
+
+  const getScoreTrend = () => {
+    if (!result.previousAnalysis) return undefined;
+    const prev = Number(result.previousAnalysis.rankScore);
+    const curr = Number(result.rankScore);
+    const change = curr - prev;
+    if (change === 0) return undefined;
+    return {
+      value: Math.abs(change).toFixed(0),
+      dir: change > 0 ? "up" : ("down" as "up" | "down"),
+    };
+  };
+
+  const rankTrend = getRankTrend();
+  const scoreTrend = getScoreTrend();
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-8"
-    >
-      {/* KPI Grid - 4 Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {/* Current Rank Position */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
-        >
-          <TrendIndicator
-            currentValue={result.rankPosition}
-            previousValue={result.previousAnalysis?.rankPosition}
-            lowerIsBetter={true}
-            format="rank"
-            colorClassName="bg-alloro-cobalt/5 group-hover:bg-alloro-cobalt/10 transition-colors"
-          />
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Current Rank
-          </h3>
-          <div className="mt-3 text-4xl font-bold text-alloro-navy font-heading tabular-nums">
-            #{result.rankPosition ?? "-"}
-          </div>
-          <div className="mt-2 text-sm text-slate-500 font-medium">
-            of {result.totalCompetitors ?? "-"} Competitors
-          </div>
-        </motion.div>
-
-        {/* Patient Satisfaction */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
-        >
-          <TrendIndicator
-            currentValue={Number(clientRating)}
-            previousValue={
-              result.previousAnalysis?.rawData?.client_gbp?.averageRating
-            }
-            format="points"
-            colorClassName="bg-green-500/5 group-hover:bg-green-500/10 transition-colors"
-          />
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Patient Satisfaction
-          </h3>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-4xl font-bold text-alloro-navy font-heading tabular-nums">
-              {Number(clientRating).toFixed(1)}
-            </span>
-            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
-          </div>
-          <div className="mt-2 text-sm text-slate-500 font-medium">
-            Market Avg: {marketAvgRating.toFixed(1)}
-          </div>
-        </motion.div>
-
-        {/* Total Reviews */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full -mr-10 -mt-10 group-hover:bg-amber-500/10 transition-colors"></div>
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Total Reviews
-          </h3>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-4xl font-bold text-alloro-navy font-heading tabular-nums">
-              {clientReviews}
-            </span>
-            {reviewGap > 0 && (
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-            )}
-          </div>
-          <div
-            className={`mt-2 text-sm font-bold ${
-              reviewGap > 0 ? "text-amber-600" : "text-green-600"
-            }`}
-          >
-            {reviewGap > 0 ? (
-              <span className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 rotate-180" />-{reviewGap} behind
-                Leader
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
-                Leading position
-              </span>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Visibility Score */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden group"
-        >
-          <TrendIndicator
-            currentValue={Number(result.rankScore)}
-            previousValue={
-              result.previousAnalysis?.rankScore
-                ? Number(result.previousAnalysis.rankScore)
-                : undefined
-            }
-            format="points"
-            colorClassName="bg-alloro-cobalt/5 group-hover:bg-alloro-cobalt/10 transition-colors"
-          />
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Visibility Score
-          </h3>
-          <div className="mt-3">
-            <span
-              className={`text-4xl font-bold font-heading tabular-nums ${getScoreColor(
-                Number(result.rankScore)
-              )}`}
-            >
-              {Number(result.rankScore).toFixed(0)}
-            </span>
-            <span className="text-xl text-slate-400 font-medium"> / 100</span>
-          </div>
-          <div className="mt-2 text-sm text-slate-500 font-medium">
-            {Number(result.rankScore) >= 80
+    <div className="space-y-12 lg:space-y-16">
+      {/* 2. MARKET VITALS */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <KPICard
+          label="Current Rank"
+          value={`#${result.rankPosition}`}
+          sub={`of ${result.totalCompetitors} Competitors`}
+          trend={rankTrend?.value}
+          dir={rankTrend?.dir}
+        />
+        <KPICard
+          label="Satisfaction"
+          value={Number(clientRating).toFixed(1)}
+          rating
+          sub={`Market Avg: ${marketAvgRating.toFixed(1)}`}
+        />
+        <KPICard
+          label="Reviews"
+          value={clientReviews.toString()}
+          warning={reviewGap > 0}
+          sub={
+            reviewGap > 0 ? `${reviewGap} behind leader` : "Leading position"
+          }
+        />
+        <KPICard
+          label="Visibility"
+          value={Number(result.rankScore).toFixed(0)}
+          suffix="/100"
+          sub={
+            Number(result.rankScore) >= 80
               ? "Excellent performance"
               : Number(result.rankScore) >= 60
               ? "Good, room to grow"
-              : "Needs improvement"}
-          </div>
-        </motion.div>
-      </div>
+              : "Needs improvement"
+          }
+          trend={scoreTrend?.value}
+          dir={scoreTrend?.dir}
+        />
+      </section>
 
-      {/* Main Row: Your Summary + Patient Engagement */}
-      <div className="grid gap-6 md:grid-cols-5">
-        {/* Your Summary - 3 columns */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="md:col-span-3 rounded-2xl border border-alloro-cobalt/20 bg-alloro-cobalt/5 p-6"
-        >
+      {/* 3. COMPETITIVE MATRIX */}
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
+        <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+          <h2 className="text-xl font-bold font-heading text-alloro-navy tracking-tight">
+            Competitive Matrix
+          </h2>
+          <div className="hidden sm:block text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+            Active Benchmarking
+          </div>
+        </div>
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">
+              <tr>
+                <th className="px-10 py-5">Practice Name</th>
+                <th className="px-4 py-5 text-center">Rank</th>
+                <th className="px-4 py-5 text-center">Reviews</th>
+                <th className="px-10 py-5 text-right">Mthly Pace</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(() => {
+                // Build display list: top competitors + client
+                const domainBase = result.domain
+                  .split(".")[0]
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, "");
+                const clientPosition = result.rankPosition;
+
+                // Filter out the client from competitors using multiple matching strategies
+                const isClientMatch = (name: string) => {
+                  const normalizedName = name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "");
+                  // Match if domain base is contained in name or vice versa
+                  return (
+                    normalizedName.includes(domainBase) ||
+                    domainBase.includes(normalizedName) ||
+                    // Also match if they share significant overlap (e.g., "artful" in both)
+                    (domainBase.length > 5 &&
+                      normalizedName.includes(domainBase.slice(0, 6)))
+                  );
+                };
+
+                // Get competitors excluding client
+                const filteredCompetitors = sortedCompetitors.filter(
+                  (c) => !isClientMatch(c.name)
+                );
+
+                // Create client entry with business name from GBP if available
+                const clientDisplayName =
+                  result.gbpLocationName ||
+                  result.rawData?.client_gbp?._raw?.locations?.[0]
+                    ?.displayName ||
+                  result.domain;
+                const clientEntry = {
+                  name: clientDisplayName,
+                  rankPosition: clientPosition,
+                  totalReviews: clientReviews,
+                  reviewsLast30d:
+                    result.rawData?.client_gbp?.reviewsLast30d || 0,
+                  isClient: true,
+                };
+
+                // Merge and sort - take top competitors that fit around client position
+                const displayList = [
+                  ...filteredCompetitors
+                    .slice(0, 5)
+                    .map((c) => ({ ...c, isClient: false })),
+                  clientEntry,
+                ]
+                  .sort((a, b) => a.rankPosition - b.rankPosition)
+                  .slice(0, 6); // Show top 6 to include client
+
+                return displayList.map((comp, idx) => (
+                  <tr
+                    key={idx}
+                    className={`${
+                      comp.isClient
+                        ? "bg-alloro-cobalt/[0.03]"
+                        : "hover:bg-slate-50/30"
+                    } transition-all group`}
+                  >
+                    <td className="px-10 py-6">
+                      <div className="flex flex-col">
+                        <span
+                          className={`text-[15px] font-bold tracking-tight ${
+                            comp.isClient
+                              ? "text-alloro-cobalt"
+                              : "text-alloro-navy"
+                          }`}
+                        >
+                          {comp.name}
+                        </span>
+                        {comp.isClient ? (
+                          <span className="text-[8px] font-bold bg-alloro-cobalt text-white px-1.5 py-0.5 rounded uppercase tracking-widest w-fit mt-1">
+                            Identity
+                          </span>
+                        ) : (
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest w-fit mt-1">
+                            Benchmark
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-6 text-center">
+                      <span
+                        className={`text-lg font-bold font-heading ${
+                          comp.rankPosition <= 3
+                            ? "text-alloro-cobalt"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        #{comp.rankPosition}
+                      </span>
+                    </td>
+                    <td className="px-4 py-6 text-center font-bold text-alloro-navy tabular-nums">
+                      {comp.totalReviews.toLocaleString()}
+                    </td>
+                    <td className="px-10 py-6 text-right font-bold text-green-600 tabular-nums">
+                      +{comp.reviewsLast30d || 0}
+                      <ArrowUpRight
+                        size={14}
+                        className="inline ml-1 mb-1 opacity-40"
+                      />
+                    </td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 4. ACTION PLAN */}
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
+        <div className="px-6 sm:px-10 py-8 border-b border-slate-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold font-heading text-alloro-navy tracking-tight leading-none mb-1">
+              Action Plan
+            </h3>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+              Tactical rank improvement steps
+            </p>
+          </div>
+          <div className="w-10 h-10 bg-indigo-50 text-alloro-cobalt rounded-xl flex items-center justify-center">
+            <ClipboardList size={20} />
+          </div>
+        </div>
+        <div className="p-6 sm:p-8 space-y-4">
+          {/* Show approved tasks from tasks table if available */}
+          {tasks && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <div
+                key={task.id}
+                className="p-5 sm:p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white hover:border-alloro-cobalt/20 transition-all"
+              >
+                <div className="space-y-1">
+                  <h4 className="font-bold text-alloro-navy text-[15px] tracking-tight">
+                    {task.title}
+                  </h4>
+                  {task.description && (
+                    <div>
+                      <p
+                        ref={(el) => {
+                          if (el) {
+                            descriptionRefs.current.set(task.id, el);
+                          }
+                        }}
+                        className={`text-[13px] text-slate-500 font-medium tracking-tight leading-relaxed ${
+                          expandedTaskId === task.id ? "" : "line-clamp-2"
+                        }`}
+                      >
+                        {task.description}
+                      </p>
+                      {clampedTasks.has(task.id) && (
+                        <button
+                          onClick={() =>
+                            setExpandedTaskId(
+                              expandedTaskId === task.id ? null : task.id
+                            )
+                          }
+                          className="text-xs text-alloro-cobalt hover:text-blue-700 font-bold mt-1"
+                        >
+                          {expandedTaskId === task.id
+                            ? "Show less"
+                            : "Read more"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  {task.metadata?.priority && (
+                    <span
+                      className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                        task.metadata.priority === "1" ||
+                        task.metadata.priority === "high"
+                          ? "bg-red-50 text-red-600 border-red-100"
+                          : "bg-blue-50 text-blue-600 border-blue-100"
+                      }`}
+                    >
+                      {task.metadata.priority === "1" ||
+                      task.metadata.priority === "high"
+                        ? "High"
+                        : "Medium"}
+                    </span>
+                  )}
+                  {task.metadata?.effort && (
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      {task.metadata.effort}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : result.llmAnalysis?.top_recommendations &&
+            result.llmAnalysis.top_recommendations.length > 0 ? (
+            // Fallback: Show recommendations from LLM analysis (not yet approved as tasks)
+            result.llmAnalysis.top_recommendations
+              .slice(0, 4)
+              .map((rec, idx) => (
+                <div
+                  key={idx}
+                  className="p-5 sm:p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white hover:border-alloro-cobalt/20 transition-all"
+                >
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-alloro-navy text-[15px] tracking-tight">
+                      {rec.title}
+                    </h4>
+                    {rec.description && (
+                      <p className="text-[13px] text-slate-500 font-medium tracking-tight leading-relaxed">
+                        {rec.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span
+                      className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
+                        rec.priority === 1
+                          ? "bg-red-50 text-red-600 border-red-100"
+                          : "bg-blue-50 text-blue-600 border-blue-100"
+                      }`}
+                    >
+                      {rec.priority === 1 ? "High" : "Medium"}
+                    </span>
+                  </div>
+                </div>
+              ))
+          ) : (
+            // Fallback to generated recommendations based on gaps
+            <>
+              {reviewGap > 50 && (
+                <div className="p-5 sm:p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white hover:border-alloro-cobalt/20 transition-all">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-alloro-navy text-[15px] tracking-tight">
+                      Launch Aggressive Review Generation Campaign
+                    </h4>
+                    <p className="text-[13px] text-slate-500 font-medium tracking-tight leading-relaxed">
+                      You're {reviewGap} reviews behind the leader. Implement an
+                      automated review request system.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border bg-red-50 text-red-600 border-red-100">
+                      High
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      2-4 weeks
+                    </span>
+                  </div>
+                </div>
+              )}
+              {(result.rawData?.client_gbp?.postsLast90d || 0) < 4 && (
+                <div className="p-5 sm:p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white hover:border-alloro-cobalt/20 transition-all">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-alloro-navy text-[15px] tracking-tight">
+                      Establish Weekly GBP Posting Routine
+                    </h4>
+                    <p className="text-[13px] text-slate-500 font-medium tracking-tight leading-relaxed">
+                      Regular posts improve GBP activity signals and engagement.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100">
+                      Medium
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      Ongoing
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="p-5 sm:p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white hover:border-alloro-cobalt/20 transition-all">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-alloro-navy text-[15px] tracking-tight">
+                    Deploy Local and Review Schema Markup
+                  </h4>
+                  <p className="text-[13px] text-slate-500 font-medium tracking-tight leading-relaxed">
+                    Structured data helps search engines understand your
+                    business better.
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-100">
+                    Medium
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                    1 week
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Patient Engagement & Summary Section */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Your Summary */}
+        <section className="rounded-2xl border border-alloro-cobalt/20 bg-alloro-cobalt/5 p-6 lg:p-8">
           <h3 className="flex items-center gap-2 text-lg font-bold text-alloro-navy font-heading mb-4">
             <div className="p-1.5 bg-alloro-cobalt/10 rounded-lg">
               <Stethoscope className="h-5 w-5 text-alloro-cobalt" />
@@ -1012,15 +1154,10 @@ function PerformanceDashboard({
               result.llmAnalysis?.render_text ||
               "No summary available."}
           </div>
-        </motion.div>
+        </section>
 
-        {/* Patient Engagement - 2 columns */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
+        {/* Patient Engagement */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:p-8 shadow-premium">
           <h3 className="text-lg font-bold text-alloro-navy font-heading mb-4">
             Patient Engagement{" "}
             <span className="text-sm font-medium text-slate-500">
@@ -1062,399 +1199,70 @@ function PerformanceDashboard({
               </div>
             </div>
           </div>
-        </motion.div>
+        </section>
       </div>
-
-      {/* Bottom Row: Review Gap Table + Action Plan */}
-      <div className="grid gap-6 md:grid-cols-5">
-        {/* The Review Gap Table - 3 columns */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="md:col-span-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
-          <h3 className="flex items-center gap-2 text-lg font-bold text-alloro-navy font-heading mb-5">
-            <div className="p-1.5 bg-amber-100 rounded-lg">
-              <Trophy className="h-5 w-5 text-amber-600" />
-            </div>
-            Top Competitors
-          </h3>
-          <div className="overflow-visible">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-2 font-bold text-slate-400 text-xs"></th>
-                  <th className="text-left py-3 px-2 font-bold text-slate-400 text-xs">
-                    <Tooltip text="Business name of the competitor">
-                      <span>Practice</span>
-                    </Tooltip>
-                  </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
-                    <Tooltip text="Position in local search rankings">
-                      <span>Rank</span>
-                    </Tooltip>
-                  </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
-                    <Tooltip text="Total number of Google reviews">
-                      <span>Reviews</span>
-                    </Tooltip>
-                  </th>
-                  <th className="text-center py-3 px-2 font-bold text-slate-400 text-xs">
-                    <Tooltip text="New reviews in the last 30 days">
-                      <span>Monthly</span>
-                    </Tooltip>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  // Build display list: top competitors + client
-                  const domainBase = result.domain
-                    .split(".")[0]
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]/g, "");
-                  const clientPosition = result.rankPosition;
-
-                  // Filter out the client from competitors using multiple matching strategies
-                  const isClientMatch = (name: string) => {
-                    const normalizedName = name
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]/g, "");
-                    // Match if domain base is contained in name or vice versa
-                    return (
-                      normalizedName.includes(domainBase) ||
-                      domainBase.includes(normalizedName) ||
-                      // Also match if they share significant overlap (e.g., "artful" in both)
-                      (domainBase.length > 5 &&
-                        normalizedName.includes(domainBase.slice(0, 6)))
-                    );
-                  };
-
-                  // Get competitors excluding client
-                  const filteredCompetitors = sortedCompetitors.filter(
-                    (c) => !isClientMatch(c.name)
-                  );
-
-                  // Create client entry with business name from GBP if available
-                  const clientDisplayName =
-                    result.gbpLocationName ||
-                    result.rawData?.client_gbp?._raw?.locations?.[0]
-                      ?.displayName ||
-                    result.domain;
-                  const clientEntry = {
-                    name: clientDisplayName,
-                    rankPosition: clientPosition,
-                    totalReviews: clientReviews,
-                    reviewsLast30d:
-                      result.rawData?.client_gbp?.reviewsLast30d || 0,
-                    isClient: true,
-                  };
-
-                  // Merge and sort - take top competitors that fit around client position
-                  const displayList = [
-                    ...filteredCompetitors
-                      .slice(0, 5)
-                      .map((c) => ({ ...c, isClient: false })),
-                    clientEntry,
-                  ]
-                    .sort((a, b) => a.rankPosition - b.rankPosition)
-                    .slice(0, 6); // Show top 6 to include client
-
-                  return displayList.map((comp, idx) => (
-                    <tr
-                      key={idx}
-                      className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${
-                        comp.isClient ? "bg-alloro-cobalt/5" : ""
-                      }`}
-                    >
-                      <td className="py-3 px-2">
-                        {comp.rankPosition === 1 && (
-                          <span className="text-lg">🥇</span>
-                        )}
-                        {comp.rankPosition === 2 && (
-                          <span className="text-lg">🥈</span>
-                        )}
-                        {comp.rankPosition === 3 && (
-                          <span className="text-lg">🥉</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span
-                          className={`font-bold ${
-                            comp.isClient
-                              ? "text-alloro-cobalt"
-                              : "text-alloro-navy"
-                          }`}
-                        >
-                          {comp.name}
-                          {comp.isClient && (
-                            <span className="ml-1.5 text-[10px] bg-alloro-cobalt text-white px-1.5 py-0.5 rounded font-bold">
-                              YOU
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-center font-bold text-alloro-navy tabular-nums">
-                        #{comp.rankPosition}
-                      </td>
-                      <td className="py-3 px-2 text-center text-slate-700 tabular-nums">
-                        {comp.totalReviews}
-                      </td>
-                      <td className="py-3 px-2 text-center text-slate-500 tabular-nums">
-                        +{comp.reviewsLast30d || 0}
-                      </td>
-                    </tr>
-                  ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-
-        {/* Doctor's Action Plan - 2 columns */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-        >
-          <h3 className="flex items-center gap-2 text-lg font-bold text-alloro-navy font-heading mb-5">
-            <div className="p-1.5 bg-red-100 rounded-lg">
-              <Rocket className="h-5 w-5 text-red-600" />
-            </div>
-            Your Action Plan
-          </h3>
-          <div className="space-y-3">
-            {/* Show approved tasks from tasks table if available */}
-            {tasks && tasks.length > 0 ? (
-              tasks.map((task, idx) => (
-                <div
-                  key={task.id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="font-bold text-alloro-navy text-sm line-clamp-2">
-                          {task.title}
-                        </h4>
-                        {task.metadata?.priority && (
-                          <span
-                            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              task.metadata.priority === "1" ||
-                              task.metadata.priority === "high"
-                                ? "bg-red-100 text-red-700"
-                                : task.metadata.priority === "2" ||
-                                  task.metadata.priority === "medium"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            P{task.metadata.priority}
-                          </span>
-                        )}
-                      </div>
-                      {task.description && (
-                        <div className="mb-2">
-                          <p
-                            ref={(el) => {
-                              if (el) {
-                                descriptionRefs.current.set(task.id, el);
-                              }
-                            }}
-                            className={`text-xs text-slate-600 leading-relaxed ${
-                              expandedTaskId === task.id ? "" : "line-clamp-2"
-                            }`}
-                          >
-                            {task.description}
-                          </p>
-                          {clampedTasks.has(task.id) && (
-                            <button
-                              onClick={() =>
-                                setExpandedTaskId(
-                                  expandedTaskId === task.id ? null : task.id
-                                )
-                              }
-                              className="text-xs text-alloro-cobalt hover:text-blue-700 font-bold mt-1"
-                            >
-                              {expandedTaskId === task.id
-                                ? "Show less"
-                                : "Read more"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
-                          {task.metadata?.impact && (
-                            <span>{task.metadata.impact} impact</span>
-                          )}
-                          {task.metadata?.timeline && (
-                            <span>{task.metadata.timeline}</span>
-                          )}
-                        </div>
-                        <a
-                          href={`/tasks?taskId=${task.id}`}
-                          className="flex items-center gap-1 text-xs font-bold text-alloro-cobalt hover:text-blue-700 transition-colors"
-                        >
-                          Start task
-                          <ArrowRight className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : result.llmAnalysis?.top_recommendations &&
-              result.llmAnalysis.top_recommendations.length > 0 ? (
-              // Fallback: Show recommendations from LLM analysis (not yet approved as tasks)
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-center gap-2 text-amber-700 text-sm font-medium mb-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Recommendations pending approval
-                </div>
-                <p className="text-xs text-amber-600">
-                  Your action plan recommendations are being reviewed. They will
-                  appear here once approved by your administrator.
-                </p>
-              </div>
-            ) : (
-              // Fallback to generated recommendations based on gaps
-              <>
-                {reviewGap > 50 && (
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
-                      1
-                    </div>
-                    <div className="flex items-start gap-2 pt-0.5">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700 font-medium leading-tight">
-                        Launch Aggressive Review Generation Campaign
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {(result.rawData?.client_gbp?.postsLast90d || 0) < 4 && (
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
-                      {reviewGap > 50 ? 2 : 1}
-                    </div>
-                    <div className="flex items-start gap-2 pt-0.5">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700 font-medium leading-tight">
-                        Establish Weekly GBP Posting Routine
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-alloro-cobalt flex items-center justify-center text-xs font-bold text-white">
-                    {(reviewGap > 50 ? 1 : 0) +
-                      ((result.rawData?.client_gbp?.postsLast90d || 0) < 4
-                        ? 1
-                        : 0) +
-                      1}
-                  </div>
-                  <div className="flex items-start gap-2 pt-0.5">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate-700 font-medium leading-tight">
-                      Deploy Local and Review Schema Markup
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
+    </div>
   );
 }
 
-// Loading Skeleton Component - Only content, header shown separately
+// Loading Skeleton Component
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
+    <div className="space-y-12 animate-pulse">
+      {/* Location Cards Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[...Array(2)].map((_, i) => (
+          <div
+            key={i}
+            className="p-6 lg:p-8 rounded-2xl border-2 border-slate-100 bg-white"
+          >
+            <div className="flex gap-4 mb-6">
+              <div className="w-12 h-12 bg-slate-200 rounded-2xl" />
+              <div>
+                <div className="h-5 w-32 bg-slate-200 rounded mb-2" />
+                <div className="h-3 w-20 bg-slate-200 rounded" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="bg-slate-50 rounded-2xl p-4">
+                  <div className="h-6 w-12 bg-slate-200 rounded mx-auto mb-2" />
+                  <div className="h-3 w-10 bg-slate-200 rounded mx-auto" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* KPI Grid Skeleton */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+            className="rounded-2xl border border-slate-200 bg-white p-6 lg:p-8"
           >
-            <div className="h-3 w-20 bg-slate-200 rounded mb-4" />
+            <div className="h-3 w-20 bg-slate-200 rounded mb-6" />
             <div className="h-10 w-24 bg-slate-200 rounded mb-2" />
             <div className="h-3 w-28 bg-slate-200 rounded" />
           </div>
         ))}
       </div>
 
-      {/* Main Row Skeleton */}
-      <div className="grid gap-6 md:grid-cols-5">
-        <div className="md:col-span-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 bg-slate-200 rounded-lg" />
-            <div className="h-5 w-32 bg-slate-200 rounded" />
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 w-full bg-slate-200 rounded" />
-            <div className="h-4 w-5/6 bg-slate-200 rounded" />
-            <div className="h-4 w-4/6 bg-slate-200 rounded" />
-          </div>
+      {/* Table Skeleton */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+        <div className="px-10 py-8 border-b border-slate-100">
+          <div className="h-6 w-48 bg-slate-200 rounded" />
         </div>
-        <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
-          <div className="grid grid-cols-3 gap-3">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="rounded-xl bg-slate-50 p-4 text-center border border-slate-100"
-              >
-                <div className="h-8 w-8 bg-slate-200 rounded-lg mx-auto mb-2" />
-                <div className="h-7 w-12 bg-slate-200 rounded mx-auto mb-1" />
-                <div className="h-3 w-14 bg-slate-200 rounded mx-auto" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Row Skeleton */}
-      <div className="grid gap-6 md:grid-cols-5">
-        <div className="md:col-span-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="h-8 w-8 bg-slate-200 rounded-lg" />
-            <div className="h-5 w-36 bg-slate-200 rounded" />
-          </div>
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="h-5 w-5 bg-slate-200 rounded" />
-                <div className="h-4 w-48 bg-slate-200 rounded" />
-                <div className="h-4 w-12 bg-slate-200 rounded ml-auto" />
-                <div className="h-4 w-16 bg-slate-200 rounded" />
-                <div className="h-4 w-14 bg-slate-200 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="h-8 w-8 bg-slate-200 rounded-lg" />
-            <div className="h-5 w-32 bg-slate-200 rounded" />
-          </div>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="h-7 w-7 bg-slate-200 rounded-full" />
-                <div className="h-4 w-56 bg-slate-200 rounded mt-1.5" />
-              </div>
-            ))}
-          </div>
+        <div className="p-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-4">
+              <div className="h-4 w-48 bg-slate-200 rounded" />
+              <div className="h-4 w-12 bg-slate-200 rounded ml-auto" />
+              <div className="h-4 w-16 bg-slate-200 rounded" />
+              <div className="h-4 w-14 bg-slate-200 rounded" />
+            </div>
+          ))}
         </div>
       </div>
     </div>

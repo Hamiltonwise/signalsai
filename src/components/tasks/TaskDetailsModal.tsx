@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { ReactElement } from "react";
 import type { ActionItem } from "../../types/tasks";
 import { AgentTypePill } from "./AgentTypePill";
+import { parseHighlightTags } from "../../utils/textFormatting";
 
 interface TaskDetailsModalProps {
   task: ActionItem | null;
@@ -44,14 +45,15 @@ export function TaskDetailsModal({
       : "border-alloro-cobalt/20 bg-alloro-cobalt/5 text-alloro-cobalt";
   };
 
-  // Enhanced markdown rendering for description
+  // Enhanced markdown rendering for description (also handles <hghlt> tags)
   const renderMarkdownText = (text: string): React.ReactNode => {
     const parts: ReactElement[] = [];
     let lastIndex = 0;
     let keyCounter = 0;
 
-    // Match **bold**, *italic*, `code`, and [links](url)
-    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/g;
+    // Match **bold**, *italic*, `code`, [links](url), and <hghlt>highlighted</hghlt>
+    const regex =
+      /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\)|<hghlt>([\s\S]*?)<\/hghlt>)/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
@@ -65,7 +67,17 @@ export function TaskDetailsModal({
       }
 
       const fullMatch = match[0];
-      if (fullMatch.startsWith("**") && fullMatch.endsWith("**")) {
+      if (fullMatch.startsWith("<hghlt>") && fullMatch.endsWith("</hghlt>")) {
+        // Highlighted text (from AI agents)
+        parts.push(
+          <span
+            key={`highlight-${keyCounter++}`}
+            className="underline underline-offset-4 font-semibold text-alloro-navy"
+          >
+            {match[4]}
+          </span>
+        );
+      } else if (fullMatch.startsWith("**") && fullMatch.endsWith("**")) {
         // Bold text
         parts.push(
           <strong key={`bold-${keyCounter++}`} className="font-semibold">
@@ -224,7 +236,7 @@ export function TaskDetailsModal({
           <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white/95 backdrop-blur-md px-6 py-5 rounded-t-2xl">
             <div className="flex-1 pr-4">
               <h2 className="text-2xl font-bold text-alloro-navy font-heading">
-                {task.title}
+                {parseHighlightTags(task.title, "underline")}
               </h2>
               <p className="mt-1 text-sm text-slate-500 font-medium">
                 {task.domain_name}

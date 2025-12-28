@@ -5,11 +5,12 @@ import {
   X,
   Check,
   CheckCheck,
-  FileSpreadsheet,
-  CheckCircle,
-  Bot,
   Info,
   TrendingUp,
+  Clock,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -168,46 +169,54 @@ export function NotificationPopover({
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    const iconMap: Record<
+  // Get notification styling matching newdesign pattern
+  const getNotificationStyle = (type: string) => {
+    const styleMap: Record<
       string,
       {
-        Icon: React.ComponentType<{ className?: string }>;
-        color: string;
-        bgColor: string;
+        Icon: React.ComponentType<{ size?: number; className?: string }>;
+        iconBg: string;
+        iconColor: string;
+        borderColor: string;
       }
     > = {
       pms: {
-        Icon: FileSpreadsheet,
-        color: "text-blue-600",
-        bgColor: "bg-blue-100",
+        Icon: CheckCircle2,
+        iconBg: "bg-green-50",
+        iconColor: "text-green-600",
+        borderColor: "border-green-100",
       },
       task: {
-        Icon: CheckCircle,
-        color: "text-green-600",
-        bgColor: "bg-green-100",
+        Icon: Zap,
+        iconBg: "bg-amber-50",
+        iconColor: "text-amber-600",
+        borderColor: "border-amber-100",
       },
       agent: {
-        Icon: Bot,
-        color: "text-purple-600",
-        bgColor: "bg-purple-100",
+        Icon: CheckCircle2,
+        iconBg: "bg-purple-50",
+        iconColor: "text-purple-600",
+        borderColor: "border-purple-100",
       },
       ranking: {
         Icon: TrendingUp,
-        color: "text-indigo-600",
-        bgColor: "bg-indigo-100",
+        iconBg: "bg-green-50",
+        iconColor: "text-green-600",
+        borderColor: "border-green-100",
       },
       system: {
-        Icon: Info,
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
+        Icon: AlertCircle,
+        iconBg: "bg-red-50",
+        iconColor: "text-red-600",
+        borderColor: "border-red-100",
       },
     };
     return (
-      iconMap[type] || {
+      styleMap[type] || {
         Icon: Info,
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
+        iconBg: "bg-slate-50",
+        iconColor: "text-slate-600",
+        borderColor: "border-slate-100",
       }
     );
   };
@@ -225,37 +234,40 @@ export function NotificationPopover({
         bottom: `${window.innerHeight - buttonRect.top + 8}px`,
         zIndex: 9999,
       }}
-      className="w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+      className="w-[420px] bg-white rounded-2xl shadow-premium border border-slate-200 overflow-hidden"
     >
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+      {/* Header - matching newdesign pattern */}
+      <div className="bg-white border-b border-slate-100 px-6 py-5">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              Notifications
-            </h3>
-            <p className="text-xs text-gray-600 dark:text-gray-300">
-              {unreadCount > 0
-                ? `${unreadCount} unread notification${
-                    unreadCount !== 1 ? "s" : ""
-                  }`
-                : "All caught up!"}
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+              <Bell size={20} />
+            </div>
+            <div>
+              <h3 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                Intelligence Signals
+              </h3>
+              <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-1">
+                {unreadCount > 0
+                  ? `${unreadCount} unread alert${unreadCount !== 1 ? "s" : ""}`
+                  : "All caught up!"}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
                 disabled={loading}
-                className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1 disabled:opacity-50"
+                className="text-[9px] text-slate-400 hover:text-alloro-navy font-bold uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-50 transition-colors"
               >
-                <CheckCheck className="w-3 h-3" />
-                Mark all read
+                <CheckCheck className="w-3.5 h-3.5" />
+                Clear
               </button>
             )}
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-slate-300 hover:text-alloro-navy transition-colors w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100"
             >
               <X className="w-4 h-4" />
             </button>
@@ -263,72 +275,75 @@ export function NotificationPopover({
         </div>
       </div>
 
-      {/* Notifications List */}
-      <div className="max-h-96 overflow-y-auto">
+      {/* Notifications List - matching newdesign alert feed pattern */}
+      <div className="max-h-[400px] overflow-y-auto">
         {notifications.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No notifications yet
+          <div className="px-6 py-14 text-center">
+            <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+              <Bell className="w-7 h-7 text-slate-300" />
+            </div>
+            <p className="text-base font-bold text-alloro-navy font-heading tracking-tight">
+              No signals yet
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1.5">
               We'll notify you when something important happens
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-slate-100">
             {notifications.map((notification) => {
-              const { Icon, color, bgColor } = getNotificationIcon(
-                notification.type
-              );
+              const style = getNotificationStyle(notification.type);
+              const Icon = style.Icon;
               return (
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
-                    !notification.read
-                      ? "bg-blue-50/50 dark:bg-blue-900/20"
-                      : ""
+                  className={`px-6 py-5 hover:bg-slate-50/40 transition-all cursor-pointer relative overflow-hidden group ${
+                    !notification.read ? "bg-alloro-cobalt/5" : ""
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  {/* Hover indicator */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-alloro-cobalt opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                  <div className="flex items-start gap-4">
                     <div
-                      className={`flex-shrink-0 ${bgColor} rounded-full p-2`}
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-all group-hover:scale-105 shadow-sm ${style.iconBg} ${style.iconColor} ${style.borderColor}`}
                     >
-                      <Icon className={`w-4 h-4 ${color}`} />
+                      <Icon size={20} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            {notification.title}
-                            {!notification.read && (
-                              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-                            )}
-                          </h4>
-                          {notification.message && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                              {notification.message}
-                            </p>
+                        <h4 className="text-sm font-bold text-alloro-navy font-heading tracking-tight leading-tight">
+                          {notification.title}
+                          {!notification.read && (
+                            <span className="inline-block w-2 h-2 bg-alloro-cobalt rounded-full animate-pulse ml-2 align-middle"></span>
                           )}
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {formatDistanceToNow(
-                              new Date(notification.created_at),
-                              { addSuffix: true }
-                            )}
-                          </p>
-                        </div>
+                        </h4>
                         {!notification.read && (
                           <button
                             onClick={(e) =>
                               handleMarkAsRead(notification.id, e)
                             }
-                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex-shrink-0"
+                            className="text-alloro-cobalt hover:text-alloro-navy flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-alloro-cobalt/10 transition-colors"
                             title="Mark as read"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                         )}
+                      </div>
+                      {notification.message && (
+                        <p className="text-[13px] text-slate-500 leading-relaxed font-medium tracking-tight line-clamp-2">
+                          {notification.message}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={12} className="opacity-40" />
+                          {formatDistanceToNow(
+                            new Date(notification.created_at),
+                            { addSuffix: true }
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -345,23 +360,23 @@ export function NotificationPopover({
     <>
       {/* Notification Button */}
       {customTrigger ? (
-        <div
-          ref={buttonRef as any}
+        <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           className="w-full"
         >
           {customTrigger}
-        </div>
+        </button>
       ) : (
         <button
           ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="relative flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-full px-2 py-1.5 rounded-lg hover:bg-white/30"
+          className="relative flex items-center gap-2 text-xs text-slate-600 hover:text-alloro-navy transition-colors w-full px-3 py-2 rounded-xl hover:bg-slate-100 font-semibold"
         >
           <Bell className="h-4 w-4" />
           <span>Notifications</span>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 left-3 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+            <span className="absolute -top-1 left-4 bg-alloro-cobalt text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

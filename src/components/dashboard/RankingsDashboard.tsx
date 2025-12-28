@@ -359,32 +359,30 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
-        <div className="max-w-[1400px] mx-auto relative flex flex-col">
-          {/* Header */}
-          <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
-            <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
-                  <LayoutGrid size={20} />
-                </div>
-                <div>
-                  <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
-                    Market Intelligence
-                  </h1>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Loading rankings data...
-                  </p>
-                </div>
+      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+                <LayoutGrid size={20} />
+              </div>
+              <div>
+                <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                  Market Intelligence
+                </h1>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Loading rankings data...
+                </p>
               </div>
             </div>
-          </header>
+          </div>
+        </header>
 
-          {/* Skeleton Content */}
-          <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-            <LoadingSkeleton />
-          </main>
-        </div>
+        {/* Skeleton Content */}
+        <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          <LoadingSkeleton />
+        </main>
       </div>
     );
   }
@@ -470,50 +468,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   // If only one location, show the full dashboard directly
   if (rankings.length === 1) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
-        <div className="max-w-[1400px] mx-auto relative flex flex-col">
-          {/* Header */}
-          <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
-            <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
-                  <LayoutGrid size={20} />
-                </div>
-                <div>
-                  <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
-                    Market Intelligence
-                  </h1>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Real-time Performance
-                  </p>
-                </div>
-              </div>
-              <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                  Location:
-                </span>
-                <span className="text-[10px] font-bold text-alloro-navy">
-                  {rankings[0].gbpLocationName || rankings[0].domain}
-                </span>
-              </div>
-            </div>
-          </header>
-
-          <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-12 lg:space-y-16">
-            <PerformanceDashboard
-              result={rankings[0]}
-              tasks={rankingTasks[rankings[0].id] || []}
-            />
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // Multiple locations - show overview with location cards
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy pb-24 lg:pb-32">
-      <div className="max-w-[1400px] mx-auto relative flex flex-col">
+      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
           <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
@@ -532,114 +487,153 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
             </div>
             <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                Locations:
+                Location:
               </span>
               <span className="text-[10px] font-bold text-alloro-navy">
-                {rankings.length} Active
+                {rankings[0].gbpLocationName || rankings[0].domain}
               </span>
             </div>
           </div>
         </header>
 
         <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-12 lg:space-y-16">
-          {/* 1. LOCATION SELECTION - PARALLEL CARDS */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {rankings.map((ranking, index) => {
-              const isSelected =
-                (ranking.gbpLocationId || ranking.id.toString()) ===
-                selectedLocationId;
-              const locationName = ranking.gbpLocationName || ranking.domain;
-              const clientRating =
-                ranking.rankingFactors?.star_rating?.value ??
-                ranking.rawData?.client_gbp?.averageRating ??
-                0;
-
-              return (
-                <motion.div
-                  key={ranking.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() =>
-                    setSelectedLocationId(
-                      ranking.gbpLocationId || ranking.id.toString()
-                    )
-                  }
-                  className={`p-6 lg:p-8 rounded-2xl border-2 cursor-pointer transition-all duration-300 relative group overflow-hidden ${
-                    isSelected
-                      ? "bg-white border-alloro-cobalt shadow-premium"
-                      : "bg-white/60 border-slate-100 hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex gap-4">
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                          isSelected
-                            ? "bg-alloro-cobalt text-white shadow-lg"
-                            : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        <Building2 size={24} />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold font-heading text-alloro-navy tracking-tight mb-1">
-                          {locationName}
-                        </h3>
-                        {ranking.location && (
-                          <div className="flex items-center gap-1.5 text-slate-400 font-semibold text-[9px] uppercase tracking-widest">
-                            <MapPin size={10} /> {ranking.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle2
-                        className="text-alloro-cobalt shrink-0"
-                        size={24}
-                      />
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
-                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
-                        #{ranking.rankPosition}
-                      </p>
-                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
-                        Rank
-                      </p>
-                    </div>
-                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
-                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
-                        {Number(ranking.rankScore).toFixed(0)}
-                      </p>
-                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
-                        Score
-                      </p>
-                    </div>
-                    <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
-                      <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
-                        {Number(clientRating).toFixed(1)}
-                      </p>
-                      <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
-                        Rating
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </section>
-
-          {/* Selected Location Detail */}
-          {selectedRanking && (
-            <PerformanceDashboard
-              result={selectedRanking}
-              tasks={rankingTasks[selectedRanking.id] || []}
-            />
-          )}
+          <PerformanceDashboard
+            result={rankings[0]}
+            tasks={rankingTasks[rankings[0].id] || []}
+          />
         </main>
       </div>
+    );
+  }
+
+  // Multiple locations - show overview with location cards
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
+              <LayoutGrid size={20} />
+            </div>
+            <div>
+              <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+                Market Intelligence
+              </h1>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Real-time Performance
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              Locations:
+            </span>
+            <span className="text-[10px] font-bold text-alloro-navy">
+              {rankings.length} Active
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-12 lg:space-y-16">
+        {/* 1. LOCATION SELECTION - PARALLEL CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {rankings.map((ranking, index) => {
+            const isSelected =
+              (ranking.gbpLocationId || ranking.id.toString()) ===
+              selectedLocationId;
+            const locationName = ranking.gbpLocationName || ranking.domain;
+            const clientRating =
+              ranking.rankingFactors?.star_rating?.value ??
+              ranking.rawData?.client_gbp?.averageRating ??
+              0;
+
+            return (
+              <motion.div
+                key={ranking.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() =>
+                  setSelectedLocationId(
+                    ranking.gbpLocationId || ranking.id.toString()
+                  )
+                }
+                className={`p-6 lg:p-8 rounded-2xl border-2 cursor-pointer transition-all duration-300 relative group overflow-hidden ${
+                  isSelected
+                    ? "bg-white border-alloro-cobalt shadow-premium"
+                    : "bg-white/60 border-slate-100 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                        isSelected
+                          ? "bg-alloro-cobalt text-white shadow-lg"
+                          : "bg-slate-100 text-slate-400"
+                      }`}
+                    >
+                      <Building2 size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold font-heading text-alloro-navy tracking-tight mb-1">
+                        {locationName}
+                      </h3>
+                      {ranking.location && (
+                        <div className="flex items-center gap-1.5 text-slate-400 font-semibold text-[9px] uppercase tracking-widest">
+                          <MapPin size={10} /> {ranking.location}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2
+                      className="text-alloro-cobalt shrink-0"
+                      size={24}
+                    />
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                  <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                    <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                      #{ranking.rankPosition}
+                    </p>
+                    <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                      Rank
+                    </p>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                    <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                      {Number(ranking.rankScore).toFixed(0)}
+                    </p>
+                    <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                      Score
+                    </p>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-2xl p-3 sm:p-4 text-center border border-slate-100">
+                    <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none mb-1">
+                      {Number(clientRating).toFixed(1)}
+                    </p>
+                    <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">
+                      Rating
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </section>
+
+        {/* Selected Location Detail */}
+        {selectedRanking && (
+          <PerformanceDashboard
+            result={selectedRanking}
+            tasks={rankingTasks[selectedRanking.id] || []}
+          />
+        )}
+      </main>
     </div>
   );
 }

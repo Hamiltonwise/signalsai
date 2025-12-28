@@ -186,7 +186,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto min-h-screen flex flex-col bg-alloro-bg font-body text-alloro-navy">
+    <div className="w-full max-w-[1600px] mx-auto min-h-screen flex flex-col bg-alloro-bg font-body text-alloro-navy">
       {/* Show loading state while checking onboarding */}
       {!ready || checkingOnboarding ? (
         <div className="flex-1 flex items-center justify-center bg-gray-50/50">

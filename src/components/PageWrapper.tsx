@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "../hooks/useAuth";
@@ -13,7 +13,6 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
   const { userProfile, selectedDomain } = useAuth();
   const { disconnect } = useGoogleAuthContext();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -22,7 +21,6 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     localStorage.getItem("onboardingCompleted") === "true";
 
   // This logic is extracted from Dashboard.tsx to ensure consistent mobile header
-  const isDashboard = location.pathname.startsWith("/dashboard");
 
   return (
     <div className="flex bg-alloro-bg min-h-screen font-body text-alloro-navy relative overflow-x-hidden selection:bg-alloro-cobalt selection:text-white">

@@ -98,8 +98,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userProfile,
   onboardingCompleted,
   disconnect,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  selectedDomain,
   isOpen,
   onClose,
 }) => {

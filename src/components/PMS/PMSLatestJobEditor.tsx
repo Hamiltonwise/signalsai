@@ -260,7 +260,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                 event.target.value
                               )
                             }
-                            className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -286,7 +286,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                     event.target.value
                                   )
                                 }
-                                className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
                               />
                             </div>
                           ))}
@@ -319,7 +319,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                         event.target.value
                                       )
                                     }
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -334,7 +334,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                         event.target.value
                                       )
                                     }
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
                                   />
                                 </td>
                                 <td className="px-3 py-2">
@@ -349,7 +349,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                         event.target.value
                                       )
                                     }
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
                                   />
                                 </td>
                                 <td className="px-3 py-2 text-right">
@@ -374,7 +374,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                           <button
                             type="button"
                             onClick={() => handleAddSource(monthIndex)}
-                            className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
+                            className="inline-flex items-center gap-2 rounded-full border border-alloro-orange/30 bg-white px-3 py-1 text-xs font-semibold uppercase text-alloro-orange transition hover:border-alloro-orange hover:bg-alloro-orange/5"
                           >
                             <Plus className="h-3.5 w-3.5" /> Add source
                           </button>
@@ -407,7 +407,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving || !jobId}
-                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-600 px-4 py-2 text-xs font-semibold uppercase text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-full border border-alloro-orange bg-alloro-orange px-4 py-2 text-xs font-semibold uppercase text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

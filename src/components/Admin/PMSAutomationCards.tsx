@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Loader2, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  Eye,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import {
   fetchPmsJobs,
   deletePmsJob,
   togglePmsJobApproval,
   updatePmsJobResponse,
   type PmsJob,
+  type AutomationStatusDetail,
 } from "../../api/pms";
+import { PMSAutomationProgressDropdown } from "./PMSAutomationProgressDropdown";
 
 type StatusFilter =
   | "all"
@@ -157,6 +167,9 @@ export function PMSAutomationCards() {
   >({});
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [expandedAutomationJobIds, setExpandedAutomationJobIds] = useState<
+    Set<number>
+  >(new Set());
 
   const isFetchingRef = useRef(false);
 
@@ -481,6 +494,31 @@ export function PMSAutomationCards() {
     }
   };
 
+  const toggleAutomationExpansion = (jobId: number) => {
+    setExpandedAutomationJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else {
+        next.add(jobId);
+      }
+      return next;
+    });
+  };
+
+  const handleAutomationStatusChange = (
+    jobId: number,
+    status: AutomationStatusDetail | null
+  ) => {
+    if (status) {
+      setJobs((prev) =>
+        prev.map((job) =>
+          job.id === jobId ? { ...job, automation_status_detail: status } : job
+        )
+      );
+    }
+  };
+
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (jobs.length === 0) {
       return { rangeStart: 0, rangeEnd: 0 };
@@ -601,93 +639,134 @@ export function PMSAutomationCards() {
               "bg-gray-100 text-gray-700 border-gray-200";
             const approvalLabel = job.is_approved ? "locked" : "pending";
             const isDeleting = deletingJobId === job.id;
+            const hasAutomationStatus = !!job.automation_status_detail;
+            const isAutomationExpanded = expandedAutomationJobIds.has(job.id);
 
             const isPending = job.status === "pending";
             return (
               <div
                 key={job.id}
-                className={`relative grid grid-cols-[1.6fr_1.4fr_1.1fr_1.6fr_1.4fr_1.2fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
-                  isPending ? "pointer-events-none" : ""
-                }`}
+                className="border-b border-gray-100 last:border-b-0"
               >
-                {isPending && (
-                  <div className="absolute inset-0 bg-white/80">
-                    <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 opacity-2" />
+                <div className="relative grid grid-cols-[1.6fr_1.4fr_1.1fr_1.6fr_1.4fr_1.2fr] gap-4 px-4 py-4">
+                  {isPending && (
+                    <div className="absolute inset-0 bg-white/50 pointer-events-none z-0">
+                      <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 opacity-30" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 relative z-10">
+                    {hasAutomationStatus && (
+                      <button
+                        type="button"
+                        onClick={() => toggleAutomationExpansion(job.id)}
+                        className="rounded p-1 hover:bg-gray-100 transition"
+                        title={
+                          isAutomationExpanded
+                            ? "Hide automation progress"
+                            : "Show automation progress"
+                        }
+                      >
+                        {isAutomationExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                        )}
+                      </button>
+                    )}
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusClass}`}
+                    >
+                      {STATUS_LABELS[job.status as StatusFilter] || job.status}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    {job.domain || "—"}
+                  </div>
+                  <div className="text-sm font-medium text-gray-800">
+                    {formatTimeElapsed(job.time_elapsed)}
+                  </div>
+                  <div className="flex flex-col gap-2 text-sm text-gray-600 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={job.is_approved}
+                        disabled={
+                          job.is_approved ||
+                          approvingJobId === job.id ||
+                          isPending
+                        }
+                        onClick={() => handleApprovalToggle(job)}
+                        className={`relative inline-flex h-6 w-12 items-center rounded-full border transition ${
+                          job.is_approved
+                            ? "border-green-400 bg-green-500"
+                            : "border-gray-300 bg-gray-200"
+                        } ${
+                          job.is_approved || isPending
+                            ? "cursor-default"
+                            : "cursor-pointer"
+                        } disabled:opacity-60`}
+                      >
+                        <span
+                          className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                            job.is_approved ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                      {approvingJobId === job.id ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold uppercase text-blue-600">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Approving…
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold uppercase text-gray-500">
+                          {APPROVAL_TEXT[approvalLabel]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {formatTimestamp(job.timestamp)}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 relative z-10">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveModalJobId(job.id)}
+                        disabled={isPending}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteJob(job.id)}
+                        disabled={isDeleting || isPending}
+                        className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-300"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {/* Automation Progress Dropdown */}
+                {hasAutomationStatus && isAutomationExpanded && (
+                  <div className="px-4 pb-4">
+                    <PMSAutomationProgressDropdown
+                      jobId={job.id}
+                      initialStatus={job.automation_status_detail}
+                      onStatusChange={(status) =>
+                        handleAutomationStatusChange(job.id, status)
+                      }
+                    />
                   </div>
                 )}
-                <div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusClass}`}
-                  >
-                    {STATUS_LABELS[job.status as StatusFilter] || job.status}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-700">{job.domain || "—"}</div>
-                <div className="text-sm font-medium text-gray-800">
-                  {formatTimeElapsed(job.time_elapsed)}
-                </div>
-                <div className="flex flex-col gap-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={job.is_approved}
-                      disabled={job.is_approved || approvingJobId === job.id}
-                      onClick={() => handleApprovalToggle(job)}
-                      className={`relative inline-flex h-6 w-12 items-center rounded-full border transition ${
-                        job.is_approved
-                          ? "border-green-400 bg-green-500"
-                          : "border-gray-300 bg-gray-200"
-                      } ${
-                        job.is_approved ? "cursor-default" : "cursor-pointer"
-                      } disabled:opacity-60`}
-                    >
-                      <span
-                        className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                          job.is_approved ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                    {approvingJobId === job.id ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold uppercase text-blue-600">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Approving…
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold uppercase text-gray-500">
-                        {APPROVAL_TEXT[approvalLabel]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500">
-                  {formatTimestamp(job.timestamp)}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveModalJobId(job.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteJob(job.id)}
-                      disabled={isDeleting}
-                      className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-300"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                      Delete
-                    </button>
-                  </div>
-                </div>
               </div>
             );
           })

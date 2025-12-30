@@ -1,5 +1,122 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "./index";
 
+// =====================================================================
+// AUTOMATION STATUS TYPES
+// =====================================================================
+
+export type AutomationStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "awaiting_approval";
+
+export type StepStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "skipped";
+
+export type StepKey =
+  | "file_upload"
+  | "pms_parser"
+  | "admin_approval"
+  | "client_approval"
+  | "monthly_agents"
+  | "task_creation"
+  | "complete";
+
+export type MonthlyAgentKey =
+  | "data_fetch"
+  | "summary_agent"
+  | "referral_engine"
+  | "opportunity_agent"
+  | "cro_optimizer";
+
+export interface StepDetail {
+  status: StepStatus;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  subStep?: MonthlyAgentKey;
+  agentsCompleted?: MonthlyAgentKey[];
+  currentAgent?: MonthlyAgentKey;
+}
+
+export interface AgentResult {
+  success: boolean;
+  resultId?: number;
+  error?: string;
+}
+
+export interface TasksCreatedSummary {
+  user: number;
+  alloro: number;
+  total: number;
+}
+
+export interface AutomationSummary {
+  tasksCreated: TasksCreatedSummary;
+  agentResults: {
+    summary?: AgentResult;
+    referral_engine?: AgentResult;
+    opportunity?: AgentResult;
+    cro_optimizer?: AgentResult;
+  };
+  duration?: string;
+}
+
+export interface AutomationStatusDetail {
+  status: AutomationStatus;
+  currentStep: StepKey;
+  currentSubStep?: string;
+  message: string;
+  progress: number;
+  steps: Record<StepKey, StepDetail>;
+  summary?: AutomationSummary;
+  startedAt: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface AutomationStatusResponse {
+  success: boolean;
+  data?: {
+    jobId: number;
+    domain: string;
+    jobStatus: string;
+    isAdminApproved: boolean;
+    isClientApproved: boolean;
+    timestamp: string;
+    automationStatus: AutomationStatusDetail | null;
+  };
+  error?: string;
+  message?: string;
+}
+
+export interface ActiveAutomationJobsResponse {
+  success: boolean;
+  data?: {
+    jobs: Array<{
+      jobId: number;
+      domain: string;
+      jobStatus: string;
+      isAdminApproved: boolean;
+      isClientApproved: boolean;
+      timestamp: string;
+      automationStatus: AutomationStatusDetail | null;
+    }>;
+    count: number;
+  };
+  error?: string;
+  message?: string;
+}
+
+// =====================================================================
+// EXISTING TYPES
+// =====================================================================
+
 export interface PmsJob {
   id: number;
   time_elapsed: number | null;
@@ -9,6 +126,7 @@ export interface PmsJob {
   is_approved: boolean;
   is_client_approved: boolean;
   domain?: string | null;
+  automation_status_detail?: AutomationStatusDetail | null;
 }
 
 export interface FetchPmsJobsParams {
@@ -248,5 +366,57 @@ export async function fetchPmsKeyData(
   domain?: string
 ): Promise<PmsKeyDataResponse> {
   const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
-  return apiGet({ path: `/pms/keyData${query}` }) as Promise<PmsKeyDataResponse>;
+  return apiGet({
+    path: `/pms/keyData${query}`,
+  }) as Promise<PmsKeyDataResponse>;
 }
+
+// =====================================================================
+// AUTOMATION STATUS API FUNCTIONS
+// =====================================================================
+
+/**
+ * Fetch automation status for a specific PMS job
+ */
+export async function fetchAutomationStatus(
+  jobId: number
+): Promise<AutomationStatusResponse> {
+  return apiGet({
+    path: `/pms/jobs/${jobId}/automation-status`,
+  }) as Promise<AutomationStatusResponse>;
+}
+
+/**
+ * Fetch all active (non-completed) automation jobs
+ */
+export async function fetchActiveAutomationJobs(
+  domain?: string
+): Promise<ActiveAutomationJobsResponse> {
+  const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+  return apiGet({
+    path: `/pms/automation/active${query}`,
+  }) as Promise<ActiveAutomationJobsResponse>;
+}
+
+// =====================================================================
+// STEP CONFIGURATION (for UI display)
+// =====================================================================
+
+export const STEP_CONFIG: Record<StepKey, { label: string; icon: string }> = {
+  file_upload: { label: "File Upload", icon: "📤" },
+  pms_parser: { label: "PMS Parser", icon: "🔄" },
+  admin_approval: { label: "Admin Approval", icon: "✅" },
+  client_approval: { label: "Client Approval", icon: "✅" },
+  monthly_agents: { label: "Monthly Agents", icon: "🤖" },
+  task_creation: { label: "Task Creation", icon: "📋" },
+  complete: { label: "Complete", icon: "✓" },
+};
+
+export const MONTHLY_AGENT_CONFIG: Record<MonthlyAgentKey, { label: string }> =
+  {
+    data_fetch: { label: "Fetching data" },
+    summary_agent: { label: "Summary Agent" },
+    referral_engine: { label: "Referral Engine" },
+    opportunity_agent: { label: "Opportunity Agent" },
+    cro_optimizer: { label: "CRO Optimizer" },
+  };

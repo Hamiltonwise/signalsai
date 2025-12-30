@@ -280,13 +280,20 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       return;
     }
 
+    // If there's no job at all, clear any stale localStorage flags
+    if (latestJobId === null) {
+      window.localStorage.removeItem(storageKey);
+      setLocalProcessing(false);
+      return;
+    }
+
     if (latestJobIsApproved === true) {
       window.localStorage.removeItem(storageKey);
       setLocalProcessing(false);
     } else if (latestJobIsApproved === false) {
       setLocalProcessing(true);
     }
-  }, [latestJobIsApproved, storageKey]);
+  }, [latestJobIsApproved, latestJobId, storageKey]);
 
   useEffect(() => {
     if (latestJobStatus?.toLowerCase() === "pending") {
@@ -372,9 +379,17 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     latestJobIsClientApproved !== true &&
     latestJobId !== null;
 
+  // Only show processing notice if:
+  // 1. Not loading
+  // 2. Not showing client approval banner
+  // 3. There's actually a job that exists (latestJobId is not null)
+  // 4. Either localProcessing is true OR job status is pending
+  // 5. The job is not yet admin approved (otherwise client approval banner shows)
   const showProcessingNotice =
     !isLoading &&
     !showClientApprovalBanner &&
+    latestJobId !== null &&
+    latestJobIsApproved !== true &&
     (localProcessing || latestJobStatus?.toLowerCase() === "pending");
 
   const handleConfirmApproval = useCallback(async () => {
@@ -718,8 +733,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="p-6 sm:p-10 space-y-8">
-                {monthlyData.slice(-6).map((data, index) => (
+              <div className="p-6 sm:p-10 space-y-8 max-h-[500px] overflow-y-auto">
+                {monthlyData.map((data, index) => (
                   <div
                     key={index}
                     className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8"

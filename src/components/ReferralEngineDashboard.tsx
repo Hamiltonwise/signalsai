@@ -3,7 +3,7 @@
  * Redesigned to match newdesign PMSStatistics.tsx
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Upload,
   Download,
@@ -13,7 +13,12 @@ import {
   ArrowUpRight,
   Lock,
   TrendingDown,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
+import { uploadPMSData } from "../api/pms";
+import { showUploadToast } from "../lib/toast";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -184,6 +189,15 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
   const [activeFilter, setActiveFilter] = useState("All");
   const [isExporting, setIsExporting] = useState(false);
 
+  // File upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [uploadMessage, setUploadMessage] = useState<string>("");
+  const [isDragOver, setIsDragOver] = useState(false);
+
   // Fetch data from API when googleAccountId is provided
   useEffect(() => {
     const fetchReferralEngineData = async () => {
@@ -235,6 +249,107 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
   }, [props.googleAccountId]);
 
   const data = props.data ?? fetchedData;
+
+  // File upload handlers
+  const handleFileSelect = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = [".csv", ".xlsx", ".xls", ".txt"];
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!validTypes.includes(fileExtension)) {
+      setUploadStatus("error");
+      setUploadMessage("Please upload a CSV, Excel, or text file.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadStatus("idle");
+    setUploadMessage("");
+
+    try {
+      // Get clientId from the domain or googleAccountId
+      const clientId = props.googleAccountId?.toString() || "default-client";
+
+      const result = await uploadPMSData({
+        clientId,
+        file,
+        pmsType: "auto-detect",
+      });
+
+      if (result.success) {
+        setUploadStatus("success");
+        setUploadMessage(
+          "We're processing your PMS data now. We'll notify you once it's ready."
+        );
+
+        // Show toast notification
+        showUploadToast(
+          "PMS export received!",
+          "We'll notify when ready for checking"
+        );
+
+        // Dispatch event for other components
+        if (typeof window !== "undefined") {
+          const event = new CustomEvent("pms:job-uploaded", {
+            detail: { clientId },
+          });
+          window.dispatchEvent(event);
+        }
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setUploadStatus("idle");
+          setUploadMessage("");
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        }, 3000);
+      } else {
+        throw new Error(result.error || "Upload failed");
+      }
+    } catch (err) {
+      console.error("PMS Upload error:", err);
+      setUploadStatus("error");
+      setUploadMessage(
+        err instanceof Error ? err.message : "Upload failed. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      handleFileSelect(selectedFile);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+
+    const droppedFile = event.dataTransfer.files?.[0];
+    if (droppedFile) {
+      handleFileSelect(droppedFile);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  };
 
   const handleExport = () => {
     setIsExporting(true);
@@ -438,29 +553,18 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
     );
   }
 
-  // Empty state
-  if (!data) {
-    return (
-      <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32">
-        <div className="max-w-[1400px] mx-auto relative flex flex-col">
-          <div className="py-32 px-6">
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center max-w-lg mx-auto">
-              <p className="text-slate-600 font-black text-lg mb-2">
-                No Revenue Data Available
-              </p>
-              <p className="text-slate-400 text-sm">
-                Revenue attribution analysis has not been run yet. Please check
-                back later.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
+      {/* Minimized Alert Bar when data is missing */}
+      {!data && (
+        <div className="bg-alloro-orange text-white text-[10px] font-black uppercase tracking-widest py-3 px-4 text-center border-b border-white/10 flex items-center justify-center gap-2 shadow-sm relative z-[60]">
+          <TrendingDown size={14} className="text-white" />
+          <span>
+            Revenue attribution analysis has not been run yet. Please upload
+            your latest PMS exports to begin the analysis.
+          </span>
+        </div>
+      )}
       <div className="max-w-[1400px] mx-auto relative flex flex-col">
         {/* Header - matches newdesign */}
         <header className="glass-header border-b border-black/5 lg:sticky lg:top-0 z-40">
@@ -752,17 +856,93 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
               </div>
             </div>
 
-            <label className="w-full md:w-[400px] h-[300px] border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 flex flex-col items-center justify-center cursor-pointer hover:border-alloro-orange hover:bg-white transition-all group/upload shrink-0 relative z-10">
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-premium border border-black/5 mb-5 group-hover/upload:scale-110 group-hover/upload:text-alloro-orange transition-all">
-                <Upload size={28} />
-              </div>
-              <span className="text-base font-black text-alloro-navy font-heading">
-                Drop Revenue CSV Export
-              </span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">
-                Max Ingestion: 50MB
-              </span>
-              <input type="file" className="hidden" accept=".csv,.xlsx,.xls" />
+            <label
+              className={`w-full md:w-[400px] h-[300px] border-2 border-dashed rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all group/upload shrink-0 relative z-10 ${
+                isDragOver
+                  ? "border-alloro-orange bg-alloro-orange/5"
+                  : uploadStatus === "success"
+                  ? "border-green-400 bg-green-50"
+                  : uploadStatus === "error"
+                  ? "border-red-400 bg-red-50"
+                  : "border-slate-200 bg-slate-50/50 hover:border-alloro-orange hover:bg-white"
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              {isUploading ? (
+                <>
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-premium border border-black/5 mb-5">
+                    <Loader2
+                      size={28}
+                      className="animate-spin text-alloro-orange"
+                    />
+                  </div>
+                  <span className="text-base font-black text-alloro-navy font-heading">
+                    Uploading...
+                  </span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">
+                    Please wait
+                  </span>
+                </>
+              ) : uploadStatus === "success" ? (
+                <>
+                  <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center shadow-premium border border-green-200 mb-5">
+                    <CheckCircle size={28} className="text-green-600" />
+                  </div>
+                  <span className="text-base font-black text-green-700 font-heading">
+                    Upload Successful!
+                  </span>
+                  <span className="text-[10px] font-bold text-green-600 mt-3 text-center px-4">
+                    {uploadMessage}
+                  </span>
+                </>
+              ) : uploadStatus === "error" ? (
+                <>
+                  <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center shadow-premium border border-red-200 mb-5">
+                    <AlertCircle size={28} className="text-red-600" />
+                  </div>
+                  <span className="text-base font-black text-red-700 font-heading">
+                    Upload Failed
+                  </span>
+                  <span className="text-[10px] font-bold text-red-600 mt-3 text-center px-4">
+                    {uploadMessage}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setUploadStatus("idle");
+                      setUploadMessage("");
+                    }}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-premium border border-black/5 mb-5 group-hover/upload:scale-110 group-hover/upload:text-alloro-orange transition-all">
+                    <Upload size={28} />
+                  </div>
+                  <span className="text-base font-black text-alloro-navy font-heading">
+                    {isDragOver ? "Drop file here" : "Drop Revenue CSV Export"}
+                  </span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-3">
+                    Max Ingestion: 50MB
+                  </span>
+                  <span className="text-[9px] font-bold text-alloro-orange mt-2">
+                    Click or drag to upload
+                  </span>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".csv,.xlsx,.xls,.txt"
+                onChange={handleFileInputChange}
+              />
             </label>
           </section>
         </main>

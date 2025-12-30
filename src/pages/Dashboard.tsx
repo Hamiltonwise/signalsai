@@ -8,6 +8,7 @@ import { useAuth } from "../hooks/useAuth";
 import { ConnectionDebugPanel } from "../components/ConnectionDebugPanel";
 import { DashboardOverview } from "../components/dashboard/DashboardOverview";
 import { ReferralEngineDashboard } from "../components/ReferralEngineDashboard";
+import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { RankingsDashboard } from "../components/dashboard/RankingsDashboard";
 
 // Integration Modal Components ✅
@@ -328,9 +329,7 @@ export default function Dashboard() {
                         </div>
                       }
                     >
-                      <ReferralEngineDashboard
-                        googleAccountId={userProfile?.googleAccountId ?? null}
-                      />
+                      <PMSVisualPillars domain={selectedDomain?.domain} />
                     </React.Suspense>
                   )}
 

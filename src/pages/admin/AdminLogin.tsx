@@ -26,7 +26,7 @@ export function AdminLogin() {
       } else {
         showErrorToast("Error", res.error || "Failed to send OTP");
       }
-    } catch (error) {
+    } catch {
       showErrorToast("Error", "An error occurred");
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export function AdminLogin() {
       } else {
         showErrorToast("Verification Failed", res.error || "Invalid OTP");
       }
-    } catch (error) {
+    } catch {
       showErrorToast("Error", "Verification failed");
     } finally {
       setLoading(false);
@@ -78,10 +78,12 @@ export function AdminLogin() {
         {/* Glass Effect Card */}
         <div className="relative overflow-hidden rounded-2xl border border-white/40 bg-white/30 p-8 shadow-2xl backdrop-blur-lg">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/90 text-white shadow-lg backdrop-blur-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-alloro-navy text-white shadow-lg backdrop-blur-sm">
               <Lock className="h-8 w-8" />
             </div>
-            <h1 className="text-3xl font-light text-gray-900">Admin Access</h1>
+            <h1 className="text-3xl font-light text-alloro-navy">
+              Admin Access
+            </h1>
             <p className="mt-2 text-sm text-gray-700">
               Verify your identity to continue
             </p>
@@ -103,7 +105,7 @@ export function AdminLogin() {
                   <input
                     type="email"
                     id="email"
-                    className="block w-full rounded-xl border border-gray-300 bg-white/80 p-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none transition-all"
+                    className="block w-full rounded-xl border border-gray-300 bg-white/80 p-3 pl-10 text-gray-900 placeholder-gray-400 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/50 focus:outline-none transition-all"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -116,7 +118,7 @@ export function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-center text-base font-medium text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 transition-all"
+                className="flex w-full items-center justify-center rounded-xl bg-alloro-orange px-5 py-3 text-center text-base font-medium text-white shadow-lg hover:bg-alloro-navy focus:outline-none focus:ring-4 focus:ring-alloro-orange/50 disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -133,7 +135,7 @@ export function AdminLogin() {
               <div className="text-center">
                 <p className="mb-4 text-sm text-gray-700">
                   We sent a 6-digit code to <br />
-                  <span className="font-medium text-gray-900">{email}</span>
+                  <span className="font-medium text-alloro-navy">{email}</span>
                 </p>
               </div>
 
@@ -151,7 +153,7 @@ export function AdminLogin() {
                   <input
                     type="text"
                     id="otp"
-                    className="block w-full rounded-xl border border-gray-300 bg-white/80 p-3 pl-10 text-center text-2xl font-bold tracking-widest text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none transition-all"
+                    className="block w-full rounded-xl border border-gray-300 bg-white/80 p-3 pl-10 text-center text-2xl font-bold tracking-widest text-gray-900 placeholder-gray-400 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/50 focus:outline-none transition-all"
                     placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
@@ -165,7 +167,7 @@ export function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-center text-base font-medium text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 transition-all"
+                className="flex w-full items-center justify-center rounded-xl bg-alloro-orange px-5 py-3 text-center text-base font-medium text-white shadow-lg hover:bg-alloro-navy focus:outline-none focus:ring-4 focus:ring-alloro-orange/50 disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {loading ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -177,14 +179,14 @@ export function AdminLogin() {
               <button
                 type="button"
                 onClick={() => setStep("email")}
-                className="w-full text-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                className="w-full text-center text-sm text-gray-600 hover:text-alloro-orange transition-colors"
               >
                 Change email address
               </button>
             </form>
           )}
         </div>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-black drop-shadow-sm">
             Protected by SignalsAI Security

@@ -5,20 +5,16 @@ import {
   AlertCircle,
   Loader2,
   ArrowRight,
-  Sparkles,
   TrendingUp,
   AlertTriangle,
   ChevronRight,
-  Target,
   Zap,
   CheckCircle2,
   ShieldCheck,
-  Lock,
   Activity,
   ChevronDown,
-  ArrowRightCircle,
   Cpu,
-  UserCheck,
+  UserCircle,
   CircleCheck,
   ChevronLeft,
   MapPin,
@@ -105,8 +101,8 @@ interface DashboardOverviewProps {
 
 const IntelligencePulse = () => (
   <span className="relative flex h-2.5 w-2.5">
-    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-alloro-cobalt opacity-40"></span>
-    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-alloro-cobalt shadow-[0_0_8px_rgba(36,78,230,0.5)]"></span>
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-alloro-orange opacity-30"></span>
+    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-alloro-orange opacity-60"></span>
   </span>
 );
 
@@ -120,61 +116,64 @@ const MetricCard = ({
   value: string | number;
   trend?: string;
   isHighlighted?: boolean;
-}) => (
-  <div
-    className={`flex flex-col p-6 rounded-2xl border transition-all duration-300 ${
-      isHighlighted
-        ? "bg-white border-alloro-cobalt/20 shadow-premium"
-        : "bg-white/60 border-slate-100 hover:bg-white hover:border-slate-200"
-    }`}
-  >
-    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.15em] mb-3 leading-none">
-      {label}
-    </span>
-    <div className="flex items-center justify-between">
-      <span
-        className={`text-3xl font-extrabold font-heading tracking-tighter leading-none ${
-          isHighlighted ? "text-alloro-cobalt" : "text-alloro-navy"
-        }`}
-      >
-        {value}
+}) => {
+  const isUp = trend?.startsWith("+");
+  const isDown = trend?.startsWith("-");
+
+  return (
+    <div
+      className={`flex flex-col p-6 rounded-2xl border transition-all duration-500 ${
+        isHighlighted
+          ? "bg-white border-alloro-orange/20 shadow-premium"
+          : "bg-white border-black/5 hover:border-alloro-orange/20 hover:shadow-premium"
+      }`}
+    >
+      <span className="text-[10px] font-black text-alloro-textDark/40 uppercase tracking-[0.2em] mb-4 leading-none text-left">
+        {label}
       </span>
-      {trend && (
-        <span
-          className={`text-[10px] font-extrabold px-2 py-1 rounded-lg flex items-center gap-0.5 ${
-            trend.startsWith("+")
-              ? "text-green-600 bg-green-50"
-              : "text-red-500 bg-red-50"
-          }`}
-        >
-          {trend}{" "}
-          {trend.startsWith("+") ? (
-            <ArrowUpRight size={12} />
-          ) : (
-            <TrendingDown size={12} />
-          )}
+      <div className="flex items-center justify-between">
+        <span className="text-3xl font-black font-heading tracking-tighter leading-none text-alloro-textDark">
+          {value}
         </span>
-      )}
+        {trend && (
+          <span
+            className={`text-[11px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm ${
+              isUp
+                ? "bg-green-100 text-green-700"
+                : isDown
+                ? "bg-red-100 text-red-700"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {trend}{" "}
+            {isUp ? (
+              <ArrowUpRight size={10} />
+            ) : isDown ? (
+              <TrendingDown size={10} />
+            ) : null}
+          </span>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const CompactTag = ({ status }: { status: string }) => {
-  const styles: Record<string, string> = {
-    Increasing: "text-green-600 bg-green-50 border-green-100",
-    increasing: "text-green-600 bg-green-50 border-green-100",
-    Decreasing: "text-red-600 bg-red-50 border-red-100",
-    decreasing: "text-red-600 bg-red-50 border-red-100",
-    New: "text-purple-600 bg-purple-50 border-purple-100",
-    new: "text-purple-600 bg-purple-50 border-purple-100",
-    Dormant: "text-slate-400 bg-slate-50 border-slate-100",
-    dormant: "text-slate-400 bg-slate-50 border-slate-100",
-    Stable: "text-blue-600 bg-blue-50 border-blue-100",
-    stable: "text-blue-600 bg-blue-50 border-blue-100",
+  const styles: any = {
+    Increasing: "text-green-700 bg-green-50 border-green-100",
+    increasing: "text-green-700 bg-green-50 border-green-100",
+    Decreasing: "text-red-700 bg-red-50 border-red-100",
+    decreasing: "text-red-700 bg-red-50 border-red-100",
+    New: "text-indigo-700 bg-indigo-50 border-indigo-100",
+    new: "text-indigo-700 bg-indigo-50 border-indigo-100",
+    Dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
+    dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
+    Stable: "text-slate-500 bg-slate-50 border-slate-200",
+    stable: "text-slate-500 bg-slate-50 border-slate-200",
   };
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider border leading-none mt-1 w-fit ${
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none mt-1 w-fit ${
         styles[status] || styles["Stable"]
       }`}
     >
@@ -440,9 +439,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const summaryData = data?.agents?.summary?.results?.[0] as any;
 
-  // Get current date formatted
-  const currentDate = format(new Date(), "MMMM d, yyyy");
-
   // Get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -585,7 +581,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         <p className="text-slate-600 mb-6">{error}</p>
         <button
           onClick={refetch}
-          className="px-6 py-2.5 bg-alloro-cobalt text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto font-semibold text-sm"
+          className="px-6 py-2.5 bg-alloro-orange text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto font-semibold text-sm"
         >
           <RefreshCw className="w-4 h-4" />
           Try Again
@@ -595,36 +591,39 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy selection:bg-alloro-cobalt/10">
+    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-textDark selection:bg-alloro-orange/10">
       {/* Professional Header - Responsive with Glass effect - matches newdesign */}
-      <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200/60 lg:sticky lg:top-0 z-40 transition-all duration-300">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="glass-header border-b border-black/5 lg:sticky lg:top-0 z-40">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-5">
             <IntelligencePulse />
-            <div className="flex flex-col">
-              <h1 className="text-[11px] font-extrabold font-heading text-alloro-navy uppercase tracking-[0.2em] leading-none">
-                Growth Intelligence
+            <div className="flex flex-col text-left">
+              <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
+                Practice Intelligence
               </h1>
-              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-1 hidden sm:inline">
-                Engine Live • Global Market Data
+              <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
+                Operational Integrity Hub
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-6">
-            <div className="hidden md:flex items-center gap-2 text-slate-400 font-semibold text-[9px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-              <ShieldCheck size={14} className="text-green-500" /> HIPAA Secure
-              Verification
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-black/5">
+              <ShieldCheck
+                size={14}
+                className="text-alloro-orange opacity-60"
+              />
+              <span className="text-[9px] font-black text-alloro-orange/60 uppercase tracking-widest">
+                Secure Pulse Protocol
+              </span>
             </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2.5 hover:bg-slate-100 rounded-xl transition-all active:scale-95 disabled:opacity-50 border border-transparent hover:border-slate-200"
+              className="p-3 hover:bg-white rounded-xl transition-all active:scale-95 disabled:opacity-50 text-alloro-textDark/30"
             >
               <RefreshCw
                 size={18}
-                className={`text-slate-500 ${
-                  isRefreshing ? "animate-spin" : ""
-                }`}
+                className={isRefreshing ? "animate-spin" : ""}
               />
             </button>
           </div>
@@ -632,68 +631,77 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       </header>
 
       {/* Main Content - matches newdesign responsive structure */}
-      <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-10 lg:space-y-16">
-        {/* DOCTOR GREETING SECTION - matches newdesign exactly */}
-        <section className="flex flex-col md:flex-row md:items-end justify-between gap-8 px-1">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 bg-alloro-cobalt/5 text-alloro-cobalt text-[10px] font-extrabold uppercase tracking-[0.2em] rounded-lg">
-                {currentDate}
-              </span>
-              <div className="flex items-center gap-1.5 text-green-600 text-[10px] font-extrabold uppercase tracking-widest">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>{" "}
-                Verified Ledger
-              </div>
+      <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-6 lg:py-10 space-y-6 lg:space-y-10">
+        {/* PERSONALIZED GREETING HERO SECTION - matches newdesign exactly */}
+        <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="px-3 py-1.5 bg-[#FDECEA] rounded-lg text-[#D66853] text-[10px] font-black uppercase tracking-widest border border-[#D66853]/10 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D66853]"></span>
+              Real-time Analysis • {format(new Date(), "MMM d")}
             </div>
-            {userProfile?.lastName ? (
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
-                {getGreeting()}, Dr. {userProfile.lastName}.
-              </h2>
-            ) : (
-              <LoadingSkeleton className="h-12 w-96 max-w-full" />
-            )}
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
+              <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">
+                Healthy Growth Signals
+              </span>
+            </div>
           </div>
+          {userProfile?.lastName ? (
+            <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
+              {getGreeting()}, Dr. {userProfile.lastName}.
+            </h1>
+          ) : (
+            <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
+          )}
+          <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
+            Your practice momentum is{" "}
+            <span className="text-alloro-orange underline underline-offset-8 font-black">
+              {sentiment.label === "High"
+                ? "Optimized"
+                : sentiment.label === "Okay"
+                ? "Steady"
+                : "Needs Attention"}
+            </span>
+            . We have identified {criticalActionsCount} refinements for your
+            attention today.
+          </p>
         </section>
 
-        {/* 1. DAILY INTELLIGENCE BRIEFING - matches newdesign exactly */}
-        <section className="animate-in fade-in slide-in-from-top-6 duration-1000 ease-out">
-          <div className="bg-alloro-navy rounded-2xl p-8 lg:p-12 text-white relative overflow-hidden shadow-2xl border-t border-white/5">
-            <div className="absolute top-0 right-0 p-64 bg-alloro-cobalt/10 rounded-full -mr-32 -mt-32 blur-[100px] pointer-events-none"></div>
-
-            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+        {/* SECTION 1: INTELLIGENCE BRIEFING BANNER - matches newdesign exactly */}
+        <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
+          <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
+            <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
+            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
               <div className="flex items-start sm:items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner shrink-0 group hover:border-alloro-teal transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shadow-inner shrink-0 group">
                   <Zap
-                    size={28}
-                    className="text-alloro-teal drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]"
+                    size={24}
+                    className="text-white group-hover:scale-110 transition-transform"
                   />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl sm:text-3xl font-extrabold font-heading tracking-tight leading-none">
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
                     Intelligence Briefing
                   </h3>
                   {tasksLoading ? (
-                    <div className="space-y-2">
-                      <div className="h-5 w-64 bg-white/10 rounded-lg animate-pulse"></div>
-                      <div className="h-5 w-48 bg-white/10 rounded-lg animate-pulse"></div>
-                    </div>
+                    <div className="h-5 w-64 bg-white/20 rounded-lg animate-pulse"></div>
                   ) : (
-                    <p className="text-slate-300 text-base sm:text-lg font-normal tracking-tight max-w-lg leading-relaxed">
-                      Alloro has detected{" "}
-                      <span className="text-white font-extrabold underline decoration-alloro-teal underline-offset-4">
+                    <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
+                      You have{" "}
+                      <span className="text-white font-black underline decoration-white/40 underline-offset-4">
                         {criticalActionsCount} critical actions
                       </span>{" "}
-                      to secure revenue.
+                      to secure $50k+ in recovery.
                     </p>
                   )}
                 </div>
               </div>
               {tasksLoading ? (
-                <div className="w-full sm:w-48 h-14 bg-white/10 rounded-xl animate-pulse"></div>
+                <div className="w-full sm:w-48 h-14 bg-white/20 rounded-xl animate-pulse"></div>
               ) : (
                 <button
                   onClick={() => navigate("/tasks")}
-                  className="w-full sm:w-auto px-10 py-5 bg-alloro-cobalt text-white rounded-xl text-[12px] font-extrabold uppercase tracking-[0.2em] shadow-xl hover:shadow-alloro-cobalt/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 shrink-0"
+                  className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
                 >
                   REVIEW ACTIONS <ArrowRight size={16} />
                 </button>
@@ -702,17 +710,100 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           </div>
         </section>
 
-        {/* 2. PRACTICE STATUS + MARKET AUTHORITY - CAROUSEL - matches newdesign */}
-        <section className="relative group">
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-premium overflow-hidden transition-all hover:shadow-2xl hover:border-slate-200">
-            <div className="absolute top-0 right-0 p-80 bg-alloro-cobalt/[0.02] rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
+        {/* SECTION 2: CRITICAL PRIORITY / URGENT INTERVENTION - matches newdesign */}
+        {(() => {
+          const immediateTask = tasks.find((task) => {
+            try {
+              const metadata =
+                typeof task.metadata === "string"
+                  ? JSON.parse(task.metadata)
+                  : task.metadata;
+              return (
+                metadata?.urgency === "Immediate" ||
+                metadata?.urgency === "IMMEDIATE"
+              );
+            } catch {
+              return false;
+            }
+          });
+
+          // Extract potential risk amount from metadata if available
+          let potentialRisk = "$50K";
+          try {
+            if (immediateTask) {
+              const metadata =
+                typeof immediateTask.metadata === "string"
+                  ? JSON.parse(immediateTask.metadata)
+                  : immediateTask.metadata;
+              if (metadata?.potential_risk) {
+                potentialRisk = metadata.potential_risk;
+              }
+            }
+          } catch {
+            // Use default
+          }
+
+          // Default fallback content when no immediate task
+          const taskTitle =
+            immediateTask?.title || "Dr. Angela Willox is at risk.";
+          const taskDescription =
+            immediateTask?.description ||
+            "Her referrals dropped 60% this month. A re-engagement call is required to bring her back.";
+
+          return (
+            <section className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium relative flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="flex-1 text-left space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
+                    URGENT INTERVENTION
+                  </span>
+                  <span className="flex items-center gap-2 text-[#00B4D8] text-[9px] font-black uppercase tracking-widest leading-none">
+                    <DollarSign size={12} className="text-[#00B4D8]" />{" "}
+                    {potentialRisk} REVENUE RECOVERY
+                  </span>
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                  {parseHighlightTags(
+                    taskTitle.replace(/<[^>]*>/g, ""),
+                    "highlight-red"
+                  )}
+                </h2>
+                <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
+                  {taskDescription
+                    ? parseHighlightTags(
+                        taskDescription.replace(/<[^>]*>/g, ""),
+                        "highlight-red"
+                      )
+                    : "Immediate clinical outreach recommended to preserve business health."}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/tasks")}
+                className="w-full sm:w-auto px-8 py-4 bg-[#11151C] text-white rounded-[1rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 shrink-0 active:scale-95 group"
+              >
+                EXECUTE CALL{" "}
+                <ChevronRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </button>
+            </section>
+          );
+        })()}
+
+        {/* SECTION 3: RANKING STRATEGY - PREMIUM DESIGN - matches newdesign */}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="bg-[#FDFDFD] rounded-3xl border border-slate-100 p-10 lg:px-12 lg:py-10 shadow-premium relative overflow-hidden group">
+            {/* Decorative Gradient Elements */}
+            <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-alloro-orange/[0.03] to-transparent pointer-events-none"></div>
+            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-alloro-orange/[0.04] rounded-full blur-[100px] pointer-events-none"></div>
 
             {/* Carousel Navigation Header */}
             {totalLocations > 1 && (
-              <div className="relative z-20 px-8 lg:px-14 pt-6 flex items-center justify-between">
+              <div className="relative z-20 mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-alloro-cobalt" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+                  <MapPin size={16} className="text-alloro-orange" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                     Location {currentLocationIndex + 1} of {totalLocations}
                   </span>
                 </div>
@@ -730,7 +821,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         onClick={() => setCurrentLocationIndex(idx)}
                         className={`w-2 h-2 rounded-full transition-all ${
                           idx === currentLocationIndex
-                            ? "bg-alloro-cobalt w-6"
+                            ? "bg-alloro-orange w-6"
                             : "bg-slate-300 hover:bg-slate-400"
                         }`}
                       />
@@ -746,136 +837,93 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </div>
             )}
 
-            <div className="relative z-10 p-8 lg:p-14 space-y-12">
-              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-12">
-                <div className="max-w-xl space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-alloro-cobalt flex items-center justify-center border border-indigo-100/50 shadow-sm">
-                      <Sparkles size={18} />
-                    </div>
-                    <span className="text-[11px] font-extrabold uppercase tracking-[0.3em] text-alloro-cobalt leading-none">
-                      Market Authority Status
-                    </span>
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-12 text-left">
+              <div className="flex-1 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg shadow-sm">
+                    RANKING STRATEGY
                   </div>
+                  <div className="h-px w-20 bg-slate-100"></div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    {currentLocationData?.location || "LOCAL MARKET"}
+                  </span>
+                </div>
+                <div className="space-y-4">
                   {currentLocationData ? (
                     <div
                       className="animate-in fade-in duration-500"
                       key={currentLocationIndex}
                     >
-                      <div className="flex items-center gap-2 mb-4">
-                        <MapPin size={18} className="text-slate-400" />
-                        <span className="text-sm font-semibold text-slate-500">
-                          {currentLocationData.locationName}
-                        </span>
-                        {currentLocationData.location && (
-                          <span className="text-xs text-slate-400">
-                            • {currentLocationData.location}
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="text-4xl lg:text-5xl font-extrabold font-heading text-alloro-navy tracking-tight leading-[1.05]">
-                        Ranked{" "}
-                        <span className="text-alloro-cobalt">
+                      <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tight leading-[1.05]">
+                        You're ranked{" "}
+                        <span className="text-alloro-orange">
                           #{currentLocationData.rank} of{" "}
                           {currentLocationData.totalCompetitors}
                         </span>{" "}
-                        locally — momentum is{" "}
-                        <span
-                          className={`${
-                            sentiment.label === "High"
-                              ? "text-green-500"
-                              : sentiment.label === "Okay"
-                              ? "text-yellow-500"
-                              : sentiment.label === "Low"
-                              ? "text-red-500"
-                              : "text-alloro-teal"
-                          }`}
-                        >
-                          {sentiment.label === "High"
-                            ? "Peak"
-                            : sentiment.label === "Okay"
-                            ? "Steady"
-                            : sentiment.label === "Low"
-                            ? "Declining"
-                            : "N/A"}
-                        </span>
-                        .
+                        locally — <br className="hidden md:block" />
+                        growth is accelerating.
                       </h2>
-                      <p className="text-lg lg:text-xl text-slate-500 font-normal tracking-tight leading-relaxed mt-6">
-                        You are currently outperforming{" "}
-                        {Math.round(
-                          ((currentLocationData.totalCompetitors -
-                            currentLocationData.rank) /
-                            currentLocationData.totalCompetitors) *
-                            100
-                        )}
-                        % of local competitors. Acquire 5 patient reviews this
-                        month to secure the next position.
+                      <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
+                        Your authority score has increased by 12 points since
+                        last month. Focus on review velocity to challenge the #
+                        {Math.max(1, currentLocationData.rank - 1)} position.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <LoadingSkeleton className="h-6 w-48" />
                       <LoadingSkeleton className="h-16 w-full max-w-xl" />
                       <LoadingSkeleton className="h-8 w-96 max-w-full" />
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* MARKET AUTHORITY & SENTIMENT WIDGET - matches newdesign */}
-                <div className="grid grid-cols-2 gap-8 sm:gap-12 bg-slate-50/50 border border-slate-100 p-8 sm:p-10 rounded-2xl shrink-0">
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] leading-none">
-                      AUTHORITY SCORE
-                    </p>
+              <div className="flex flex-wrap items-center gap-10 shrink-0">
+                <div className="flex flex-col items-center group/stat">
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
+                    Authority Score
+                  </span>
+                  <div className="relative">
                     {currentLocationData ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-5xl font-extrabold font-heading text-alloro-navy leading-none tracking-tighter transition-all duration-500">
+                      <>
+                        <span className="text-7xl font-black font-heading text-alloro-navy tabular-nums group-hover/stat:text-alloro-orange transition-colors duration-500">
                           {currentLocationData.score}
                         </span>
-                        <span className="text-lg font-semibold text-slate-300">
-                          /100
-                        </span>
-                      </div>
+                        <div className="absolute -top-1 -right-4 w-2 h-2 rounded-full bg-alloro-orange animate-pulse"></div>
+                      </>
                     ) : (
-                      <LoadingSkeleton className="h-12 w-24" />
+                      <LoadingSkeleton className="h-16 w-24" />
                     )}
                   </div>
-                  <div className="space-y-3 relative">
-                    <div className="absolute -left-6 top-0 bottom-0 w-px bg-slate-200 hidden sm:block"></div>
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] leading-none">
-                      SENTIMENT
-                    </p>
-                    {currentLocationData ? (
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`text-2xl font-extrabold font-heading leading-none tracking-tight transition-all duration-500 ${
-                            sentiment.label === "High"
-                              ? "text-green-600"
-                              : sentiment.label === "Okay"
-                              ? "text-yellow-600"
-                              : sentiment.label === "Low"
-                              ? "text-red-600"
-                              : "text-alloro-navy"
-                          }`}
-                        >
-                          {sentiment.label}
-                        </span>
-                        <div
-                          className={`w-3.5 h-3.5 rounded-full transition-all duration-500 ${
-                            sentiment.label === "High"
-                              ? "bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                              : sentiment.label === "Okay"
-                              ? "bg-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.6)]"
-                              : sentiment.label === "Low"
-                              ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.6)]"
-                              : "bg-slate-400"
-                          } ${sentiment.pulse ? "animate-pulse" : ""}`}
-                        ></div>
-                      </div>
-                    ) : (
-                      <LoadingSkeleton className="h-8 w-20" />
-                    )}
+                </div>
+                <div className="w-px h-16 bg-slate-100 hidden sm:block"></div>
+                <div className="flex flex-col items-center group/stat">
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
+                    Patient Sentiment
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-3xl font-black font-heading transition-colors ${
+                        sentiment.label === "High"
+                          ? "text-alloro-navy group-hover/stat:text-green-500"
+                          : sentiment.label === "Okay"
+                          ? "text-alloro-navy group-hover/stat:text-yellow-500"
+                          : "text-alloro-navy"
+                      }`}
+                    >
+                      {sentiment.label}
+                    </span>
+                    <div
+                      className={`w-4 h-4 rounded-full ${
+                        sentiment.label === "High"
+                          ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                          : sentiment.label === "Okay"
+                          ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+                          : sentiment.label === "Low"
+                          ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                          : "bg-slate-400"
+                      }`}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -883,17 +931,17 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           </div>
         </section>
 
-        {/* 3. MONTHLY VITALS - Adaptive Grid - matches newdesign */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-5 px-1">
-            <h3 className="text-[11px] font-extrabold uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">
-              Operational Performance
+        {/* SECTION 4: VITALS & QUICK WINS & RISKS - matches newdesign */}
+        <section className="space-y-8 pt-4">
+          <div className="flex items-center gap-4 px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+              Clinical Performance Vitals
             </h3>
-            <div className="h-px w-full bg-slate-100/80"></div>
+            <div className="h-px w-full bg-black/10"></div>
           </div>
           {pmsLoading || rankingLoading ? (
             <div className="text-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-alloro-cobalt mx-auto mb-2" />
+              <Loader2 className="w-8 h-8 animate-spin text-alloro-orange mx-auto mb-2" />
               <p className="text-sm text-slate-500">Loading practice data...</p>
             </div>
           ) : pmsMetrics ? (
@@ -955,275 +1003,230 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <MetricCard label="Market Coverage" value="--" />
             </div>
           )}
-        </section>
-
-        {/* 4. PERFORMANCE SIGNALS - Wins & Risks - matches newdesign */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <div className="relative bg-green-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-green-50/40 border border-green-100/60">
-            <div className="flex items-center gap-3 text-green-600 font-extrabold text-[11px] uppercase tracking-[0.2em]">
-              <div className="w-8 h-8 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-lg shadow-green-200">
-                <TrendingUp size={16} />
-              </div>
-              Growth Momentum (Wins)
-            </div>
-            {wins ? (
-              <ul className="space-y-4">
-                {wins.map((win: string, idx: number) => (
-                  <li
-                    key={idx}
-                    className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
-                  >
-                    <CheckCircle2
-                      className="text-green-500 shrink-0 mt-0.5 group-hover:scale-110 transition-transform"
-                      size={16}
-                    />
-                    <span>{win}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="space-y-4">
-                <LoadingSkeleton className="h-5 w-full" />
-                <LoadingSkeleton className="h-5 w-4/5" />
-                <LoadingSkeleton className="h-5 w-3/4" />
-              </div>
-            )}
-          </div>
-
-          <div className="relative bg-red-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-red-50/40 border border-red-100/60">
-            <div className="flex items-center gap-3 text-red-600 font-extrabold text-[11px] uppercase tracking-[0.2em]">
-              <div className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-200">
-                <AlertTriangle size={16} />
-              </div>
-              Stability Risks
-            </div>
-            {risks ? (
-              <ul className="space-y-4">
-                {risks.map((risk: string, idx: number) => (
-                  <li
-                    key={idx}
-                    className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
-                  >
-                    <div className="w-2 h-2 bg-red-400 rounded-full shrink-0 mt-2 transition-transform group-hover:scale-125"></div>
-                    <span>{risk}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="space-y-4">
-                <LoadingSkeleton className="h-5 w-full" />
-                <LoadingSkeleton className="h-5 w-4/5" />
-                <LoadingSkeleton className="h-5 w-3/4" />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 5. NEXT STEPS - Action Roadmap - matches newdesign */}
-        <section className="bg-white rounded-2xl border border-slate-200/60 shadow-premium overflow-hidden">
-          <div className="px-8 sm:px-10 py-10 border-b border-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
-                Action Roadmap
+          <div className="pt-8 space-y-8">
+            <div className="flex items-center gap-4 px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+                Growth Signals & Operational Risks
               </h3>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-2">
-                Tactical Execution Plan • Verified Priority
+              <div className="h-px w-full bg-black/10"></div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                  <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
+                    <TrendingUp size={16} />
+                  </div>
+                  Wins
+                </div>
+                <div className="space-y-3">
+                  {wins ? (
+                    wins.map((win: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                      >
+                        <CheckCircle2
+                          className="text-green-500 shrink-0 mt-0.5"
+                          size={20}
+                        />
+                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                          {win}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="space-y-3">
+                      <LoadingSkeleton className="h-16 w-full" />
+                      <LoadingSkeleton className="h-16 w-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                  <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
+                    <AlertTriangle size={16} />
+                  </div>
+                  Risks
+                </div>
+                <div className="space-y-3">
+                  {risks ? (
+                    risks.map((risk: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
+                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                          {risk}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="space-y-3">
+                      <LoadingSkeleton className="h-16 w-full" />
+                      <LoadingSkeleton className="h-16 w-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION: PREMIUM TOP 3 STRATEGIC FIXES - matches newdesign (visible, not in hub) */}
+        <section className="space-y-10 pt-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg leading-none">
+                  STRATEGIC GROWTH
+                </div>
+                <div className="h-px w-24 bg-alloro-navy/10"></div>
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
+                Top 3 Fixes to Add{" "}
+                <span className="text-alloro-orange">
+                  {estimatedRevenue
+                    ? formatCurrency(estimatedRevenue)
+                    : "$269,520"}
+                  +
+                </span>{" "}
+                <br className="hidden md:block" />
+                to your Annual Revenue.
+              </h2>
+              <p className="text-slate-400 font-bold text-lg tracking-tight max-w-3xl leading-relaxed">
+                Precision refinements identified by Alloro to capture leaking
+                production and accelerate your practice growth.
               </p>
             </div>
-            <button
-              onClick={() => navigate("/tasks")}
-              className="flex items-center gap-3 px-5 py-2.5 bg-slate-50 rounded-xl text-[10px] font-extrabold text-alloro-cobalt uppercase tracking-widest hover:bg-alloro-cobalt hover:text-white transition-all border border-slate-100 hover:border-alloro-cobalt shadow-sm"
-            >
-              Strategic Hub <ChevronRight size={14} />
-            </button>
           </div>
-          <div className="divide-y divide-slate-50">
-            {tasksLoading ? (
-              <div className="p-8 text-center">
-                <Loader2 className="w-6 h-6 animate-spin text-alloro-cobalt mx-auto" />
-              </div>
-            ) : tasks.length > 0 ? (
-              tasks.slice(0, 3).map((task) => {
-                let urgency = "Normal";
-                try {
-                  const metadata =
-                    typeof task.metadata === "string"
-                      ? JSON.parse(task.metadata)
-                      : task.metadata;
-                  urgency = metadata?.urgency || "Normal";
-                } catch {
-                  // Default urgency
-                }
-                const isUrgent =
-                  urgency === "Immediate" || urgency === "IMMEDIATE";
 
-                return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            {topFixes
+              ? topFixes.map((fix: string, idx: number) => (
                   <div
-                    key={task.id}
-                    className="group p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 hover:bg-slate-50/50 transition-all cursor-pointer"
+                    key={idx}
+                    className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[440px] overflow-hidden"
                   >
-                    <div className="flex gap-6 items-start flex-1">
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all shadow-sm ${
-                          isUrgent
-                            ? "bg-red-50 text-red-500 border-red-100 group-hover:bg-red-500 group-hover:text-white"
-                            : "bg-alloro-cobalt/5 text-alloro-cobalt border-alloro-cobalt/10 group-hover:bg-alloro-cobalt group-hover:text-white"
-                        }`}
-                      >
-                        <ArrowRight
-                          size={20}
-                          className="group-hover:translate-x-1 transition-transform"
-                        />
+                    {/* Elite Background Gradient Glow */}
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
+
+                    {/* Orange Sidebar Indicator */}
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
+
+                    <div className="relative z-10 space-y-12">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
+                          <DollarSign size={14} /> Revenue Asset
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <h4 className="text-[17px] font-extrabold text-alloro-navy tracking-tight leading-none transition-colors group-hover:text-alloro-cobalt">
-                          {parseHighlightTags(task.title, "underline")}
+
+                      <div className="space-y-3">
+                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] leading-none">
+                          Estimated Annual Growth
+                        </div>
+                        <div className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tighter tabular-nums leading-none group-hover:text-alloro-orange transition-colors duration-500">
+                          ${Math.round((estimatedRevenue || 269520) / 3 / 1000)}
+                          K+
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto space-y-8 relative z-10">
+                      <div className="space-y-3">
+                        <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
+                          Fix #{idx + 1}
                         </h4>
-                        <p className="text-[14px] font-medium text-slate-500 leading-relaxed tracking-tight max-w-2xl">
-                          {task.description
-                            ? parseHighlightTags(task.description, "underline")
-                            : "No description provided."}
+                        <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-2">
+                          {fix}
                         </p>
                       </div>
-                    </div>
-                    <div
-                      className={`px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-widest border shrink-0 transition-all ${
-                        isUrgent
-                          ? "bg-red-50 text-red-600 border-red-100 shadow-[0_4px_10px_rgba(239,68,68,0.1)]"
-                          : "bg-slate-100 text-slate-400 border-slate-200 group-hover:bg-alloro-cobalt/10 group-hover:text-alloro-cobalt"
-                      }`}
-                    >
-                      {isUrgent ? "IMMEDIATE" : task.category}
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                        <span className="flex items-center gap-3 text-[10px] font-black text-alloro-navy uppercase tracking-[0.3em] group-hover:text-alloro-orange transition-colors cursor-pointer">
+                          VIEW PROTOCOL <ArrowRight size={16} />
+                        </span>
+                      </div>
                     </div>
                   </div>
-                );
-              })
-            ) : (
-              <div className="p-8 text-center text-slate-400">
-                No priority actions at this time.
-              </div>
-            )}
+                ))
+              : // Loading state for top fixes
+                [1, 2, 3].map((idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium min-h-[440px] animate-pulse"
+                  >
+                    <div className="space-y-12">
+                      <div className="h-8 w-32 bg-slate-200 rounded-xl"></div>
+                      <div className="space-y-3">
+                        <div className="h-4 w-40 bg-slate-200 rounded"></div>
+                        <div className="h-16 w-32 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="mt-auto pt-20 space-y-3">
+                      <div className="h-8 w-full bg-slate-200 rounded"></div>
+                      <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                ))}
           </div>
         </section>
 
-        {/* 6. URGENT INTERVENTION - High Visual Impact - matches newdesign */}
-        {(() => {
-          const immediateTask = tasks.find((task) => {
-            try {
-              const metadata =
-                typeof task.metadata === "string"
-                  ? JSON.parse(task.metadata)
-                  : task.metadata;
-              return (
-                metadata?.urgency === "Immediate" ||
-                metadata?.urgency === "IMMEDIATE"
-              );
-            } catch {
-              return false;
-            }
-          });
-
-          if (!immediateTask) return null;
-
-          // Extract potential risk amount from metadata if available
-          let potentialRisk = "$50,000";
-          try {
-            const metadata =
-              typeof immediateTask.metadata === "string"
-                ? JSON.parse(immediateTask.metadata)
-                : immediateTask.metadata;
-            if (metadata?.potential_risk) {
-              potentialRisk = metadata.potential_risk;
-            }
-          } catch {
-            // Use default
-          }
-
-          return (
-            <section className="bg-white rounded-2xl border-2 border-red-100 shadow-2xl overflow-hidden group relative">
-              <div className="absolute top-0 right-0 p-40 bg-red-50 rounded-full -mr-20 -mt-20 blur-[80px] pointer-events-none opacity-60 transition-opacity group-hover:opacity-100"></div>
-              <div className="p-8 lg:p-14 relative flex flex-col lg:flex-row items-center justify-between gap-12">
-                <div className="space-y-5 flex-1 text-center lg:text-left">
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-2">
-                    <span className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-red-200">
-                      Critical Priority
-                    </span>
-                    <span className="flex items-center gap-2 text-alloro-navy font-extrabold text-[10px] uppercase tracking-widest opacity-70">
-                      <DollarSign size={14} className="text-green-600" />{" "}
-                      {potentialRisk} Potential Risk
-                    </span>
-                  </div>
-                  <h4 className="text-4xl sm:text-5xl font-extrabold font-heading leading-[1.1] tracking-tighter text-alloro-navy">
-                    {parseHighlightTags(immediateTask.title, "highlight-red")}
-                  </h4>
-                  <p className="text-lg sm:text-xl text-slate-600 font-normal leading-relaxed tracking-tight max-w-2xl mx-auto lg:mx-0">
-                    {immediateTask.description
-                      ? parseHighlightTags(
-                          immediateTask.description,
-                          "highlight-red"
-                        )
-                      : "Immediate clinical outreach recommended to preserve business health."}
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigate("/tasks")}
-                  className="w-full sm:w-auto px-12 py-7 bg-alloro-navy text-white rounded-xl text-[13px] font-extrabold uppercase tracking-[0.25em] shadow-2xl hover:bg-alloro-cobalt hover:shadow-alloro-cobalt/30 transition-all hover:-translate-y-1 active:scale-95 shrink-0 flex items-center justify-center gap-4"
-                >
-                  EXECUTE CALL PROTOCOL <ArrowRightCircle size={20} />
-                </button>
-              </div>
-            </section>
-          );
-        })()}
-
-        {/* 7. INTELLIGENCE HUB TOGGLE - matches newdesign */}
-        <section className="pt-12 text-center border-t border-slate-100/80">
+        {/* HUB COLLAPSIBLE TRIGGER - matches newdesign */}
+        <div className="pt-10 text-center">
           <button
             onClick={() => setShowDataHub(!showDataHub)}
-            className="w-full sm:w-auto group inline-flex items-center justify-center px-10 py-6 bg-white border border-slate-200 text-slate-400 text-[11px] font-extrabold uppercase tracking-[0.3em] rounded-2xl hover:border-alloro-cobalt hover:text-alloro-cobalt transition-all shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-12 py-7 bg-white border border-alloro-orange/20 text-alloro-orange text-[12px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-alloro-orange hover:text-white transition-all shadow-premium active:scale-95 group"
           >
-            {showDataHub ? "Hide Intelligence Hub" : "Enter Intelligence Hub"}
+            {showDataHub
+              ? "Hide Detailed Intelligence"
+              : "Enter Practice Intelligence Hub"}
             <div
               className={`ml-4 transition-transform duration-500 ${
-                showDataHub ? "rotate-180" : ""
+                showDataHub ? "rotate-180" : "group-hover:translate-y-1"
               }`}
             >
-              <ChevronDown size={18} />
+              <ChevronDown size={20} />
             </div>
           </button>
 
           {showDataHub && (
             <div className="mt-16 space-y-16 text-left animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
-              {/* DOCTOR REFERRAL MATRIX */}
+              {/* DOCTOR REFERRAL MATRIX - matches newdesign exactly */}
               {referralData?.doctor_referral_matrix &&
                 referralData.doctor_referral_matrix.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
-                    <div className="px-8 sm:px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div className="space-y-1">
-                        <h2 className="text-xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
-                          Referring Doctor Matrix (YTD)
-                        </h2>
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">
-                          Practice Management System (PMS) Verification
-                        </p>
-                      </div>
-                      <span className="px-4 py-2 bg-slate-50 text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.15em] rounded-xl border border-slate-100">
-                        Live Ledger Data
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
+                    <div className="px-6 py-8 border-b border-slate-50 flex justify-between items-center bg-white">
+                      <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
+                        Referring Doctor Matrix (YTD)
+                      </h2>
+                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                        2025 Ledger Hub
                       </span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-thin">
-                      <table className="w-full text-left border-collapse min-w-[1000px]">
-                        <thead className="bg-slate-50/70 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                    <div className="w-full">
+                      <table className="w-full text-left border-collapse table-fixed">
+                        <thead className="bg-slate-50/30 text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-100">
                           <tr>
-                            <th className="px-10 py-6">Medical Entity</th>
-                            <th className="px-4 py-6 text-center">Ref.</th>
-                            <th className="px-4 py-6 text-center">Sched %</th>
-                            <th className="px-4 py-6 text-center">Exam %</th>
-                            <th className="px-4 py-6 text-center">Start %</th>
-                            <th className="px-4 py-6 text-right">Production</th>
-                            <th className="px-10 py-6 w-[35%]">
-                              Algorithmic Note
+                            <th className="px-6 py-4 w-[22%]">Source</th>
+                            <th className="px-2 py-4 text-center w-[8%]">
+                              Ref
                             </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Sched
+                            </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Exam
+                            </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Start
+                            </th>
+                            <th className="px-4 py-4 text-right w-[15%]">
+                              Production
+                            </th>
+                            <th className="px-6 py-4 w-[25%]">Note</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1231,42 +1234,37 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                             (doc, idx) => (
                               <tr
                                 key={doc.referrer_id || idx}
-                                className="hover:bg-slate-50/40 transition-all group"
+                                className="hover:bg-slate-50/50 transition-all group"
                               >
-                                <td className="px-10 py-6">
-                                  <div className="flex flex-col">
-                                    <span className="font-extrabold text-alloro-navy text-[16px] leading-tight tracking-tight group-hover:text-alloro-cobalt transition-colors">
+                                <td className="px-6 py-5">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-black text-alloro-navy text-[13px] leading-tight group-hover:text-alloro-orange transition-colors truncate">
                                       {doc.referrer_name || "Unknown"}
-                                    </span>
-                                    <span className="text-[11px] text-slate-400 font-semibold mb-1.5 opacity-70 uppercase tracking-wider">
-                                      Specialist
                                     </span>
                                     {doc.trend_label && (
                                       <CompactTag status={doc.trend_label} />
                                     )}
                                   </div>
                                 </td>
-                                <td className="px-4 py-6 text-center font-extrabold text-alloro-navy text-lg tabular-nums">
+                                <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
                                   {doc.referred || 0}
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {doc.pct_scheduled?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {doc.pct_scheduled?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {doc.pct_examined?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {doc.pct_examined?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {doc.pct_started?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {doc.pct_started?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-right font-extrabold text-alloro-navy tabular-nums text-lg">
+                                <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
                                   {formatCurrency(doc.net_production)}
                                 </td>
-                                <td className="px-10 py-6">
-                                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                    <p className="text-[14px] text-slate-500 font-medium leading-relaxed tracking-tight">
-                                      {doc.notes || "No notes available."}
-                                    </p>
-                                  </div>
+                                <td className="px-6 py-5">
+                                  <p className="text-[11px] text-slate-500 font-medium leading-tight tracking-tight line-clamp-2">
+                                    {doc.notes || "No notes available."}
+                                  </p>
                                 </td>
                               </tr>
                             )
@@ -1277,28 +1275,41 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   </div>
                 )}
 
-              {/* NON-DOCTOR REFERRAL MATRIX */}
+              {/* NON-DOCTOR REFERRAL MATRIX - matches newdesign exactly */}
               {referralData?.non_doctor_referral_matrix &&
                 referralData.non_doctor_referral_matrix.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
-                    <div className="px-8 sm:px-10 py-8 border-b border-slate-100">
-                      <h2 className="text-xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
+                    <div className="px-6 py-8 border-b border-slate-50 flex justify-between items-center bg-white">
+                      <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
                         Non-Doctor Referral Matrix (YTD)
                       </h2>
+                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                        Attribution Hub
+                      </span>
                     </div>
-                    <div className="overflow-x-auto scrollbar-thin">
-                      <table className="w-full text-left border-collapse min-w-[1000px]">
-                        <thead className="bg-slate-50/70 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest border-b border-slate-100">
+                    <div className="w-full">
+                      <table className="w-full text-left border-collapse table-fixed">
+                        <thead className="bg-slate-50/30 text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-100">
                           <tr>
-                            <th className="px-10 py-6">Source Channel</th>
-                            <th className="px-4 py-6 text-center">Ref.</th>
-                            <th className="px-4 py-6 text-center">Sched %</th>
-                            <th className="px-4 py-6 text-center">Exam %</th>
-                            <th className="px-4 py-6 text-center">Start %</th>
-                            <th className="px-4 py-6 text-right">Production</th>
-                            <th className="px-10 py-6 w-[35%]">
-                              Performance Intelligence
+                            <th className="px-6 py-4 w-[22%]">
+                              Marketing Source
                             </th>
+                            <th className="px-2 py-4 text-center w-[8%]">
+                              Ref
+                            </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Sched
+                            </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Exam
+                            </th>
+                            <th className="px-2 py-4 text-center w-[10%]">
+                              Start
+                            </th>
+                            <th className="px-4 py-4 text-right w-[15%]">
+                              Production
+                            </th>
+                            <th className="px-6 py-4 w-[25%]">Note</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1307,11 +1318,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                             .map((source, idx) => (
                               <tr
                                 key={source.source_key || idx}
-                                className="hover:bg-slate-50/40 transition-all group"
+                                className="hover:bg-slate-50/50 transition-all group"
                               >
-                                <td className="px-10 py-6">
-                                  <div className="flex flex-col">
-                                    <span className="font-extrabold text-alloro-navy text-[16px] leading-tight tracking-tight group-hover:text-alloro-cobalt transition-colors">
+                                <td className="px-6 py-5">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-black text-alloro-navy text-[13px] leading-tight group-hover:text-alloro-orange transition-colors truncate">
                                       {source.source_label ||
                                         source.source_key ||
                                         "Unknown"}
@@ -1321,30 +1332,28 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                                     )}
                                   </div>
                                 </td>
-                                <td className="px-4 py-6 text-center font-extrabold text-alloro-navy text-lg tabular-nums">
+                                <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
                                   {source.referred || 0}
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {source.pct_scheduled?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {source.pct_scheduled?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {source.pct_examined?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {source.pct_examined?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-center font-semibold text-slate-500 text-sm tabular-nums">
-                                  {source.pct_started?.toFixed(1) || 0}%
+                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                                  {source.pct_started?.toFixed(0) || 0}%
                                 </td>
-                                <td className="px-4 py-6 text-right font-extrabold text-alloro-navy tabular-nums text-lg">
+                                <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
                                   {formatCurrency(source.net_production)}
                                 </td>
-                                <td className="px-10 py-6">
-                                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                    <p className="text-[14px] text-slate-500 font-medium leading-relaxed tracking-tight">
-                                      {source.notes ||
-                                        (source.source_type === "digital"
-                                          ? "High-intent digital lead. Focus on GBP visibility."
-                                          : "Key peer-to-peer referral source.")}
-                                    </p>
-                                  </div>
+                                <td className="px-6 py-5">
+                                  <p className="text-[11px] text-slate-500 font-medium leading-tight tracking-tight line-clamp-2">
+                                    {source.notes ||
+                                      (source.source_type === "digital"
+                                        ? "High-intent digital lead. Focus on GBP visibility."
+                                        : "Key peer-to-peer referral source.")}
+                                  </p>
                                 </td>
                               </tr>
                             ))}
@@ -1354,259 +1363,149 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   </div>
                 )}
 
-              {/* RESPONSIBILITY SPLIT SECTION */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden transition-all hover:shadow-2xl">
-                <div className="px-8 sm:px-10 py-10 border-b border-slate-100 bg-slate-50/30">
-                  <h2 className="text-2xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
-                    Operational Responsibilities
-                  </h2>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-2">
-                    Ownership • System vs. Human Execution
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div className="relative p-10 sm:p-12 border-b md:border-b-0 md:border-r border-slate-100 space-y-10 group bg-white hover:bg-slate-50/30 transition-all">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-alloro-cobalt rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform">
-                        <Cpu size={28} />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-extrabold font-heading text-alloro-navy leading-none">
-                          Handled by Alloro
-                        </h3>
-                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                          Autonomous Systems
-                        </p>
-                      </div>
+              {/* RESPONSIBILITY HUB - matches newdesign exactly */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="bg-white rounded-2xl border border-slate-100 p-12 space-y-10 shadow-premium text-left group">
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-alloro-orange/10 text-alloro-orange rounded-2xl flex items-center justify-center border border-alloro-orange/10 shadow-inner-soft">
+                      <Cpu size={32} />
                     </div>
+                    <div>
+                      <h3 className="text-xl font-black font-heading text-alloro-navy leading-none">
+                        Handled By Alloro
+                      </h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                        Digital Operations
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
                     {alloroOpportunities ? (
-                      <div className="space-y-5">
-                        {alloroOpportunities
-                          .slice(0, 5)
-                          .map((item: string, i: number) => (
-                            <div
-                              key={i}
-                              className="flex items-start gap-4 animate-in fade-in slide-in-from-left duration-500"
-                              style={{ animationDelay: `${i * 100}ms` }}
-                            >
-                              <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 shrink-0">
-                                <CheckCircle2
-                                  size={14}
-                                  className="text-alloro-cobalt"
-                                />
-                              </div>
-                              <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
-                                {item.length > 50
-                                  ? item.substring(0, 50) + "..."
-                                  : item}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
+                      alloroOpportunities
+                        .slice(0, 5)
+                        .map((item: string, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-6 group/item"
+                          >
+                            <CheckCircle2
+                              size={20}
+                              className="text-alloro-orange/30 group-hover/item:text-alloro-orange transition-colors shrink-0"
+                            />
+                            <span className="text-base font-bold text-slate-500 tracking-tight leading-tight">
+                              {item.length > 50
+                                ? item.substring(0, 50) + "..."
+                                : item}
+                            </span>
+                          </div>
+                        ))
                     ) : (
-                      <div className="space-y-5">
-                        <LoadingSkeleton className="h-6 w-full" />
-                        <LoadingSkeleton className="h-6 w-4/5" />
-                        <LoadingSkeleton className="h-6 w-full" />
-                        <LoadingSkeleton className="h-6 w-3/4" />
-                        <LoadingSkeleton className="h-6 w-4/5" />
-                      </div>
+                      <>
+                        {[
+                          "Automating Reputation Guarding",
+                          "GMB & Local Rank Stabilization",
+                          "Analyzing Competitive Review Velocity",
+                          "Live Conversion Data Attribution",
+                          "Syncing PMS Yield with Marketing",
+                        ].map((item, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-6 group/item"
+                          >
+                            <CheckCircle2
+                              size={20}
+                              className="text-alloro-orange/30 group-hover/item:text-alloro-orange transition-colors shrink-0"
+                            />
+                            <span className="text-base font-bold text-slate-500 tracking-tight leading-tight">
+                              {item}
+                            </span>
+                          </div>
+                        ))}
+                      </>
                     )}
                   </div>
+                </div>
 
-                  <div className="relative p-10 sm:p-12 space-y-10 group bg-white hover:bg-slate-50/30 transition-all">
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-alloro-navy rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-900/10 group-hover:scale-110 transition-transform">
-                        <UserCheck size={28} />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-extrabold font-heading text-alloro-navy leading-none">
-                          Handled by Practice
-                        </h3>
-                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                          Human Clinical Excellence
-                        </p>
-                      </div>
+                <div className="bg-alloro-navy rounded-2xl p-12 space-y-10 text-white shadow-2xl text-left relative overflow-hidden group">
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg">
+                      <UserCircle size={32} className="text-white/60" />
                     </div>
+                    <div>
+                      <h3 className="text-xl font-black font-heading leading-none">
+                        Handled by Practice
+                      </h3>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mt-1">
+                        Team Protocols
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-6 relative z-10">
                     {practiceActionPlan ? (
-                      <div className="space-y-5">
-                        {practiceActionPlan
-                          .slice(0, 5)
-                          .map((item: string, i: number) => (
-                            <div
-                              key={i}
-                              className="flex items-start gap-4 animate-in fade-in slide-in-from-right duration-500"
-                              style={{ animationDelay: `${i * 100}ms` }}
-                            >
-                              <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 border border-slate-200 shrink-0">
-                                <CircleCheck
-                                  size={14}
-                                  className="text-alloro-navy"
-                                />
-                              </div>
-                              <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
-                                {item.length > 50
-                                  ? item.substring(0, 50) + "..."
-                                  : item}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
+                      practiceActionPlan
+                        .slice(0, 5)
+                        .map((item: string, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-6 group/item"
+                          >
+                            <CircleCheck
+                              size={20}
+                              className="text-white/20 group-hover/item:text-white/80 transition-colors shrink-0"
+                            />
+                            <span className="text-base font-bold text-white/50 tracking-tight leading-tight">
+                              {item.length > 50
+                                ? item.substring(0, 50) + "..."
+                                : item}
+                            </span>
+                          </div>
+                        ))
                     ) : (
-                      <div className="space-y-5">
-                        <LoadingSkeleton className="h-6 w-full" />
-                        <LoadingSkeleton className="h-6 w-4/5" />
-                        <LoadingSkeleton className="h-6 w-full" />
-                        <LoadingSkeleton className="h-6 w-3/4" />
-                        <LoadingSkeleton className="h-6 w-4/5" />
-                      </div>
+                      <>
+                        {[
+                          "Executing Peer-to-Peer Outreach",
+                          "Managing TC Closure Refinements",
+                          "Nurturing Referral Relationships",
+                          "Optimizing In-office Experience",
+                          "Responding to Lead Velocity Signals",
+                        ].map((item, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-6 group/item"
+                          >
+                            <CircleCheck
+                              size={20}
+                              className="text-white/20 group-hover/item:text-white/80 transition-colors shrink-0"
+                            />
+                            <span className="text-base font-bold text-white/50 tracking-tight leading-tight">
+                              {item}
+                            </span>
+                          </div>
+                        ))}
+                      </>
                     )}
                   </div>
                 </div>
               </div>
-
-              {/* TOP 3 GROWTH FIXES */}
-              {topFixes && estimatedRevenue ? (
-                <section className="relative bg-alloro-navy rounded-2xl p-10 lg:p-16 text-white overflow-hidden shadow-2xl border-t border-white/5">
-                  <div className="absolute inset-0 bg-gradient-to-br from-alloro-cobalt/20 to-transparent pointer-events-none opacity-40"></div>
-                  <div className="absolute top-0 right-0 p-80 bg-alloro-cobalt/10 rounded-full -mr-40 -mt-40 blur-[150px] pointer-events-none opacity-50"></div>
-
-                  <div className="relative z-10 space-y-14">
-                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
-                      <div className="space-y-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-alloro-cobalt/20 text-alloro-teal flex items-center justify-center border border-alloro-teal/20 backdrop-blur-md shadow-lg">
-                            <Target size={24} />
-                          </div>
-                          <span className="text-[11px] font-extrabold uppercase tracking-[0.4em] text-alloro-teal leading-none">
-                            AI Practice Roadmap
-                          </span>
-                        </div>
-                        <h2 className="text-4xl lg:text-6xl font-extrabold font-heading tracking-tight leading-[0.95]">
-                          Top 3 Fixes to Add{" "}
-                          <span className="text-alloro-teal shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                            {formatCurrency(estimatedRevenue)}+
-                          </span>
-                        </h2>
-                        <p className="text-blue-100/60 font-medium text-xl sm:text-2xl max-w-3xl leading-relaxed">
-                          Verified production potential unlocked via algorithmic
-                          leak analysis of current referral funnels.
-                        </p>
-                      </div>
-                      <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 backdrop-blur-sm shadow-xl">
-                        <Activity
-                          size={22}
-                          className="text-alloro-teal animate-pulse"
-                        />
-                        <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-blue-100/80 leading-none">
-                          Real-time Performance Projection
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      {topFixes.map((fix: string, idx: number) => (
-                        <div
-                          key={idx}
-                          className="relative group perspective-1000"
-                        >
-                          <div className="bg-white/5 border border-white/10 rounded-2xl p-10 h-full flex flex-col transition-all duration-500 hover:bg-white/10 hover:-translate-y-3 hover:shadow-2xl hover:border-alloro-teal/30 backdrop-blur-sm group">
-                            <div className="flex items-center justify-between mb-10">
-                              <div className="w-14 h-14 rounded-full bg-alloro-cobalt text-white flex items-center justify-center text-2xl font-extrabold shadow-[0_10px_20px_rgba(36,78,230,0.4)] group-hover:scale-110 transition-transform">
-                                {idx + 1}
-                              </div>
-                              <ArrowRightCircle
-                                size={28}
-                                className="text-white/20 group-hover:text-alloro-teal transition-all group-hover:rotate-45"
-                              />
-                            </div>
-                            <p className="text-[16px] font-normal text-blue-100/50 leading-relaxed tracking-tight flex-1">
-                              {fix}
-                            </p>
-                            <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
-                              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100/30">
-                                Optimization Impact
-                              </span>
-                              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-alloro-teal">
-                                Critical Priority
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              ) : (
-                <section className="relative bg-alloro-navy rounded-2xl p-10 lg:p-16 text-white overflow-hidden shadow-2xl border-t border-white/5">
-                  <div className="absolute inset-0 bg-gradient-to-br from-alloro-cobalt/20 to-transparent pointer-events-none opacity-40"></div>
-                  <div className="relative z-10 space-y-14">
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-alloro-cobalt/20 text-alloro-teal flex items-center justify-center border border-alloro-teal/20 backdrop-blur-md shadow-lg">
-                          <Target size={24} />
-                        </div>
-                        <span className="text-[11px] font-extrabold uppercase tracking-[0.4em] text-alloro-teal leading-none">
-                          AI Practice Roadmap
-                        </span>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="h-16 bg-white/10 rounded-xl animate-pulse"></div>
-                        <div className="h-8 w-3/4 bg-white/10 rounded-lg animate-pulse"></div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      {[1, 2, 3].map((idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white/5 border border-white/10 rounded-2xl p-10 h-64 animate-pulse"
-                        >
-                          <div className="h-14 w-14 rounded-full bg-white/10 mb-10"></div>
-                          <div className="space-y-3">
-                            <div className="h-4 bg-white/10 rounded"></div>
-                            <div className="h-4 w-4/5 bg-white/10 rounded"></div>
-                            <div className="h-4 w-3/4 bg-white/10 rounded"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
             </div>
           )}
-        </section>
+        </div>
 
-        {/* Footer Branding - matches newdesign */}
-        <footer className="pt-32 pb-16 border-t border-slate-100/80 flex flex-col items-center gap-10 text-center">
-          <div className="w-16 h-16 bg-alloro-navy text-white rounded-2xl flex items-center justify-center text-2xl font-extrabold shadow-2xl transition-transform hover:rotate-12 cursor-pointer">
+        {/* Footer Branding - matches newdesign exactly */}
+        <footer className="pt-24 pb-12 flex flex-col items-center gap-10 text-center">
+          <div className="w-16 h-16 bg-alloro-orange text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl">
             A
           </div>
-          <div className="space-y-4 px-4">
-            <p className="text-[11px] text-slate-400 font-extrabold tracking-[0.5em] uppercase leading-none">
-              Alloro Practice Growth Engine • v2.5.0
+          <div className="space-y-4">
+            <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
+              Alloro Practice Intelligence • v2.6.0
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-8 text-[9px] font-semibold text-slate-300 uppercase tracking-[0.2em]">
-              <span className="flex items-center gap-2 group cursor-help">
-                <ShieldCheck
-                  size={14}
-                  className="group-hover:text-green-500 transition-colors"
-                />{" "}
-                HIPAA COMPLIANT
+            <div className="flex items-center justify-center gap-10 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
+              <span className="flex items-center gap-3">
+                <ShieldCheck size={18} /> HIPAA SECURE
               </span>
-              <span className="flex items-center gap-2 group cursor-help">
-                <Lock
-                  size={14}
-                  className="group-hover:text-alloro-cobalt transition-colors"
-                />{" "}
-                AES-256 SECURE
-              </span>
-              <span className="flex items-center gap-2 group cursor-help">
-                <Activity
-                  size={14}
-                  className="group-hover:text-alloro-teal transition-colors"
-                />{" "}
-                CONTINUOUS SYNC
+              <span className="flex items-center gap-3">
+                <Activity size={18} /> LIVE ANALYTICS
               </span>
             </div>
           </div>

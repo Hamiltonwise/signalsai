@@ -46,9 +46,9 @@ export function AdminTopBar() {
           <button
             type="button"
             onClick={toggleMenu}
-            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-alloro-navy shadow-sm transition-all hover:border-alloro-cobalt/30 hover:shadow active:scale-95"
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-alloro-navy shadow-sm transition-all hover:border-alloro-orange/30 hover:shadow active:scale-95"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-alloro-cobalt/10 text-alloro-cobalt">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-alloro-orange/10 text-alloro-orange">
               <User className="h-4 w-4" />
             </span>
             <div className="flex flex-col items-start">

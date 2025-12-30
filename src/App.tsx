@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import { Settings } from "./pages/Settings";
 import { Notifications } from "./pages/Notifications";
+import Help from "./pages/Help";
 import { PageWrapper } from "./components/PageWrapper";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GSCProvider } from "./contexts/GSCContext.tsx";
@@ -115,9 +116,7 @@ function App() {
             path="/admin/*"
             element={
               <AppProviders>
-                <PageWrapper>
-                  <Admin />
-                </PageWrapper>
+                <Admin />
               </AppProviders>
             }
           />
@@ -140,6 +139,18 @@ function App() {
                 <AppProviders>
                   <PageWrapper>
                     <Notifications />
+                  </PageWrapper>
+                </AppProviders>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/help"
+            element={
+              <ProtectedRoute>
+                <AppProviders>
+                  <PageWrapper>
+                    <Help />
                   </PageWrapper>
                 </AppProviders>
               </ProtectedRoute>

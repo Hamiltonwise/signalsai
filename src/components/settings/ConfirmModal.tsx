@@ -63,7 +63,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       ? "bg-red-50 text-red-600"
                       : type === "warning"
                       ? "bg-amber-50 text-amber-600"
-                      : "bg-alloro-cobalt/10 text-alloro-cobalt"
+                      : "bg-alloro-orange/10 text-alloro-orange"
                   }`}
                 >
                   <AlertTriangle className="w-6 h-6" />
@@ -91,7 +91,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       ? "bg-red-600 hover:bg-red-700"
                       : type === "warning"
                       ? "bg-amber-600 hover:bg-amber-700"
-                      : "bg-alloro-cobalt hover:bg-blue-700"
+                      : "bg-alloro-orange hover:bg-blue-700"
                   }`}
                 >
                   {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -49,7 +49,7 @@ export function parseHighlightTags(
           result.push(
             <span
               key={index}
-              className="text-alloro-cobalt font-black underline underline-offset-4 decoration-alloro-cobalt/40 decoration-2"
+              className="text-alloro-orange font-black underline underline-offset-4 decoration-alloro-orange/40 decoration-2"
             >
               {part}
             </span>

@@ -434,14 +434,14 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
                 Patient Journey Insights
               </h1>
               <p className="text-slate-400 font-medium text-[11px] uppercase tracking-wider flex items-center gap-2 mt-1">
-                <Activity size={14} className="text-alloro-cobalt" />
+                <Activity size={14} className="text-alloro-orange" />
                 AI-powered practice analytics • {STAGES.length} stages
               </p>
             </div>
 
             <button
               onClick={handleFetchAIReadyData}
-              className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3 bg-alloro-cobalt text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-blue-900/10 active:scale-95 transition-all hover:bg-alloro-navy disabled:opacity-60"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3 bg-alloro-orange text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-blue-900/10 active:scale-95 transition-all hover:bg-alloro-navy disabled:opacity-60"
               disabled={isFetchingAIData}
             >
               {isFetchingAIData ? (
@@ -583,7 +583,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
                 <div
                   className={`w-20 h-20 rounded-3xl flex items-center justify-center bg-white border-2 shadow-sm shrink-0 transition-colors ${
                     activeStage.id === "awareness"
-                      ? "border-indigo-100 text-alloro-cobalt"
+                      ? "border-indigo-100 text-alloro-orange"
                       : "border-slate-100 text-alloro-navy"
                   }`}
                 >
@@ -594,7 +594,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
                     <span
                       className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center text-base font-bold font-heading ${
                         activeStage.id === "awareness"
-                          ? "bg-alloro-cobalt shadow-lg shadow-blue-500/20"
+                          ? "bg-alloro-orange shadow-lg shadow-blue-500/20"
                           : "bg-alloro-navy"
                       }`}
                     >
@@ -641,8 +641,8 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
 
               {/* Insight Box */}
               <div className="bg-alloro-navy rounded-[32px] p-10 flex flex-col sm:flex-row items-center gap-8 border border-white/5 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-48 bg-alloro-cobalt/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
-                <div className="w-16 h-16 rounded-[20px] bg-alloro-cobalt flex items-center justify-center text-white shadow-xl shadow-blue-500/20 shrink-0 relative z-10">
+                <div className="absolute top-0 right-0 p-48 bg-alloro-orange/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+                <div className="w-16 h-16 rounded-[20px] bg-alloro-orange flex items-center justify-center text-white shadow-xl shadow-blue-500/20 shrink-0 relative z-10">
                   <Lightbulb size={32} />
                 </div>
                 <div className="relative z-10">
@@ -668,7 +668,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
               <button
                 onClick={nextStage}
                 disabled={activeIndex === STAGES.length - 1}
-                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-alloro-cobalt hover:text-alloro-navy disabled:opacity-0 transition-all"
+                className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-alloro-orange hover:text-alloro-navy disabled:opacity-0 transition-all"
               >
                 Next Stage <ChevronRight size={16} />
               </button>
@@ -679,7 +679,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
           <div className="relative pt-10 pb-12 max-w-4xl mx-auto">
             <div className="absolute top-[3.75rem] left-0 right-0 h-1.5 bg-slate-100 rounded-full"></div>
             <motion.div
-              className="absolute top-[3.75rem] left-0 h-1.5 bg-alloro-cobalt rounded-full shadow-[0_0_15px_rgba(36,78,230,0.3)]"
+              className="absolute top-[3.75rem] left-0 h-1.5 bg-alloro-orange rounded-full shadow-[0_0_15px_rgba(36,78,230,0.3)]"
               initial={{ width: 0 }}
               animate={{
                 width: `${(activeIndex / (STAGES.length - 1)) * 100}%`,
@@ -702,7 +702,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
                     <div
                       className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 transition-all shadow-sm ${
                         isActive
-                          ? "bg-alloro-cobalt border-white text-white shadow-lg"
+                          ? "bg-alloro-orange border-white text-white shadow-lg"
                           : isPassed
                           ? "bg-alloro-navy border-white text-white"
                           : "bg-white border-slate-100 text-slate-300 group-hover:border-slate-200"

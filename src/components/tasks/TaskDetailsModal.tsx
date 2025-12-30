@@ -32,7 +32,7 @@ export function TaskDetailsModal({
     const styles = {
       pending: "border-amber-200 bg-amber-50 text-amber-700",
       in_progress:
-        "border-alloro-cobalt/20 bg-alloro-cobalt/5 text-alloro-cobalt",
+        "border-alloro-orange/20 bg-alloro-orange/5 text-alloro-orange",
       complete: "border-green-200 bg-green-50 text-green-700",
       archived: "border-slate-200 bg-slate-50 text-slate-600",
     };
@@ -42,7 +42,7 @@ export function TaskDetailsModal({
   const getCategoryBadge = (category: string) => {
     return category === "ALLORO"
       ? "border-purple-200 bg-purple-50 text-purple-700"
-      : "border-alloro-cobalt/20 bg-alloro-cobalt/5 text-alloro-cobalt";
+      : "border-alloro-orange/20 bg-alloro-orange/5 text-alloro-orange";
   };
 
   // Enhanced markdown rendering for description (also handles <hghlt> tags)
@@ -109,7 +109,7 @@ export function TaskDetailsModal({
             href={match[3]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-alloro-cobalt font-medium underline hover:text-blue-700"
+            className="text-alloro-orange font-medium underline hover:text-blue-700"
           >
             {match[2]}
           </a>

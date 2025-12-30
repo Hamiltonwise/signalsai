@@ -299,11 +299,11 @@ export function NotificationPopover({
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
                   className={`px-6 py-5 hover:bg-slate-50/40 transition-all cursor-pointer relative overflow-hidden group ${
-                    !notification.read ? "bg-alloro-cobalt/5" : ""
+                    !notification.read ? "bg-alloro-orange/5" : ""
                   }`}
                 >
                   {/* Hover indicator */}
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-alloro-cobalt opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-alloro-orange opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                   <div className="flex items-start gap-4">
                     <div
@@ -316,7 +316,7 @@ export function NotificationPopover({
                         <h4 className="text-sm font-bold text-alloro-navy font-heading tracking-tight leading-tight">
                           {notification.title}
                           {!notification.read && (
-                            <span className="inline-block w-2 h-2 bg-alloro-cobalt rounded-full animate-pulse ml-2 align-middle"></span>
+                            <span className="inline-block w-2 h-2 bg-alloro-orange rounded-full animate-pulse ml-2 align-middle"></span>
                           )}
                         </h4>
                         {!notification.read && (
@@ -324,7 +324,7 @@ export function NotificationPopover({
                             onClick={(e) =>
                               handleMarkAsRead(notification.id, e)
                             }
-                            className="text-alloro-cobalt hover:text-alloro-navy flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-alloro-cobalt/10 transition-colors"
+                            className="text-alloro-orange hover:text-alloro-navy flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-alloro-orange/10 transition-colors"
                             title="Mark as read"
                           >
                             <Check className="w-4 h-4" />
@@ -376,7 +376,7 @@ export function NotificationPopover({
           <Bell className="h-4 w-4" />
           <span>Notifications</span>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 left-4 bg-alloro-cobalt text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center">
+            <span className="absolute -top-1 left-4 bg-alloro-orange text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

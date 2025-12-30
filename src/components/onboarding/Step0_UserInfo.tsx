@@ -75,7 +75,7 @@ export const Step0UserInfo: React.FC<Step0UserInfoProps> = ({
             placeholder="Enter your first name"
             className={`w-full px-4 py-3 rounded-xl bg-white border ${
               errors.firstName ? "border-red-400" : "border-slate-300"
-            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt transition-all`}
+            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange transition-all`}
           />
           {errors.firstName && (
             <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
@@ -102,7 +102,7 @@ export const Step0UserInfo: React.FC<Step0UserInfoProps> = ({
             placeholder="Enter your last name"
             className={`w-full px-4 py-3 rounded-xl bg-white border ${
               errors.lastName ? "border-red-400" : "border-slate-300"
-            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt transition-all`}
+            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange transition-all`}
           />
           {errors.lastName && (
             <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
@@ -119,7 +119,7 @@ export const Step0UserInfo: React.FC<Step0UserInfoProps> = ({
             w-full px-6 py-3 rounded-xl font-semibold transition-all
             ${
               firstName.trim() && lastName.trim()
-                ? "bg-alloro-cobalt text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20"
+                ? "bg-alloro-orange text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }
           `}

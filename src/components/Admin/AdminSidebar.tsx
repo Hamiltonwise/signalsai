@@ -67,7 +67,7 @@ export function AdminSidebar() {
           indented ? "pl-8 pr-3" : "px-3"
         } ${
           isActive
-            ? "bg-alloro-cobalt text-white shadow-lg shadow-alloro-cobalt/20"
+            ? "bg-alloro-orange text-white shadow-lg shadow-alloro-orange/20"
             : "text-slate-300 hover:bg-white/10 hover:text-white"
         }`}
       >
@@ -83,7 +83,7 @@ export function AdminSidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-72 flex-col bg-alloro-navy">
       {/* Logo/Brand Section */}
       <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10">
-        <div className="p-2 bg-alloro-cobalt rounded-xl">
+        <div className="p-2 bg-alloro-orange rounded-xl">
           <Shield className="w-6 h-6 text-white" />
         </div>
         <div>

@@ -72,7 +72,7 @@ const MetricCard = ({
   <div
     className={`flex flex-col p-5 lg:p-6 rounded-2xl border transition-all ${
       isHighlighted
-        ? "bg-white border-alloro-cobalt/20 shadow-premium"
+        ? "bg-white border-alloro-orange/20 shadow-premium"
         : "bg-white/60 border-slate-100 hover:bg-white"
     }`}
   >
@@ -82,7 +82,7 @@ const MetricCard = ({
     <div className="flex items-center justify-between mb-2">
       <span
         className={`text-2xl font-bold font-heading tracking-tighter leading-none ${
-          isHighlighted ? "text-alloro-cobalt" : "text-alloro-navy"
+          isHighlighted ? "text-alloro-orange" : "text-alloro-navy"
         }`}
       >
         {value}
@@ -110,7 +110,7 @@ const MetricCard = ({
 
 const CompactTag = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
-    Marketing: "text-alloro-cobalt bg-indigo-50 border-indigo-100",
+    Marketing: "text-alloro-orange bg-indigo-50 border-indigo-100",
     Doctor: "text-alloro-navy bg-slate-100 border-slate-200",
     Insurance: "text-green-600 bg-green-50 border-green-100",
   };
@@ -517,7 +517,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           </div>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white border border-slate-200 text-alloro-navy rounded-xl text-[10px] font-bold uppercase tracking-widest hover:border-alloro-cobalt transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white border border-slate-200 text-alloro-navy rounded-xl text-[10px] font-bold uppercase tracking-widest hover:border-alloro-orange transition-all shadow-sm"
           >
             <Download
               size={14}
@@ -560,7 +560,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 rounded-2xl border border-alloro-cobalt/20 bg-alloro-cobalt/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-premium"
+            className="flex flex-col gap-4 rounded-2xl border border-alloro-orange/20 bg-alloro-orange/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-premium"
           >
             <div className="flex-1 space-y-1">
               <div className="font-bold text-alloro-navy text-base">
@@ -582,7 +582,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 type="button"
                 onClick={handleConfirmApproval}
                 disabled={isConfirming || latestJobId == null}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-alloro-navy transition hover:border-alloro-cobalt hover:text-alloro-cobalt disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-alloro-navy transition hover:border-alloro-orange hover:text-alloro-orange disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
               >
                 {isConfirming ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -595,7 +595,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 type="button"
                 onClick={() => setIsEditorOpen(true)}
                 disabled={latestJobId == null || !hasLatestJobRaw}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-cobalt px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-orange px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
               >
                 <Pencil className="h-4 w-4" />
                 Make changes
@@ -698,14 +698,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
               <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
-                  <Calendar size={20} className="text-alloro-cobalt" />
+                  <Calendar size={20} className="text-alloro-orange" />
                   <h2 className="text-xl font-bold font-heading text-alloro-navy tracking-tight">
                     Referral Velocity
                   </h2>
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-alloro-cobalt"></div>
+                    <div className="w-2 h-2 rounded-full bg-alloro-orange"></div>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                       Marketing
                     </span>
@@ -735,7 +735,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     <div className="flex-1 space-y-2.5">
                       <div className="relative h-4 flex items-center gap-4">
                         <motion.div
-                          className="h-full bg-alloro-cobalt rounded-lg shadow-sm"
+                          className="h-full bg-alloro-orange rounded-lg shadow-sm"
                           initial={{ width: 0 }}
                           animate={{
                             width: `${
@@ -850,7 +850,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                               </span>
                               <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-alloro-cobalt"
+                                  className="h-full bg-alloro-orange"
                                   style={{ width: `${source.percentage}%` }}
                                 />
                               </div>
@@ -897,10 +897,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-12">
                 <div className="space-y-6 flex-1 text-center md:text-left">
                   <div className="flex items-center justify-center md:justify-start gap-3">
-                    <div className="w-10 h-10 bg-alloro-cobalt/10 text-alloro-cobalt rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-alloro-orange/10 text-alloro-orange rounded-xl flex items-center justify-center">
                       <Upload size={20} />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-alloro-cobalt">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-alloro-orange">
                       Data Ingestion Hub
                     </span>
                   </div>
@@ -936,8 +936,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   }}
                   className={`w-full md:w-80 h-48 sm:h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group shrink-0 ${
                     inlineIsDragOver
-                      ? "border-alloro-cobalt bg-alloro-cobalt/5"
-                      : "border-slate-200 bg-slate-50 hover:border-alloro-cobalt hover:bg-white"
+                      ? "border-alloro-orange bg-alloro-orange/5"
+                      : "border-slate-200 bg-slate-50 hover:border-alloro-orange hover:bg-white"
                   }`}
                 >
                   <div
@@ -948,10 +948,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     {inlineIsUploading ? (
                       <Loader2
                         size={24}
-                        className="text-alloro-cobalt animate-spin"
+                        className="text-alloro-orange animate-spin"
                       />
                     ) : (
-                      <Upload size={24} className="text-alloro-cobalt" />
+                      <Upload size={24} className="text-alloro-orange" />
                     )}
                   </div>
                   <span className="text-sm font-bold text-alloro-navy">
@@ -1001,10 +1001,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
             {/* Practice Diagnosis Card - Temporarily hidden
               <section className="bg-alloro-navy rounded-2xl p-8 lg:p-10 text-white shadow-xl relative overflow-hidden border border-white/5">
-                <div className="absolute top-0 right-0 p-40 bg-alloro-cobalt/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                <div className="absolute top-0 right-0 p-40 bg-alloro-orange/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
                 <div className="relative z-10 space-y-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-alloro-cobalt rounded-xl flex items-center justify-center shadow-lg border border-white/10">
+                    <div className="w-10 h-10 bg-alloro-orange rounded-xl flex items-center justify-center shadow-lg border border-white/10">
                       <Target size={20} className="text-white" />
                     </div>
                     <h3 className="text-xl font-bold font-heading tracking-tight leading-none">
@@ -1032,7 +1032,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                       }`}
                     />
                   </div>
-                  <button className="w-full md:w-auto py-3.5 px-8 bg-alloro-cobalt rounded-xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg active:scale-95">
+                  <button className="w-full md:w-auto py-3.5 px-8 bg-alloro-orange rounded-xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg active:scale-95">
                     View Strategic Plan
                   </button>
                 </div>

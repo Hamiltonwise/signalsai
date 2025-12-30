@@ -8,9 +8,9 @@ import {
   Bell,
   LogOut,
   ChevronRight,
-  Settings,
   AlertTriangle,
   X,
+  HelpCircle,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchClientTasks } from "../api/tasks";
@@ -38,7 +38,7 @@ interface NavItemProps {
   hasNotification?: boolean;
 }
 
-// NavItem - matches newdesign exactly
+// NavItem Component - MATCHES newdesign exactly
 const NavItem = ({
   icon,
   label,
@@ -49,47 +49,49 @@ const NavItem = ({
 }: NavItemProps) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl cursor-pointer transition-all duration-300 group relative
+    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-300 group relative
     ${
       active
-        ? "bg-alloro-cobalt text-white shadow-[0_10px_20px_-5px_rgba(36,78,230,0.3)]"
-        : "text-slate-400 hover:bg-white/5 hover:text-white"
+        ? "bg-alloro-sidehover text-white shadow-sm border border-white/5"
+        : "text-white/40 hover:text-white hover:bg-alloro-sidehover"
     }`}
   >
     <div className="flex items-center gap-3.5">
       <div
         className={`transition-transform duration-300 ${
           active
-            ? "scale-110"
-            : "group-hover:scale-110 opacity-70 group-hover:opacity-100"
+            ? "scale-110 text-alloro-orange"
+            : "opacity-40 group-hover:opacity-100"
         }`}
       >
         {icon}
       </div>
       <span
-        className={`text-[13px] font-bold tracking-tight ${
-          active ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+        className={`text-[13px] font-semibold tracking-tight ${
+          active ? "text-white" : "group-hover:text-white/80"
         }`}
       >
         {label}
       </span>
       {hasNotification && !active && (
-        <span className="absolute left-2.5 top-2.5 flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-alloro-cobalt opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-alloro-cobalt"></span>
+        <span className="absolute left-2.5 top-2.5 flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-alloro-orange opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-alloro-orange"></span>
         </span>
       )}
     </div>
     <div className="flex items-center gap-2">
       {badge && (
         <span
-          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none shadow-sm transition-colors
-          ${active ? "bg-white/20 text-white" : "bg-red-500 text-white"}`}
+          className={`px-2 py-0.5 rounded-md text-[9px] font-black leading-none
+          ${
+            active ? "bg-alloro-orange text-white" : "bg-white/10 text-white/40"
+          }`}
         >
           {badge}
         </span>
       )}
-      {!badge && active && <ChevronRight size={14} className="opacity-50" />}
+      {!badge && active && <ChevronRight size={14} className="opacity-20" />}
     </div>
   </button>
 );
@@ -176,26 +178,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     window.location.href = "/signin";
   };
 
-  const canSeeSettings = userRole !== "viewer";
   const canSeeNotifications = userRole !== "viewer";
 
   // Main navigation items
   const mainNavItems = [
     {
       label: "Practice Hub",
-      icon: <LayoutDashboard size={20} />,
+      icon: <LayoutDashboard size={18} />,
       path: "/dashboard",
       showDuringOnboarding: true,
     },
     {
-      label: "Revenue Attribution",
-      icon: <Activity size={20} />,
+      label: "Revenue Insights",
+      icon: <Activity size={18} />,
       path: "/pmsStatistics",
       showDuringOnboarding: false,
     },
     {
-      label: "Market Rankings",
-      icon: <Trophy size={20} />,
+      label: "Market Performance",
+      icon: <Trophy size={18} />,
       path: "/rankings",
       showDuringOnboarding: false,
     },
@@ -206,14 +207,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     () => [
       {
         label: "Strategic Tasks",
-        icon: <CheckSquare size={20} />,
+        icon: <CheckSquare size={18} />,
         path: "/tasks",
         showDuringOnboarding: false,
         badge: userTaskCount > 0 ? String(userTaskCount) : undefined,
       },
       {
-        label: "Intelligence Signals",
-        icon: <Bell size={20} />,
+        label: "Signals",
+        icon: <Bell size={18} />,
         path: "/notifications",
         showDuringOnboarding: false,
         hasNotification: unreadNotificationCount > 0,
@@ -247,7 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay - matches newdesign exactly */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[70] lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-alloro-navy/40 backdrop-blur-sm z-[70] lg:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
@@ -310,47 +311,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar - matches newdesign exactly */}
       <aside
         className={`
-          fixed left-0 top-0 h-screen w-72 bg-alloro-navy text-white flex flex-col z-[80] border-r border-slate-800/50 shadow-2xl
+          fixed left-0 top-0 h-screen w-72 bg-alloro-sidebg text-white flex flex-col z-[80] border-r border-white/5 shadow-2xl
           transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Brand Header - matches newdesign exactly */}
-        <div className="p-8 pb-10 flex items-center justify-between">
+        <div className="p-10 pb-12 flex items-center justify-between">
           <div
             className="flex items-center gap-4 group cursor-pointer"
             onClick={() => handleNavigate("/dashboard")}
           >
-            <div className="w-11 h-11 bg-alloro-cobalt rounded-xl flex items-center justify-center text-xl font-black font-heading shadow-[0_0_20px_rgba(36,78,230,0.4)] transition-transform group-hover:scale-110">
-              {onboardingCompleted
-                ? userProfile?.practiceName?.charAt(0)?.toUpperCase() || "A"
-                : "A"}
+            <div className="w-10 h-10 bg-alloro-orange rounded-xl flex items-center justify-center text-xl font-black font-heading text-white shadow-soft-glow transition-transform group-hover:scale-105">
+              A
             </div>
             <div className="flex flex-col">
               <h1 className="font-heading font-black text-xl tracking-tight leading-none">
-                {onboardingCompleted
-                  ? userProfile?.practiceName || "Alloro"
-                  : "Alloro"}
+                Alloro
               </h1>
-              <span className="text-[9px] font-black text-alloro-teal uppercase tracking-[0.25em] mt-1.5 opacity-80">
-                {onboardingCompleted ? "Intelligence Hub" : "Setup in Progress"}
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.25em] mt-1.5 leading-none">
+                Intelligence
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-lg"
+            className="lg:hidden p-2 text-white/40 hover:text-white transition-colors bg-white/5 rounded-lg"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Navigation - matches newdesign exactly */}
-        <nav className="flex-1 overflow-y-auto py-2 px-4 space-y-8 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto px-6 space-y-10 scrollbar-thin">
           {/* Main Operating View */}
           <div className="space-y-1.5">
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 mb-4">
-              Main Operating View
+            <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
+              Operations
             </div>
             {filteredMainNav.map(({ label, icon, path }) => (
               <NavItem
@@ -366,8 +363,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Execution & Alerts */}
           {onboardingCompleted && (
             <div className="space-y-1.5">
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 mb-4">
-                Execution & Alerts
+              <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
+                Execution
               </div>
               {filteredExecutionNav.map(
                 ({ label, icon, path, badge, hasNotification }) =>
@@ -386,62 +383,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Configuration - Settings (PRESERVED from original) */}
-          {canSeeSettings && onboardingCompleted && (
+          {/* Support Section */}
+          {onboardingCompleted && (
             <div className="space-y-1.5">
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 mb-4">
-                Configuration
+              <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
+                Support
               </div>
               <NavItem
-                icon={<Settings size={20} />}
-                label="Settings"
-                active={location.pathname === "/settings"}
-                onClick={() => handleNavigate("/settings")}
+                icon={<HelpCircle size={18} />}
+                label="Help Center"
+                active={location.pathname === "/help"}
+                onClick={() => handleNavigate("/help")}
               />
             </div>
           )}
         </nav>
 
         {/* Footer / Account - matches newdesign exactly */}
-        <div className="p-6 mt-auto">
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-4 transition-all hover:bg-white/[0.08]">
-            {/* Only show practice info after onboarding is complete */}
-            {onboardingCompleted && (
-              <div
-                className="flex items-center gap-3 mb-4 cursor-pointer group"
-                onClick={() => handleNavigate("/settings")}
-              >
-                <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xs font-black border border-white/10 shadow-inner group-hover:border-alloro-cobalt transition-colors">
-                  {userProfile?.practiceName?.substring(0, 2).toUpperCase() ||
-                    userProfile?.email?.charAt(0).toUpperCase() ||
-                    "AP"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-black text-white truncate leading-tight">
-                    {userProfile?.practiceName || "Practice"}
-                  </p>
-                  <p className="text-[10px] text-slate-500 truncate font-bold uppercase tracking-wider mt-1">
-                    {userRole === "admin"
-                      ? "Admin Access"
-                      : userRole === "manager"
-                      ? "Manager Access"
-                      : "Viewer Access"}
-                  </p>
-                </div>
+        <div className="p-8 mt-auto">
+          <div
+            className="bg-white/5 border border-white/5 rounded-2xl p-5 transition-all hover:bg-alloro-sidehover cursor-pointer group"
+            onClick={() => handleNavigate("/settings")}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[10px] font-black border border-white/10 group-hover:border-alloro-orange transition-colors">
+                {userProfile?.practiceName?.substring(0, 2).toUpperCase() ||
+                  "AP"}
               </div>
-            )}
-
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-white truncate">
+                  {userProfile?.practiceName || "Practice"}
+                </p>
+                <p className="text-[9px] text-white/20 font-black uppercase tracking-widest mt-0.5">
+                  {userRole === "admin"
+                    ? "Administrator"
+                    : userRole === "manager"
+                    ? "Manager"
+                    : "Viewer"}
+                </p>
+              </div>
+            </div>
             <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="flex items-center gap-3 text-slate-500 hover:text-red-400 transition-all w-full py-2 group"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLogoutConfirm(true);
+              }}
+              className="flex items-center gap-2 text-white/20 hover:text-red-400 transition-all w-full text-[9px] font-black uppercase tracking-widest"
             >
-              <LogOut
-                size={16}
-                className="group-hover:-translate-x-1 transition-transform"
-              />
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                Disconnect Session
-              </span>
+              <LogOut size={14} /> Disconnect
             </button>
           </div>
         </div>

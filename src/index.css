@@ -5,7 +5,9 @@
 
 html, body {
   font-family: 'Inter', sans-serif;
-  background-color: #F3F6F8;
+  background-color: #F3F4F6;
+  color: #11151C;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
@@ -22,6 +24,38 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   }
   .glass-hover {
     @apply transition-colors hover:bg-slate-50;
+  }
+  
+  /* NEW: Premium Shadow */
+  .shadow-premium {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* NEW: Soft Glow (for orange accent elements) */
+  .shadow-soft-glow {
+    box-shadow: 0 0 20px rgba(214, 104, 83, 0.2);
+  }
+  
+  /* NEW: Inner Soft shadow */
+  .shadow-inner-soft {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Glass Header (sticky headers) - matching newdesign exactly */
+  .glass-header {
+    background: rgba(243, 244, 246, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  /* NEW: Skeleton loader base */
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+  
+  /* NEW: Input focus ring (orange) */
+  .input-focus-orange:focus {
+    @apply outline-none border-alloro-orange ring-4 ring-alloro-orange/10;
   }
 }
 
@@ -69,6 +103,21 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     opacity: 0.3;
     transform: translateX(100%) translateY(100%);
   }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 /* OrbitViz animations */
@@ -154,15 +203,34 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  
-  --color-alloro-navy: #0D1321;
-  --color-alloro-cobalt: #244EE6;
-  --color-alloro-teal: #06B6D4;
-  --color-alloro-bg: #F3F6F8;
+   --radius-sm: calc(var(--radius) - 4px);
+   --radius-md: calc(var(--radius) - 2px);
+   --radius-lg: var(--radius);
+   --radius-xl: calc(var(--radius) + 4px);
+   
+   /* Alloro Brand Colors - matching newdesign exactly */
+   --color-alloro-navy: #11151C;
+   --color-alloro-deepBlue: #212D40;
+   --color-alloro-slateBlue: #364156;
+   --color-alloro-orange: #D66853;
+   
+   /* Secondary accent */
+   --color-alloro-teal: #06b6d4;
+   
+   /* Sidebar Specific */
+   --color-alloro-sidebg: #212D40;
+   --color-alloro-sidehover: #11151C;
+   
+   /* Dashboard UI */
+   --color-alloro-bg: #F3F4F6;
+   --color-alloro-surface: #FFFFFF;
+   --color-alloro-success: #22c55e;
+   --color-alloro-danger: #ef4444;
+   --color-alloro-textDark: #11151C;
+   
+   /* Font families */
+   --font-sans: 'Plus Jakarta Sans', sans-serif;
+   --font-body: 'Inter', sans-serif;
   
   --color-background: var(--background);
   --color-foreground: var(--foreground);

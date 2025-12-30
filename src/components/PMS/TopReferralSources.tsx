@@ -125,7 +125,7 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
               setCurrentPage(1);
             }}
             placeholder="Search referrals source..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-alloro-navy focus:outline-none focus:ring-2 focus:ring-alloro-cobalt/20 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-alloro-navy focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 transition-all"
           />
         </div>
       </div>
@@ -156,7 +156,7 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
                         w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm
                         ${
                           idx < 3
-                            ? "bg-alloro-cobalt text-white"
+                            ? "bg-alloro-orange text-white"
                             : "bg-slate-100 text-slate-500"
                         }
                       `}
@@ -183,7 +183,7 @@ export const TopReferralSources: React.FC<TopReferralSourcesProps> = ({
                         )}%`,
                       }}
                       transition={{ delay: idx * 0.05 + 0.2, duration: 0.4 }}
-                      className="h-full rounded-full bg-alloro-cobalt"
+                      className="h-full rounded-full bg-alloro-orange"
                     />
                   </div>
                 </td>

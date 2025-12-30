@@ -119,7 +119,7 @@ export default function SignIn() {
         <div className="relative p-8 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           {/* Logo/Brand */}
           <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-alloro-cobalt rounded-xl flex items-center justify-center text-2xl font-bold font-heading text-white shadow-lg shadow-blue-900/20">
+            <div className="w-14 h-14 bg-alloro-orange rounded-xl flex items-center justify-center text-2xl font-bold font-heading text-white shadow-lg shadow-blue-900/20">
               A
             </div>
           </div>
@@ -223,14 +223,14 @@ export default function SignIn() {
                   <div
                     className={`flex items-center gap-2 ${
                       otpStep === "email"
-                        ? "text-alloro-cobalt"
+                        ? "text-alloro-orange"
                         : "text-slate-400"
                     }`}
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                         otpStep === "email"
-                          ? "bg-alloro-cobalt text-white"
+                          ? "bg-alloro-orange text-white"
                           : "bg-slate-200 text-slate-500"
                       }`}
                     >
@@ -244,14 +244,14 @@ export default function SignIn() {
                   <div
                     className={`flex items-center gap-2 ${
                       otpStep === "code" || otpStep === "verifying"
-                        ? "text-alloro-cobalt"
+                        ? "text-alloro-orange"
                         : "text-slate-400"
                     }`}
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                         otpStep === "code" || otpStep === "verifying"
-                          ? "bg-alloro-cobalt text-white"
+                          ? "bg-alloro-orange text-white"
                           : "bg-slate-200 text-slate-500"
                       }`}
                     >
@@ -292,7 +292,7 @@ export default function SignIn() {
                             handleKeyPress(e, handleRequestOTP)
                           }
                           placeholder="Enter your work email"
-                          className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt outline-none transition-all placeholder:text-slate-400"
+                          className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange outline-none transition-all placeholder:text-slate-400"
                           disabled={isLoading}
                           autoFocus
                         />
@@ -304,7 +304,7 @@ export default function SignIn() {
                           !email ||
                           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
                         }
-                        className="w-full py-3 px-4 bg-alloro-cobalt hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
+                        className="w-full py-3 px-4 bg-alloro-orange hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
                       >
                         {isLoading ? (
                           <>
@@ -340,7 +340,7 @@ export default function SignIn() {
                             <p className="text-sm text-slate-600 font-medium">
                               Code sent to
                             </p>
-                            <p className="text-sm text-alloro-cobalt font-semibold">
+                            <p className="text-sm text-alloro-orange font-semibold">
                               {email}
                             </p>
                           </>
@@ -377,7 +377,7 @@ export default function SignIn() {
                           onKeyPress={(e) => handleKeyPress(e, handleVerifyOTP)}
                           placeholder="000000"
                           maxLength={6}
-                          className="w-full px-4 py-4 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt outline-none transition-all text-center tracking-[0.5em] font-mono text-2xl font-bold placeholder:tracking-normal placeholder:text-base text-alloro-navy"
+                          className="w-full px-4 py-4 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange outline-none transition-all text-center tracking-[0.5em] font-mono text-2xl font-bold placeholder:tracking-normal placeholder:text-base text-alloro-navy"
                           disabled={isLoading}
                           autoFocus
                         />
@@ -386,7 +386,7 @@ export default function SignIn() {
                       <button
                         onClick={handleVerifyOTP}
                         disabled={isLoading || otp.length !== 6}
-                        className="w-full py-3 px-4 bg-alloro-cobalt hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
+                        className="w-full py-3 px-4 bg-alloro-orange hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
                       >
                         {otpStep === "verifying" ? (
                           <>
@@ -404,7 +404,7 @@ export default function SignIn() {
                       <button
                         onClick={handleRequestOTP}
                         disabled={isLoading}
-                        className="w-full text-sm text-slate-500 hover:text-alloro-cobalt transition-colors disabled:opacity-50"
+                        className="w-full text-sm text-slate-500 hover:text-alloro-orange transition-colors disabled:opacity-50"
                       >
                         Didn't receive code? Resend
                       </button>

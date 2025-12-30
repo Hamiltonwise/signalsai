@@ -53,7 +53,7 @@ export default function Admin() {
         actionBar={
           <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] px-8 py-6 w-full">
             <div className="flex flex-col">
-              <span className="text-xs font-bold uppercase tracking-wider text-alloro-cobalt">
+              <span className="text-xs font-bold uppercase tracking-wider text-alloro-orange">
                 Control Center
               </span>
               <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight mt-1">

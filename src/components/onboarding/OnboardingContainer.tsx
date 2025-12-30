@@ -96,7 +96,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-full h-full rounded-2xl bg-alloro-cobalt flex items-center justify-center shadow-lg shadow-blue-900/20"
+                className="w-full h-full rounded-2xl bg-alloro-orange flex items-center justify-center shadow-lg shadow-blue-900/20"
               >
                 <Loader2 className="w-10 h-10 text-white" />
               </motion.div>
@@ -137,7 +137,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
             <p className="text-slate-600">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-3 rounded-xl bg-alloro-cobalt text-white font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
+              className="px-6 py-3 rounded-xl bg-alloro-orange text-white font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
             >
               Try Again
             </button>
@@ -210,7 +210,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
             Need help? Contact us at{" "}
             <a
               href="mailto:info@getalloro.com"
-              className="text-alloro-cobalt hover:underline font-medium"
+              className="text-alloro-orange hover:underline font-medium"
             >
               info@getalloro.com
             </a>

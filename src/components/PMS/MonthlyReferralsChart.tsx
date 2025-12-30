@@ -78,7 +78,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
         transition={{ duration: 0.5 }}
         className="bg-alloro-navy rounded-2xl p-6 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden group"
       >
-        <div className="absolute top-0 right-0 p-24 bg-alloro-cobalt/20 rounded-full -mr-12 -mt-12 blur-3xl group-hover:bg-alloro-cobalt/30 transition-colors"></div>
+        <div className="absolute top-0 right-0 p-24 bg-alloro-orange/20 rounded-full -mr-12 -mt-12 blur-3xl group-hover:bg-alloro-orange/30 transition-colors"></div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
@@ -141,7 +141,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
           </h3>
           <div className="flex gap-3 text-[10px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-alloro-cobalt"></span>{" "}
+              <span className="w-2 h-2 rounded-full bg-alloro-orange"></span>{" "}
               Self
             </div>
             <div className="flex items-center gap-1.5">
@@ -194,7 +194,7 @@ export const MonthlyReferralsChart: React.FC<MonthlyReferralsChartProps> = ({
                             duration: 0.6,
                             ease: "easeOut",
                           }}
-                          className="h-full bg-alloro-cobalt rounded-r-md text-[10px] text-white font-bold flex items-center justify-end px-2 shadow-sm shadow-blue-200 transition-all duration-300 group-hover:bg-blue-700"
+                          className="h-full bg-alloro-orange rounded-r-md text-[10px] text-white font-bold flex items-center justify-end px-2 shadow-sm shadow-blue-200 transition-all duration-300 group-hover:bg-blue-700"
                         >
                           {item.selfReferrals > 0 && item.selfReferrals}
                         </motion.div>

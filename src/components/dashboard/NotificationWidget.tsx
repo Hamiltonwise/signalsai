@@ -145,7 +145,7 @@ export function NotificationWidget({
         iconBg: "bg-green-50",
         iconColor: "text-green-600",
         impactBg: "bg-indigo-50",
-        impactText: "text-alloro-cobalt",
+        impactText: "text-alloro-orange",
         impactBorder: "border-indigo-100",
         impactLabel: "Verified",
       },
@@ -163,7 +163,7 @@ export function NotificationWidget({
         iconBg: "bg-purple-50",
         iconColor: "text-purple-600",
         impactBg: "bg-indigo-50",
-        impactText: "text-alloro-cobalt",
+        impactText: "text-alloro-orange",
         impactBorder: "border-indigo-100",
         impactLabel: "Strategic",
       },
@@ -172,7 +172,7 @@ export function NotificationWidget({
         iconBg: "bg-green-50",
         iconColor: "text-green-600",
         impactBg: "bg-indigo-50",
-        impactText: "text-alloro-cobalt",
+        impactText: "text-alloro-orange",
         impactBorder: "border-indigo-100",
         impactLabel: "Strategic",
       },
@@ -204,7 +204,7 @@ export function NotificationWidget({
     return (
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-premium">
         <div className="flex items-center justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-alloro-cobalt" />
+          <Loader2 className="w-5 h-5 animate-spin text-alloro-orange" />
         </div>
       </div>
     );
@@ -259,7 +259,7 @@ export function NotificationWidget({
       onClick={handleNotificationClick}
       className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden cursor-pointer hover:shadow-xl transition-all group relative"
     >
-      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-alloro-cobalt opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-alloro-orange opacity-0 group-hover:opacity-100 transition-opacity"></div>
       <div className="p-6 lg:p-8 flex flex-col sm:flex-row gap-6">
         <div
           className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-all group-hover:scale-105 shadow-sm ${style.iconBg} ${style.iconColor} border-opacity-50`}
@@ -293,14 +293,14 @@ export function NotificationWidget({
               <button
                 onClick={handleMarkAsRead}
                 disabled={isMarking}
-                className="text-alloro-cobalt hover:underline disabled:opacity-50"
+                className="text-alloro-orange hover:underline disabled:opacity-50"
               >
                 {isMarking ? "Marking..." : "Acknowledge"}
               </button>
             </div>
             <ChevronRight
               size={20}
-              className="text-slate-200 group-hover:text-alloro-cobalt transition-all group-hover:translate-x-2"
+              className="text-slate-200 group-hover:text-alloro-orange transition-all group-hover:translate-x-2"
             />
           </div>
         </div>

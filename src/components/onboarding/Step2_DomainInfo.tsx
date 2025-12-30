@@ -91,7 +91,7 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
             placeholder="bestdentalpractice.com"
             className={`w-full px-4 py-3 rounded-xl bg-white border ${
               error ? "border-red-400" : "border-slate-300"
-            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-cobalt/20 focus:border-alloro-cobalt transition-all`}
+            } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange transition-all`}
           />
           {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
           <div className="mt-2 space-y-1">
@@ -121,7 +121,7 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
             flex-1 px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2
             ${
               domainName.trim()
-                ? "bg-alloro-cobalt text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20"
+                ? "bg-alloro-orange text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }
           `}

@@ -373,7 +373,7 @@ export const PropertiesTab: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleConnect(integration.type)}
-                      className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-alloro-cobalt bg-alloro-cobalt/10 rounded-xl hover:bg-alloro-cobalt/20 transition-colors flex-1 sm:flex-none"
+                      className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-alloro-orange bg-alloro-orange/10 rounded-xl hover:bg-alloro-orange/20 transition-colors flex-1 sm:flex-none"
                     >
                       Change
                     </button>
@@ -390,7 +390,7 @@ export const PropertiesTab: React.FC = () => {
               ) : canManageConnections ? (
                 <button
                   onClick={() => handleConnect(integration.type)}
-                  className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-alloro-cobalt rounded-xl hover:bg-blue-700 transition-colors shadow-lg w-full sm:w-auto active:scale-95"
+                  className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-alloro-orange rounded-xl hover:bg-blue-700 transition-colors shadow-lg w-full sm:w-auto active:scale-95"
                 >
                   Connect
                 </button>

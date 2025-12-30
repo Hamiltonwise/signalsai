@@ -13,6 +13,8 @@ import {
   Layout,
   Users,
   Plus,
+  HelpCircle,
+  Send,
 } from "lucide-react";
 import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
@@ -45,7 +47,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
   isClamped,
   descriptionRef,
 }) => {
+  const [showHelp, setShowHelp] = useState(false);
+  const [comment, setComment] = useState("");
+  const [sent, setSent] = useState(false);
   const isDone = task.status === "complete";
+
+  const handleHelpSubmit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!comment.trim()) return;
+    setSent(true);
+    setTimeout(() => {
+      setShowHelp(false);
+      setComment("");
+      setSent(false);
+    }, 1500);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -75,101 +91,150 @@ const TaskCard: React.FC<TaskCardProps> = ({
     <div
       onClick={!isReadOnly && canEdit ? onToggle : undefined}
       className={`
-        group relative bg-white rounded-2xl p-5 sm:p-6 lg:p-8 border transition-all duration-300 select-none
+        group relative bg-white rounded-3xl p-8 border transition-all duration-500 select-none text-left
         ${
           isDone
-            ? "border-green-100 bg-green-50/20 opacity-60"
-            : "border-slate-100 shadow-premium hover:shadow-xl hover:border-alloro-cobalt/20"
+            ? "border-green-100 bg-green-50/20 opacity-60 shadow-none"
+            : "border-black/5 shadow-premium hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1"
         }
         ${!isReadOnly && canEdit ? "cursor-pointer active:scale-[0.98]" : ""}
       `}
     >
-      <div className="flex flex-row gap-4 sm:gap-6 items-start">
+      <div className="flex flex-row gap-8 items-start">
         <div className="shrink-0 mt-1">
-          {isReadOnly ? (
-            isDone ? (
-              <CheckCircle2 size={24} className="text-green-500" />
-            ) : (
-              <div className="p-1.5 bg-alloro-navy/5 rounded-lg text-alloro-navy">
-                <Zap size={20} />
-              </div>
-            )
-          ) : isCompleting ? (
-            <Loader2 size={24} className="animate-spin text-alloro-cobalt" />
+          {isCompleting ? (
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center border-2 border-alloro-orange/20">
+              <Loader2 size={18} className="animate-spin text-alloro-orange" />
+            </div>
           ) : isDone ? (
-            <CheckSquare size={24} className="text-green-500" />
+            <div className="w-8 h-8 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-lg shadow-green-500/20">
+              <CheckSquare size={20} />
+            </div>
           ) : (
-            <Square
-              size={24}
-              className={`text-slate-200 ${
-                canEdit ? "group-hover:text-alloro-cobalt" : ""
-              } transition-colors`}
-            />
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all duration-300 ${
+                isReadOnly
+                  ? "bg-alloro-navy/5 text-alloro-navy border-transparent"
+                  : "bg-white border-slate-200 group-hover:border-alloro-orange group-hover:bg-alloro-orange/5 text-slate-200 group-hover:text-alloro-orange"
+              }`}
+            >
+              {isReadOnly ? <Zap size={18} /> : <Square size={18} />}
+            </div>
           )}
         </div>
 
-        <div className="flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3
-              className={`font-bold text-[16px] sm:text-[17px] text-alloro-navy font-heading tracking-tight leading-tight transition-all ${
-                isDone ? "line-through opacity-30" : ""
-              }`}
-            >
-              {parseHighlightTags(task.title, "underline")}
-            </h3>
-            {isHighPriority && !isDone && (
-              <span className="px-2 py-0.5 bg-alloro-cobalt/10 text-alloro-cobalt text-[8px] font-bold uppercase tracking-widest rounded leading-none">
-                High Priority
-              </span>
-            )}
-          </div>
-          {task.description && (
-            <div>
-              <p
-                ref={descriptionRef}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isClamped && onExpand) onExpand();
-                }}
-                className={`text-[13px] sm:text-[14px] leading-relaxed font-medium tracking-tight transition-all ${
-                  isDone ? "opacity-30" : "text-slate-500"
-                } ${!isExpanded ? "line-clamp-2" : ""} ${
-                  isClamped ? "cursor-pointer hover:opacity-80" : ""
+        <div className="flex-1 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <h3
+                className={`font-black text-xl text-alloro-navy font-heading tracking-tight leading-tight transition-all ${
+                  isDone ? "line-through opacity-30" : ""
                 }`}
               >
-                {parseHighlightTags(task.description, "underline")}
-              </p>
-              {isClamped && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onExpand) onExpand();
-                  }}
-                  className="text-xs text-alloro-cobalt hover:text-blue-700 font-semibold mt-1"
-                >
-                  {isExpanded ? "Show less" : "Read more"}
-                </button>
+                {parseHighlightTags(task.title, "underline")}
+              </h3>
+              {isHighPriority && !isDone && (
+                <span className="px-3 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
+                  Priority Alpha
+                </span>
               )}
             </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-4 border-t border-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-            <span className="flex items-center gap-2">
-              <Clock size={14} className="opacity-40" />{" "}
-              {isDone && task.completed_at
-                ? `Verified: ${formatDate(task.completed_at)}`
-                : task.due_date
-                ? `Due: ${formatDate(task.due_date)}`
-                : `Created: ${formatDate(task.created_at)}`}
-            </span>
-            <span className="flex items-center gap-2">
-              <Users size={14} className="opacity-40" />{" "}
-              {task.agent_type || "User"}
-            </span>
-            <span className="px-2 py-0.5 bg-slate-50 rounded text-slate-500">
-              {task.category}
-            </span>
+            {!isDone && !isReadOnly && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHelp(!showHelp);
+                }}
+                className={`p-2 rounded-xl transition-all duration-300 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${
+                  showHelp
+                    ? "bg-alloro-orange text-white"
+                    : "bg-alloro-bg text-slate-400 hover:text-alloro-orange hover:bg-alloro-orange/5"
+                }`}
+              >
+                <HelpCircle size={14} /> {showHelp ? "Close" : "Ask Question"}
+              </button>
+            )}
           </div>
+
+          {showHelp ? (
+            <div
+              className="animate-in fade-in slide-in-from-top-2 duration-300 py-4 space-y-4 border-t border-black/5 mt-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <textarea
+                  autoFocus
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="e.g. Where should I place the QR code?"
+                  className="w-full h-24 bg-alloro-bg border border-black/5 rounded-2xl px-5 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all resize-none"
+                />
+                <button
+                  onClick={handleHelpSubmit}
+                  disabled={!comment.trim() || sent}
+                  className="absolute bottom-4 right-4 p-2.5 bg-alloro-navy text-white rounded-xl shadow-lg hover:bg-black transition-all active:scale-95 disabled:opacity-30"
+                >
+                  {sent ? <CheckCircle2 size={16} /> : <Send size={16} />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">
+                Your strategist will receive this inquiry immediately.
+              </p>
+            </div>
+          ) : (
+            <>
+              {task.description && (
+                <div>
+                  <p
+                    ref={descriptionRef}
+                    className={`text-[16px] leading-relaxed font-bold tracking-tight transition-all ${
+                      isDone ? "opacity-30" : "text-slate-500"
+                    } ${!isExpanded ? "line-clamp-2" : ""} ${
+                      isClamped ? "cursor-pointer hover:opacity-80" : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isClamped && onExpand) onExpand();
+                    }}
+                  >
+                    {parseHighlightTags(task.description, "underline")}
+                  </p>
+                  {isClamped && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onExpand) onExpand();
+                      }}
+                      className="text-xs text-alloro-orange hover:text-blue-700 font-bold mt-2 uppercase tracking-widest"
+                    >
+                      {isExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-6 border-t border-black/5 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
+                <span className="flex items-center gap-2.5">
+                  <Clock size={16} className="text-alloro-orange/40" />{" "}
+                  {isDone && task.completed_at
+                    ? `Verified: ${formatDate(task.completed_at)}`
+                    : task.due_date
+                    ? `Due: ${formatDate(task.due_date)}`
+                    : `Created: ${formatDate(task.created_at)}`}
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <Users size={16} className="text-alloro-orange/40" />{" "}
+                  {task.agent_type || "User"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Layout size={14} className="opacity-40" />
+                  <span className="text-slate-500">
+                    {task.category} Coordinator Hub
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -327,7 +392,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
           <p className="text-slate-500 text-sm font-medium mb-6">{error}</p>
           <button
             onClick={loadTasks}
-            className="px-6 py-3 bg-alloro-cobalt text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-alloro-orange text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm flex items-center gap-2 mx-auto"
           >
             <RotateCw className="w-4 h-4" />
             Retry
@@ -345,97 +410,117 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
+      <header className="glass-header border-b border-black/5 lg:sticky lg:top-0 z-40">
+        <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-5">
             <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
               <Target size={20} />
             </div>
-            <div>
-              <h1 className="text-[10px] font-bold font-heading text-alloro-navy uppercase tracking-[0.2em]">
+            <div className="flex flex-col text-left">
+              <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
                 Execution Plan
               </h1>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Strategy Sprint 2026
-              </p>
+              <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
+                Tactical Sprint Protocol
+              </span>
             </div>
           </div>
           <button
             onClick={handleSync}
             disabled={loading}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white border border-slate-200 text-alloro-navy rounded-xl text-[10px] font-bold uppercase tracking-widest hover:border-alloro-cobalt transition-all shadow-sm disabled:opacity-50"
+            className="flex items-center gap-3 px-6 py-3.5 bg-white border border-black/5 text-alloro-navy rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:border-alloro-orange/20 transition-all shadow-premium active:scale-95 disabled:opacity-50"
           >
             <RotateCw
               size={14}
               className={isRefreshing ? "animate-spin" : ""}
             />
             <span className="hidden sm:inline">
-              {isRefreshing ? "Syncing..." : "Sync Hub"}
+              {isRefreshing ? "Synchronizing..." : "Sync Execution Hub"}
             </span>
             <span className="sm:hidden">{isRefreshing ? "..." : "Sync"}</span>
           </button>
         </div>
       </header>
 
-      <main className="w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-12 lg:space-y-16">
-        {/* Sprint Progress Monitor */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 lg:p-12 shadow-premium relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-48 bg-alloro-cobalt/5 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none"></div>
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 sm:gap-10">
-            {/* Circular Progress */}
-            <div className="w-24 sm:w-32 h-24 sm:h-32 rounded-full border-[8px] sm:border-[10px] border-slate-50 flex items-center justify-center text-2xl sm:text-3xl font-bold font-heading text-alloro-navy relative shrink-0">
+      <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
+        {/* HERO SECTION */}
+        <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
+              Sprint v2.4 Live
+            </div>
+          </div>
+          <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
+            Operational Flow.
+          </h1>
+          <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
+            Coordinating{" "}
+            <span className="text-alloro-orange underline underline-offset-8 font-black">
+              Alloro Intelligence & Practice Effort
+            </span>{" "}
+            to eliminate bottlenecks and capture production.
+          </p>
+        </section>
+
+        {/* SPRINT INTEGRITY MONITOR */}
+        <section className="bg-white rounded-[2.5rem] border border-black/5 p-10 lg:p-16 shadow-premium relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-alloro-orange/[0.03] rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 lg:gap-20">
+            <div className="w-40 h-40 rounded-full border-[12px] border-slate-50 flex items-center justify-center text-4xl font-black font-heading text-alloro-navy relative shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-700">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
                 <circle
                   cx="50%"
                   cy="50%"
                   r="42%"
                   stroke="currentColor"
-                  strokeWidth="8"
+                  strokeWidth="12"
                   fill="transparent"
-                  className="text-slate-100"
+                  className="text-slate-50"
                 />
                 <circle
                   cx="50%"
                   cy="50%"
                   r="42%"
                   stroke="currentColor"
-                  strokeWidth="8"
+                  strokeWidth="12"
                   fill="transparent"
                   strokeDasharray="264"
                   strokeDashoffset={264 - (264 * completionPct) / 100}
                   strokeLinecap="round"
-                  className="text-alloro-cobalt transition-all duration-1000"
+                  className="text-alloro-orange transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(214,104,83,0.3)]"
                 />
               </svg>
-              {completionPct}%
+              <span className="font-sans tabular-nums">{completionPct}%</span>
             </div>
-            <div className="flex-1 space-y-2 text-center md:text-left">
-              <h2 className="text-xl sm:text-2xl font-bold font-heading text-alloro-navy tracking-tight leading-none">
-                Sprint Readiness Monitor
+            <div className="flex-1 space-y-4 text-center md:text-left">
+              <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tighter leading-none">
+                Sprint Integrity Monitor
               </h2>
-              <p className="text-sm sm:text-base text-slate-500 font-medium tracking-tight">
-                Completed{" "}
-                <span className="text-alloro-cobalt font-bold">
-                  {doneTasks} of {totalTasks} tasks
-                </span>
-                .
+              <p className="text-lg lg:text-xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg">
+                You have verified{" "}
+                <span className="text-alloro-orange font-black">
+                  {doneTasks} of {totalTasks} tactical directives
+                </span>{" "}
+                in the current window.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
-              <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-100 min-w-[80px] sm:min-w-[100px] text-center">
-                <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">
-                  Alloro
+            <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
+              <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
+                  System
                 </p>
-                <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none">
+                <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
                   {alloroTasks.length}
                 </p>
               </div>
-              <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-100 min-w-[80px] sm:min-w-[100px] text-center">
-                <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">
+              <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
                   Manual
                 </p>
-                <p className="text-lg sm:text-xl font-bold font-heading text-alloro-navy leading-none">
+                <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
                   {userTasks.length}
                 </p>
               </div>
@@ -443,81 +528,24 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
           </div>
         </section>
 
-        {loading && tasks === null && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 animate-pulse">
-            {/* Left Column Skeleton */}
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex items-center gap-4 px-2">
-                <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                <div className="h-6 w-32 bg-slate-200 rounded" />
+        {/* TASK SEGMENTATION */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+          {/* Alloro Tasks */}
+          <div className="space-y-10">
+            <div className="flex items-center gap-5 px-2">
+              <div className="w-12 h-12 bg-alloro-navy text-white rounded-2xl flex items-center justify-center shadow-xl">
+                <Zap size={24} />
               </div>
-              <div className="space-y-4 sm:space-y-6">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 lg:p-8 shadow-premium"
-                  >
-                    <div className="flex gap-4 sm:gap-6">
-                      <div className="w-6 h-6 bg-slate-200 rounded-lg shrink-0 mt-1" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 w-48 bg-slate-200 rounded" />
-                        <div className="h-4 w-full bg-slate-200 rounded" />
-                        <div className="h-4 w-3/4 bg-slate-200 rounded" />
-                        <div className="flex gap-4 pt-4 border-t border-slate-50">
-                          <div className="h-3 w-24 bg-slate-200 rounded" />
-                          <div className="h-3 w-20 bg-slate-200 rounded" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-left">
+                <h2 className="text-2xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                  Alloro Directives
+                </h2>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
+                  Algorithmic Operations
+                </p>
               </div>
             </div>
-
-            {/* Right Column Skeleton */}
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex items-center gap-4 px-2">
-                <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                <div className="h-6 w-28 bg-slate-200 rounded" />
-              </div>
-              <div className="space-y-4 sm:space-y-6">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6 lg:p-8 shadow-premium"
-                  >
-                    <div className="flex gap-4 sm:gap-6">
-                      <div className="w-6 h-6 bg-slate-200 rounded shrink-0 mt-1" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 w-44 bg-slate-200 rounded" />
-                        <div className="h-4 w-full bg-slate-200 rounded" />
-                        <div className="h-4 w-2/3 bg-slate-200 rounded" />
-                        <div className="flex gap-4 pt-4 border-t border-slate-50">
-                          <div className="h-3 w-24 bg-slate-200 rounded" />
-                          <div className="h-3 w-28 bg-slate-200 rounded" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Task Segmentation */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
-          {/* System Directives (Alloro Tasks) */}
-          <div className="space-y-6 sm:space-y-8">
-            <div className="flex items-center gap-4 px-2">
-              <div className="w-10 h-10 bg-alloro-navy text-white rounded-xl flex items-center justify-center shadow-lg">
-                <Zap size={20} />
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold font-heading text-alloro-navy tracking-tight">
-                Alloro Tasks
-              </h2>
-            </div>
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-6">
               {alloroTasks.length === 0 ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium">
                   <div className="p-4 bg-slate-100 rounded-2xl w-fit mx-auto mb-4">
@@ -550,17 +578,22 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
             </div>
           </div>
 
-          {/* Practice Actions (Your Tasks) */}
-          <div className="space-y-6 sm:space-y-8">
-            <div className="flex items-center gap-4 px-2">
-              <div className="w-10 h-10 bg-alloro-cobalt text-white rounded-xl flex items-center justify-center shadow-lg">
-                <Layout size={20} />
+          {/* User Tasks */}
+          <div className="space-y-10">
+            <div className="flex items-center gap-5 px-2">
+              <div className="w-12 h-12 bg-alloro-orange text-white rounded-2xl flex items-center justify-center shadow-xl">
+                <Layout size={24} />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold font-heading text-alloro-navy tracking-tight">
-                Your Tasks
-              </h2>
+              <div className="text-left">
+                <h2 className="text-2xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                  Manual Protocol
+                </h2>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
+                  Staff Execution Steps
+                </p>
+              </div>
             </div>
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-6">
               {userTasks.length === 0 ? (
                 <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium">
                   <div className="p-4 bg-green-50 rounded-2xl w-fit mx-auto mb-4">
@@ -594,11 +627,11 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               )}
 
               {/* Add Manual Task Button */}
-              <button className="w-full py-12 sm:py-16 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-4 text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] hover:border-alloro-cobalt hover:text-alloro-cobalt transition-all group shadow-inner-soft">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg transition-all">
-                  <Plus size={24} />
+              <button className="w-full py-16 sm:py-20 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-6 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] hover:border-alloro-orange hover:text-alloro-orange hover:bg-white transition-all group shadow-inner-soft active:scale-[0.99]">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
+                  <Plus size={28} />
                 </div>
-                Add Manual Task
+                Initialize Manual Task
               </button>
             </div>
           </div>

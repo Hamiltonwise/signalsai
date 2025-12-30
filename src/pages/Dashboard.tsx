@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertTriangle, Building2, Settings } from "lucide-react";
 
 // Import auth and integration hooks for domain selection
@@ -16,7 +16,6 @@ import { GSCIntegrationModal } from "../components/GSCIntegrationModal";
 import { ClarityIntegrationModal } from "../components/ClarityIntegrationModal";
 import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
 import { PMSUploadModal } from "../components/PMS/PMSUploadModal";
-import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { TasksView } from "../components/tasks/TasksView";
 import { AnimatePresence, motion } from "framer-motion";
@@ -312,7 +311,28 @@ export default function Dashboard() {
                     />
                   )}
 
-                  {activeTab === "PMS Statistics" && <PMSVisualPillars />}
+                  {activeTab === "PMS Statistics" && (
+                    <React.Suspense
+                      fallback={
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {[...Array(4)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="bg-white rounded-[32px] p-6 h-48 animate-pulse shadow-sm border border-slate-100"
+                            >
+                              <div className="h-4 bg-slate-100 rounded-full w-2/3 mb-4"></div>
+                              <div className="h-8 bg-slate-100 rounded-full w-1/2 mb-2"></div>
+                              <div className="h-32 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl"></div>
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
+                      <ReferralEngineDashboard
+                        googleAccountId={userProfile?.googleAccountId ?? null}
+                      />
+                    </React.Suspense>
+                  )}
 
                   {activeTab === "Rankings" && (
                     <RankingsDashboard

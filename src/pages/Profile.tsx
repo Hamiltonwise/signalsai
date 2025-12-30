@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { User, Mail, Lock, Building2, LogOut, Save, X } from "lucide-react";
+import { User, Lock, LogOut, Save, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
-  const { userProfile, disconnect } = useAuth();
+  const { userProfile } = useAuth();
+  const { disconnect } = useGoogleAuthContext();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({

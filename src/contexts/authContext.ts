@@ -20,6 +20,7 @@ export interface UserProfile {
   practiceName: string | null;
   domainName: string | null;
   googleAccountId?: number | null;
+  email?: string | null;
 }
 
 export interface AuthContextType {

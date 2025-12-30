@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   RefreshCw,
   AlertCircle,
-  Loader2,
   ArrowRight,
   TrendingUp,
   AlertTriangle,
@@ -159,7 +158,7 @@ const MetricCard = ({
 };
 
 const CompactTag = ({ status }: { status: string }) => {
-  const styles: any = {
+  const styles: Record<string, string> = {
     Increasing: "text-green-700 bg-green-50 border-green-100",
     increasing: "text-green-700 bg-green-50 border-green-100",
     Decreasing: "text-red-700 bg-red-50 border-red-100",
@@ -193,9 +192,7 @@ const formatCurrency = (value: number | null | undefined): string => {
 export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { data, loading, error, refetch } = useAgentData(
-    googleAccountId || null
-  );
+  const { data, error, refetch } = useAgentData(googleAccountId || null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDataHub, setShowDataHub] = useState(false);
@@ -205,7 +202,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
     null
   );
-  const [pmsLoading, setPmsLoading] = useState(true);
+  const [, setPmsLoading] = useState(true);
   const [, setPmsError] = useState<string | null>(null);
 
   // Tasks data state
@@ -216,7 +213,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Ranking data state
   const [rankingData, setRankingData] = useState<RankingResult[] | null>(null);
-  const [rankingLoading, setRankingLoading] = useState(true);
+  const [, setRankingLoading] = useState(true);
   const [, setRankingError] = useState<string | null>(null);
 
   // Referral Engine data state
@@ -438,6 +435,9 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   // Extract agent data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const summaryData = data?.agents?.summary?.results?.[0] as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prooflineData = (data?.agents as any)?.proofline;
+  const trajectory = prooflineData?.trajectory;
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -448,18 +448,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   };
 
   // Get critical actions count
-  const criticalActionsCount =
-    tasks.filter((t) => {
-      try {
-        const metadata =
-          typeof t.metadata === "string" ? JSON.parse(t.metadata) : t.metadata;
-        return (
-          metadata?.urgency === "Immediate" || metadata?.urgency === "High"
-        );
-      } catch {
-        return false;
-      }
-    }).length || 3; // Default to 3 if no data
+  const criticalActionsCount = tasks.filter((t) => {
+    try {
+      const metadata =
+        typeof t.metadata === "string" ? JSON.parse(t.metadata) : t.metadata;
+      return metadata?.urgency === "Immediate" || metadata?.urgency === "High";
+    } catch {
+      return false;
+    }
+  }).length;
 
   // Data availability flags
   const wins = summaryData?.wins;
@@ -526,47 +523,21 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Loading skeleton component for sections waiting for data
   const LoadingSkeleton = ({ className = "" }: { className?: string }) => (
-    <div
-      className={`bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-xl animate-pulse ${className}`}
-    ></div>
+    <div className={`skeleton-shimmer rounded-xl ${className}`}></div>
   );
 
-  // Loading state - show skeleton when any critical data is still loading
-  const isInitialLoading =
-    loading || pmsLoading || rankingLoading || tasksLoading;
-
-  if (isInitialLoading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-10 lg:space-y-16 animate-pulse">
-          {/* Header skeleton */}
-          <div className="h-16 bg-slate-200 rounded-2xl"></div>
-          {/* Greeting skeleton */}
-          <div className="space-y-3">
-            <div className="h-6 w-32 bg-slate-200 rounded-lg"></div>
-            <div className="h-12 w-96 max-w-full bg-slate-200 rounded-xl"></div>
-            <div className="h-6 w-80 max-w-full bg-slate-200 rounded-lg"></div>
-          </div>
-          {/* Intelligence briefing skeleton */}
-          <div className="h-32 bg-slate-200 rounded-2xl"></div>
-          {/* Market Authority skeleton */}
-          <div className="h-64 bg-slate-200 rounded-2xl"></div>
-          {/* Metrics grid skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-            <div className="h-28 bg-slate-200 rounded-2xl"></div>
-            <div className="h-28 bg-slate-200 rounded-2xl"></div>
-            <div className="h-28 bg-slate-200 rounded-2xl"></div>
-            <div className="h-28 bg-slate-200 rounded-2xl"></div>
-          </div>
-          {/* Wins/Risks skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <div className="h-48 bg-slate-200 rounded-2xl"></div>
-            <div className="h-48 bg-slate-200 rounded-2xl"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Determine if any data is missing for the alert
+  const hasMissingData =
+    !pmsMetrics ||
+    !rankingData ||
+    !tasks ||
+    !referralData ||
+    !wins ||
+    !risks ||
+    !topFixes ||
+    !estimatedRevenue ||
+    !alloroOpportunities ||
+    !practiceActionPlan;
 
   // Error state
   if (error) {
@@ -592,8 +563,23 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-textDark selection:bg-alloro-orange/10">
+      {/* Alert Bar */}
+      {hasMissingData && (
+        <div className="bg-alloro-orange text-white text-[10px] font-black uppercase tracking-widest py-3 px-4 text-center border-b border-white/10 flex items-center justify-center gap-2 shadow-sm relative z-[60]">
+          <AlertTriangle size={14} className="text-white" />
+          <span>
+            Our agents are currently completing your account setup. You may see
+            missing data while we sync your sources.
+          </span>
+        </div>
+      )}
+
       {/* Professional Header - Responsive with Glass effect - matches newdesign */}
-      <header className="glass-header border-b border-black/5 lg:sticky lg:top-0 z-40">
+      <header
+        className={`glass-header border-b border-black/5 lg:sticky ${
+          hasMissingData ? "lg:top-[37px]" : "lg:top-0"
+        } z-40`}
+      >
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
           <div className="flex items-center gap-5">
             <IntelligencePulse />
@@ -653,18 +639,18 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           ) : (
             <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
           )}
-          <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Your practice momentum is{" "}
-            <span className="text-alloro-orange underline underline-offset-8 font-black">
-              {sentiment.label === "High"
-                ? "Optimized"
-                : sentiment.label === "Okay"
-                ? "Steady"
-                : "Needs Attention"}
-            </span>
-            . We have identified {criticalActionsCount} refinements for your
-            attention today.
-          </p>
+          {trajectory ? (
+            <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
+              Your practice momentum is{" "}
+              <span className="text-alloro-orange underline underline-offset-8 font-black">
+                {trajectory}
+              </span>
+              . We have identified {criticalActionsCount} refinements for your
+              attention today.
+            </p>
+          ) : (
+            <LoadingSkeleton className="h-8 w-full max-w-3xl mt-4" />
+          )}
         </section>
 
         {/* SECTION 1: INTELLIGENCE BRIEFING BANNER - matches newdesign exactly */}
@@ -683,8 +669,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
                     Intelligence Briefing
                   </h3>
-                  {tasksLoading ? (
-                    <div className="h-5 w-64 bg-white/20 rounded-lg animate-pulse"></div>
+                  {tasksLoading || criticalActionsCount === 0 ? (
+                    <div className="h-6 w-80 bg-white/30 rounded-lg animate-pulse mt-2"></div>
                   ) : (
                     <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
                       You have{" "}
@@ -743,13 +729,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             // Use default
           }
 
-          // Default fallback content when no immediate task
-          const taskTitle =
-            immediateTask?.title || "Dr. Angela Willox is at risk.";
-          const taskDescription =
-            immediateTask?.description ||
-            "Her referrals dropped 60% this month. A re-engagement call is required to bring her back.";
-
           return (
             <section className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium relative flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="flex-1 text-left space-y-3">
@@ -757,25 +736,31 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
                     URGENT INTERVENTION
                   </span>
-                  <span className="flex items-center gap-2 text-[#00B4D8] text-[9px] font-black uppercase tracking-widest leading-none">
-                    <DollarSign size={12} className="text-[#00B4D8]" />{" "}
-                    {potentialRisk} REVENUE RECOVERY
-                  </span>
                 </div>
-                <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                  {parseHighlightTags(
-                    taskTitle.replace(/<[^>]*>/g, ""),
-                    "highlight-red"
-                  )}
-                </h2>
-                <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
-                  {taskDescription
-                    ? parseHighlightTags(
-                        taskDescription.replace(/<[^>]*>/g, ""),
+                {immediateTask ? (
+                  <>
+                    <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                      {parseHighlightTags(
+                        (immediateTask.title || "").replace(/<[^>]*>/g, ""),
                         "highlight-red"
-                      )
-                    : "Immediate clinical outreach recommended to preserve business health."}
-                </p>
+                      )}
+                    </h2>
+                    <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
+                      {parseHighlightTags(
+                        (immediateTask.description || "").replace(
+                          /<[^>]*>/g,
+                          ""
+                        ),
+                        "highlight-red"
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-4 w-full">
+                    <LoadingSkeleton className="h-10 w-3/4 max-w-lg" />
+                    <LoadingSkeleton className="h-6 w-full max-w-xl" />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => navigate("/tasks")}
@@ -939,12 +924,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </h3>
             <div className="h-px w-full bg-black/10"></div>
           </div>
-          {pmsLoading || rankingLoading ? (
-            <div className="text-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-alloro-orange mx-auto mb-2" />
-              <p className="text-sm text-slate-500">Loading practice data...</p>
-            </div>
-          ) : pmsMetrics ? (
+          {pmsMetrics ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
               <MetricCard
                 label="Monthly Starts"
@@ -997,10 +977,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-              <MetricCard label="Monthly Starts" value="--" isHighlighted />
-              <MetricCard label="Source Referrals" value="--" />
-              <MetricCard label="Production" value="--" />
-              <MetricCard label="Market Coverage" value="--" />
+              <LoadingSkeleton className="h-32 w-full" />
+              <LoadingSkeleton className="h-32 w-full" />
+              <LoadingSkeleton className="h-32 w-full" />
+              <LoadingSkeleton className="h-32 w-full" />
             </div>
           )}
           <div className="pt-8 space-y-8">
@@ -1088,11 +1068,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </div>
               <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
                 Top 3 Fixes to Add{" "}
-                <span className="text-alloro-orange">
-                  {estimatedRevenue
-                    ? formatCurrency(estimatedRevenue)
-                    : "$269,520"}
-                  +
+                <span className="text-alloro-orange inline-flex items-baseline gap-1">
+                  {estimatedRevenue ? (
+                    <>{formatCurrency(estimatedRevenue)}+</>
+                  ) : (
+                    <LoadingSkeleton className="h-10 lg:h-12 w-48 lg:w-64 inline-block translate-y-2" />
+                  )}
                 </span>{" "}
                 <br className="hidden md:block" />
                 to your Annual Revenue.
@@ -1129,8 +1110,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                           Estimated Annual Growth
                         </div>
                         <div className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tighter tabular-nums leading-none group-hover:text-alloro-orange transition-colors duration-500">
-                          ${Math.round((estimatedRevenue || 269520) / 3 / 1000)}
-                          K+
+                          {estimatedRevenue ? (
+                            `$${Math.round(estimatedRevenue / 3 / 1000)}K+`
+                          ) : (
+                            <LoadingSkeleton className="h-12 w-32" />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1154,22 +1138,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 ))
               : // Loading state for top fixes
                 [1, 2, 3].map((idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium min-h-[440px] animate-pulse"
-                  >
-                    <div className="space-y-12">
-                      <div className="h-8 w-32 bg-slate-200 rounded-xl"></div>
-                      <div className="space-y-3">
-                        <div className="h-4 w-40 bg-slate-200 rounded"></div>
-                        <div className="h-16 w-32 bg-slate-200 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="mt-auto pt-20 space-y-3">
-                      <div className="h-8 w-full bg-slate-200 rounded"></div>
-                      <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
-                    </div>
-                  </div>
+                  <LoadingSkeleton key={idx} className="h-[440px] w-full" />
                 ))}
           </div>
         </section>

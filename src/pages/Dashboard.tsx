@@ -270,19 +270,19 @@ export default function Dashboard() {
         !hasProperties ? (
           // Empty State
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-              <Settings className="w-12 h-12 text-blue-600" />
+            <div className="w-24 h-24 bg-alloro-orange/10 rounded-full flex items-center justify-center mb-6">
+              <Settings className="w-12 h-12 text-alloro-orange" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-alloro-navy mb-2">
               Connect Your Properties
             </h2>
-            <p className="text-gray-600 max-w-md mb-8">
+            <p className="text-alloro-navy/70 max-w-md mb-8">
               Welcome to Alloro! To get started, please connect your Google
               Analytics, Search Console, and Business Profile in Settings.
             </p>
             <button
               onClick={() => navigate("/settings")}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+              className="px-6 py-3 bg-alloro-orange text-white rounded-xl font-semibold hover:bg-alloro-navy transition-colors shadow-lg shadow-alloro-orange/50 active:scale-95"
             >
               Go to Settings
             </button>

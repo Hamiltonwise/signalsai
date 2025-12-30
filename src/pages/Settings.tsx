@@ -269,7 +269,7 @@ export const Settings: React.FC = () => {
     {
       id: "gbp",
       name: "Google Business Profile",
-      icon: "https://www.gstatic.com/images/branding/product/1x/business_profile_64dp.png",
+      icon: "https://www.gstatic.com/marketing-cms/assets/images/ads/ea/91/8b79515441068a3e0018d56c19cd/logo-googleg-gradient-color-2x-web-64dp.webp",
       connected: properties.gbp && properties.gbp.length > 0,
       lastSync: properties.gbp.length > 0 ? "1 hour ago" : "Not connected",
       locations: properties.gbp,

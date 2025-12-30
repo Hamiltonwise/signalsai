@@ -714,7 +714,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           });
 
           // Extract potential risk amount from metadata if available
-          let potentialRisk = "$50K";
+          // let potentialRisk = "$50K";
           try {
             if (immediateTask) {
               const metadata =
@@ -722,7 +722,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   ? JSON.parse(immediateTask.metadata)
                   : immediateTask.metadata;
               if (metadata?.potential_risk) {
-                potentialRisk = metadata.potential_risk;
+                // potentialRisk = metadata.potential_risk;
               }
             }
           } catch {

@@ -34,28 +34,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadUserProperties = async () => {
     setIsLoadingUserProperties(true);
     try {
+      // Always try to get googleAccountId from localStorage as the most reliable source
+      const storedGoogleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountIdFromStorage = storedGoogleAccountId
+        ? parseInt(storedGoogleAccountId, 10)
+        : null;
+
       const status = await onboarding.getOnboardingStatus();
 
       if (status.success && status.onboardingCompleted && status.propertyIds) {
-        // Load user profile
-        if (status.profile) {
-          // Get googleAccountId from backend first, fallback to localStorage
-          const storedGoogleAccountId =
-            localStorage.getItem("google_account_id");
-          const googleAccountId =
-            status.profile.googleAccountId ||
-            (storedGoogleAccountId
-              ? parseInt(storedGoogleAccountId, 10)
-              : null);
+        // Get googleAccountId: prefer backend, then localStorage
+        const googleAccountId =
+          status.profile?.googleAccountId || googleAccountIdFromStorage;
 
-          setUserProfile({
-            firstName: status.profile.firstName,
-            lastName: status.profile.lastName,
-            practiceName: status.profile.practiceName,
-            domainName: status.profile.domainName,
-            googleAccountId,
-          });
-        }
+        // Load user profile - always set it if we have any data
+        setUserProfile({
+          firstName: status.profile?.firstName || null,
+          lastName: status.profile?.lastName || null,
+          practiceName: status.profile?.practiceName || null,
+          domainName: status.profile?.domainName || null,
+          googleAccountId,
+        });
 
         // Transform onboarding data to DomainMapping format
         const userMapping: DomainMapping = {
@@ -75,12 +74,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
         };
         setSelectedDomain(userMapping);
+      } else if (googleAccountIdFromStorage) {
+        // Even if onboarding status fails, if we have googleAccountId in localStorage,
+        // set a minimal userProfile so dashboard can fetch data
+        console.log(
+          "[AuthContext] Onboarding status incomplete but googleAccountId found in localStorage:",
+          googleAccountIdFromStorage
+        );
+        setUserProfile((prev) => ({
+          firstName: prev?.firstName || null,
+          lastName: prev?.lastName || null,
+          practiceName: prev?.practiceName || null,
+          domainName: prev?.domainName || null,
+          googleAccountId: googleAccountIdFromStorage,
+        }));
+        // Fallback to hardcoded mappings
+        setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
       } else {
         // Fallback to hardcoded mappings if onboarding not completed
         setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
       }
     } catch (error) {
       console.error("Failed to load user properties:", error);
+      // Even on error, try to use localStorage googleAccountId
+      const storedGoogleAccountId = localStorage.getItem("google_account_id");
+      if (storedGoogleAccountId) {
+        setUserProfile((prev) => ({
+          firstName: prev?.firstName || null,
+          lastName: prev?.lastName || null,
+          practiceName: prev?.practiceName || null,
+          domainName: prev?.domainName || null,
+          googleAccountId: parseInt(storedGoogleAccountId, 10),
+        }));
+      }
       // Fallback to hardcoded mappings on error
       setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
     } finally {

@@ -81,6 +81,20 @@ export default function Dashboard() {
     setActiveTab(tabFromPath(location.pathname));
   }, [location.pathname]);
 
+  // Ensure userProfile.googleAccountId is loaded from localStorage if not already set
+  // This handles the case where login just completed and userProfile needs refresh
+  useEffect(() => {
+    const storedGoogleAccountId = localStorage.getItem("google_account_id");
+
+    // If localStorage has googleAccountId but userProfile doesn't, refresh
+    if (storedGoogleAccountId && !userProfile?.googleAccountId) {
+      console.log(
+        "[Dashboard] googleAccountId in localStorage but not in userProfile, refreshing..."
+      );
+      refreshUserProperties();
+    }
+  }, [userProfile?.googleAccountId, refreshUserProperties]);
+
   // Check onboarding status on mount
   useEffect(() => {
     const checkStatus = async () => {

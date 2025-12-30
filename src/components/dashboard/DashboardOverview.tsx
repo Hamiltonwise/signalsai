@@ -439,8 +439,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   // Extract agent data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const summaryData = data?.agents?.summary?.results?.[0] as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prooflineData = data?.agents?.proofline?.results?.[0] as any;
 
   // Get current date formatted
   const currentDate = format(new Date(), "MMMM d, yyyy");
@@ -467,52 +465,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       }
     }).length || 3; // Default to 3 if no data
 
-  // STATIC DATA - Components that don't have API data yet
-  // These are marked with red borders in the UI for identification
-  const STATIC_WINS = summaryData?.wins || [
-    "Google Business Profile interaction strong (28 calls).",
-    "Net Production of $10,153 achieved from new starts.",
-  ];
-  const isWinsStatic = !summaryData?.wins;
-
-  const STATIC_RISKS = summaryData?.risks || [
-    "Total referrals down 60% this month.",
-    "Organic search click-through rate is below baseline.",
-  ];
-  const isRisksStatic = !summaryData?.risks;
-
-  const STATIC_TOP_FIXES = referralData?.growth_opportunity_summary
-    ?.top_three_fixes || [
-    "Optimize Website Conversion: Eliminate high Dead Click/Quickback issues on crucial consultation pages.",
-    "Implement Instant Lead Nurturing: Automate rapid speed-to-contact via text/email.",
-    "Scale High-ROI Offline Source: Expand Yard Sign strategy across community touchpoints.",
-  ];
-  const isTopFixesStatic =
-    !referralData?.growth_opportunity_summary?.top_three_fixes;
-
-  // Get trajectory and description from proofline data
-  const trajectoryRaw = prooflineData?.trajectory || "Strong";
-  const trajectoryDescription = prooflineData?.description || null;
-  const isTrajectoryStatic = !prooflineData?.trajectory;
-
-  // Helper to clean trajectory description
-  const getCleanedTrajectoryDescription = (
-    text: string | null
-  ): string | null => {
-    if (!text) return null;
-    const cleaned = text
-      .replace(/\s*with new growth signals detected\.?\s*$/gi, "")
-      .trim();
-    return cleaned || null;
-  };
-
-  // Check if trajectoryRaw contains <hghlt> tags
-  const trajectoryContainsHghlt = trajectoryRaw.includes("<hghlt>");
-  const textToDisplay = trajectoryContainsHghlt
-    ? trajectoryRaw
-    : trajectoryDescription || null;
-  const cleanedDescription = getCleanedTrajectoryDescription(textToDisplay);
-  const trajectoryStatus = trajectoryContainsHghlt ? "Strong" : trajectoryRaw;
+  // Data availability flags
+  const wins = summaryData?.wins;
+  const risks = summaryData?.risks;
+  const topFixes = referralData?.growth_opportunity_summary?.top_three_fixes;
+  const estimatedRevenue =
+    referralData?.growth_opportunity_summary
+      ?.estimated_additional_annual_revenue;
+  const alloroOpportunities = referralData?.alloro_automation_opportunities;
+  const practiceActionPlan = referralData?.practice_action_plan;
 
   // Calculate sentiment based on score
   const getSentimentFromScore = (score: number | null | undefined) => {
@@ -526,7 +487,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   // Get sentiment for current location
   const currentLocationRanking = rankingData?.[currentLocationIndex];
   const sentiment = getSentimentFromScore(currentLocationRanking?.rankScore);
-  const isSentimentStatic = !rankingData || rankingData.length === 0;
 
   // Carousel navigation for multiple locations
   const totalLocations = rankingData?.length || 0;
@@ -567,18 +527,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   };
 
   const currentLocationData = getCurrentLocationData();
-  const isAlloroResponsibilitiesStatic =
-    !referralData?.alloro_automation_opportunities;
-  const isPracticeResponsibilitiesStatic = !referralData?.practice_action_plan;
-  const isEstimatedRevenueStatic =
-    !referralData?.growth_opportunity_summary
-      ?.estimated_additional_annual_revenue;
 
-  // Static indicator component
-  const StaticBadge = ({ label }: { label: string }) => (
-    <div className="absolute -top-2 -right-2 z-50 px-2 py-1 bg-red-500 text-white text-[8px] font-extrabold uppercase tracking-wider rounded shadow-lg">
-      {label}
-    </div>
+  // Loading skeleton component for sections waiting for data
+  const LoadingSkeleton = ({ className = "" }: { className?: string }) => (
+    <div
+      className={`bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-xl animate-pulse ${className}`}
+    ></div>
   );
 
   // Loading state - show skeleton when any critical data is still loading
@@ -691,45 +645,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 Verified Ledger
               </div>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
-              {getGreeting()}, Dr. {userProfile?.lastName || "Smith"}.
-            </h2>
-            <div
-              className={`relative ${
-                isTrajectoryStatic
-                  ? "border-2 border-dashed border-red-500 rounded-lg p-2 -m-2"
-                  : ""
-              }`}
-            >
-              {isTrajectoryStatic && (
-                <StaticBadge label="STATIC: proofline.trajectory" />
-              )}
-              <p className="text-slate-500 font-medium text-lg sm:text-xl tracking-tight max-w-2xl leading-relaxed">
-                {cleanedDescription ? (
-                  parseHighlightTags(cleanedDescription, "glow-blue")
-                ) : (
-                  <>
-                    Your practice trajectory remains{" "}
-                    <span
-                      className={`font-extrabold underline underline-offset-8 ${
-                        trajectoryStatus.toLowerCase() === "strong"
-                          ? "text-alloro-cobalt decoration-alloro-cobalt/20"
-                          : trajectoryStatus.toLowerCase() === "growing"
-                          ? "text-green-600 decoration-green-600/20"
-                          : trajectoryStatus.toLowerCase() === "stable"
-                          ? "text-blue-600 decoration-blue-600/20"
-                          : trajectoryStatus.toLowerCase() === "at risk"
-                          ? "text-red-600 decoration-red-600/20"
-                          : "text-alloro-cobalt decoration-alloro-cobalt/20"
-                      }`}
-                    >
-                      {trajectoryStatus}
-                    </span>{" "}
-                    with new growth signals detected.
-                  </>
-                )}
-              </p>
-            </div>
+            {userProfile?.lastName ? (
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading text-alloro-navy tracking-tight leading-none">
+                {getGreeting()}, Dr. {userProfile.lastName}.
+              </h2>
+            ) : (
+              <LoadingSkeleton className="h-12 w-96 max-w-full" />
+            )}
           </div>
         </section>
 
@@ -750,21 +672,32 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   <h3 className="text-2xl sm:text-3xl font-extrabold font-heading tracking-tight leading-none">
                     Intelligence Briefing
                   </h3>
-                  <p className="text-slate-300 text-base sm:text-lg font-normal tracking-tight max-w-lg leading-relaxed">
-                    Alloro has detected{" "}
-                    <span className="text-white font-extrabold underline decoration-alloro-teal underline-offset-4">
-                      {criticalActionsCount} critical actions
-                    </span>{" "}
-                    to secure revenue.
-                  </p>
+                  {tasksLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-5 w-64 bg-white/10 rounded-lg animate-pulse"></div>
+                      <div className="h-5 w-48 bg-white/10 rounded-lg animate-pulse"></div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-300 text-base sm:text-lg font-normal tracking-tight max-w-lg leading-relaxed">
+                      Alloro has detected{" "}
+                      <span className="text-white font-extrabold underline decoration-alloro-teal underline-offset-4">
+                        {criticalActionsCount} critical actions
+                      </span>{" "}
+                      to secure revenue.
+                    </p>
+                  )}
                 </div>
               </div>
-              <button
-                onClick={() => navigate("/tasks")}
-                className="w-full sm:w-auto px-10 py-5 bg-alloro-cobalt text-white rounded-xl text-[12px] font-extrabold uppercase tracking-[0.2em] shadow-xl hover:shadow-alloro-cobalt/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 shrink-0"
-              >
-                REVIEW ACTIONS <ArrowRight size={16} />
-              </button>
+              {tasksLoading ? (
+                <div className="w-full sm:w-48 h-14 bg-white/10 rounded-xl animate-pulse"></div>
+              ) : (
+                <button
+                  onClick={() => navigate("/tasks")}
+                  className="w-full sm:w-auto px-10 py-5 bg-alloro-cobalt text-white rounded-xl text-[12px] font-extrabold uppercase tracking-[0.2em] shadow-xl hover:shadow-alloro-cobalt/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 shrink-0"
+                >
+                  REVIEW ACTIONS <ArrowRight size={16} />
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -868,24 +801,25 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         </span>
                         .
                       </h2>
-                    </div>
-                  ) : (
-                    <h2 className="text-4xl lg:text-5xl font-extrabold font-heading text-alloro-navy tracking-tight leading-[1.05]">
-                      Market analysis{" "}
-                      <span className="text-alloro-cobalt">in progress</span> —
-                      data loading.
-                    </h2>
-                  )}
-                  <p className="text-lg lg:text-xl text-slate-500 font-normal tracking-tight leading-relaxed">
-                    {currentLocationData
-                      ? `You are currently outperforming ${Math.round(
+                      <p className="text-lg lg:text-xl text-slate-500 font-normal tracking-tight leading-relaxed mt-6">
+                        You are currently outperforming{" "}
+                        {Math.round(
                           ((currentLocationData.totalCompetitors -
                             currentLocationData.rank) /
                             currentLocationData.totalCompetitors) *
                             100
-                        )}% of local competitors. Acquire 5 patient reviews this month to secure the next position.`
-                      : "Complete your integrations to see market positioning data."}
-                  </p>
+                        )}
+                        % of local competitors. Acquire 5 patient reviews this
+                        month to secure the next position.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <LoadingSkeleton className="h-6 w-48" />
+                      <LoadingSkeleton className="h-16 w-full max-w-xl" />
+                      <LoadingSkeleton className="h-8 w-96 max-w-full" />
+                    </div>
+                  )}
                 </div>
 
                 {/* MARKET AUTHORITY & SENTIMENT WIDGET - matches newdesign */}
@@ -894,55 +828,54 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] leading-none">
                       AUTHORITY SCORE
                     </p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-5xl font-extrabold font-heading text-alloro-navy leading-none tracking-tighter transition-all duration-500">
-                        {currentLocationData?.score || "--"}
-                      </span>
-                      <span className="text-lg font-semibold text-slate-300">
-                        /100
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className={`space-y-3 relative ${
-                      isSentimentStatic
-                        ? "border-2 border-dashed border-red-500 rounded-lg p-2"
-                        : ""
-                    }`}
-                  >
-                    {isSentimentStatic && (
-                      <StaticBadge label="STATIC: No ranking data" />
+                    {currentLocationData ? (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-5xl font-extrabold font-heading text-alloro-navy leading-none tracking-tighter transition-all duration-500">
+                          {currentLocationData.score}
+                        </span>
+                        <span className="text-lg font-semibold text-slate-300">
+                          /100
+                        </span>
+                      </div>
+                    ) : (
+                      <LoadingSkeleton className="h-12 w-24" />
                     )}
+                  </div>
+                  <div className="space-y-3 relative">
                     <div className="absolute -left-6 top-0 bottom-0 w-px bg-slate-200 hidden sm:block"></div>
                     <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] leading-none">
                       SENTIMENT
                     </p>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-2xl font-extrabold font-heading leading-none tracking-tight transition-all duration-500 ${
-                          sentiment.label === "High"
-                            ? "text-green-600"
-                            : sentiment.label === "Okay"
-                            ? "text-yellow-600"
-                            : sentiment.label === "Low"
-                            ? "text-red-600"
-                            : "text-alloro-navy"
-                        }`}
-                      >
-                        {sentiment.label}
-                      </span>
-                      <div
-                        className={`w-3.5 h-3.5 rounded-full transition-all duration-500 ${
-                          sentiment.label === "High"
-                            ? "bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                            : sentiment.label === "Okay"
-                            ? "bg-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.6)]"
-                            : sentiment.label === "Low"
-                            ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.6)]"
-                            : "bg-slate-400"
-                        } ${sentiment.pulse ? "animate-pulse" : ""}`}
-                      ></div>
-                    </div>
+                    {currentLocationData ? (
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-2xl font-extrabold font-heading leading-none tracking-tight transition-all duration-500 ${
+                            sentiment.label === "High"
+                              ? "text-green-600"
+                              : sentiment.label === "Okay"
+                              ? "text-yellow-600"
+                              : sentiment.label === "Low"
+                              ? "text-red-600"
+                              : "text-alloro-navy"
+                          }`}
+                        >
+                          {sentiment.label}
+                        </span>
+                        <div
+                          className={`w-3.5 h-3.5 rounded-full transition-all duration-500 ${
+                            sentiment.label === "High"
+                              ? "bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
+                              : sentiment.label === "Okay"
+                              ? "bg-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.6)]"
+                              : sentiment.label === "Low"
+                              ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                              : "bg-slate-400"
+                          } ${sentiment.pulse ? "animate-pulse" : ""}`}
+                        ></div>
+                      </div>
+                    ) : (
+                      <LoadingSkeleton className="h-8 w-20" />
+                    )}
                   </div>
                 </div>
               </div>
@@ -1026,61 +959,63 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
         {/* 4. PERFORMANCE SIGNALS - Wins & Risks - matches newdesign */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <div
-            className={`relative bg-green-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-green-50/40 ${
-              isWinsStatic
-                ? "border-2 border-dashed border-red-500"
-                : "border border-green-100/60"
-            }`}
-          >
-            {isWinsStatic && <StaticBadge label="STATIC: summaryData.wins" />}
+          <div className="relative bg-green-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-green-50/40 border border-green-100/60">
             <div className="flex items-center gap-3 text-green-600 font-extrabold text-[11px] uppercase tracking-[0.2em]">
               <div className="w-8 h-8 rounded-lg bg-green-500 text-white flex items-center justify-center shadow-lg shadow-green-200">
                 <TrendingUp size={16} />
               </div>
               Growth Momentum (Wins)
             </div>
-            <ul className="space-y-4">
-              {STATIC_WINS.map((win: string, idx: number) => (
-                <li
-                  key={idx}
-                  className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
-                >
-                  <CheckCircle2
-                    className="text-green-500 shrink-0 mt-0.5 group-hover:scale-110 transition-transform"
-                    size={16}
-                  />
-                  <span>{win}</span>
-                </li>
-              ))}
-            </ul>
+            {wins ? (
+              <ul className="space-y-4">
+                {wins.map((win: string, idx: number) => (
+                  <li
+                    key={idx}
+                    className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
+                  >
+                    <CheckCircle2
+                      className="text-green-500 shrink-0 mt-0.5 group-hover:scale-110 transition-transform"
+                      size={16}
+                    />
+                    <span>{win}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="space-y-4">
+                <LoadingSkeleton className="h-5 w-full" />
+                <LoadingSkeleton className="h-5 w-4/5" />
+                <LoadingSkeleton className="h-5 w-3/4" />
+              </div>
+            )}
           </div>
 
-          <div
-            className={`relative bg-red-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-red-50/40 ${
-              isRisksStatic
-                ? "border-2 border-dashed border-red-500"
-                : "border border-red-100/60"
-            }`}
-          >
-            {isRisksStatic && <StaticBadge label="STATIC: summaryData.risks" />}
+          <div className="relative bg-red-50/20 rounded-2xl p-8 space-y-6 transition-all hover:bg-red-50/40 border border-red-100/60">
             <div className="flex items-center gap-3 text-red-600 font-extrabold text-[11px] uppercase tracking-[0.2em]">
               <div className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-200">
                 <AlertTriangle size={16} />
               </div>
               Stability Risks
             </div>
-            <ul className="space-y-4">
-              {STATIC_RISKS.map((risk: string, idx: number) => (
-                <li
-                  key={idx}
-                  className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
-                >
-                  <div className="w-2 h-2 bg-red-400 rounded-full shrink-0 mt-2 transition-transform group-hover:scale-125"></div>
-                  <span>{risk}</span>
-                </li>
-              ))}
-            </ul>
+            {risks ? (
+              <ul className="space-y-4">
+                {risks.map((risk: string, idx: number) => (
+                  <li
+                    key={idx}
+                    className="flex gap-4 text-sm sm:text-[15px] font-semibold text-slate-600 leading-tight tracking-tight items-start group"
+                  >
+                    <div className="w-2 h-2 bg-red-400 rounded-full shrink-0 mt-2 transition-transform group-hover:scale-125"></div>
+                    <span>{risk}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="space-y-4">
+                <LoadingSkeleton className="h-5 w-full" />
+                <LoadingSkeleton className="h-5 w-4/5" />
+                <LoadingSkeleton className="h-5 w-3/4" />
+              </div>
+            )}
           </div>
         </section>
 
@@ -1430,16 +1365,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div
-                    className={`relative p-10 sm:p-12 border-b md:border-b-0 md:border-r border-slate-100 space-y-10 group bg-white hover:bg-slate-50/30 transition-all ${
-                      isAlloroResponsibilitiesStatic
-                        ? "border-2 border-dashed border-red-500 rounded-tl-2xl rounded-bl-2xl md:rounded-bl-2xl"
-                        : ""
-                    }`}
-                  >
-                    {isAlloroResponsibilitiesStatic && (
-                      <StaticBadge label="STATIC: alloro_automation_opportunities" />
-                    )}
+                  <div className="relative p-10 sm:p-12 border-b md:border-b-0 md:border-r border-slate-100 space-y-10 group bg-white hover:bg-slate-50/30 transition-all">
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 bg-alloro-cobalt rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform">
                         <Cpu size={28} />
@@ -1453,49 +1379,42 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="space-y-5">
-                      {(
-                        referralData?.alloro_automation_opportunities || [
-                          "Reputation Safeguarding & Velocity",
-                          "Competitive Signal Detection",
-                          "Rank Stability Monitoring",
-                          "GA4/GSC Performance Aggregation",
-                          "ROI & Attribution Modeling",
-                        ]
-                      )
-                        .slice(0, 5)
-                        .map((item: string, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-start gap-4 animate-in fade-in slide-in-from-left duration-500"
-                            style={{ animationDelay: `${i * 100}ms` }}
-                          >
-                            <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 shrink-0">
-                              <CheckCircle2
-                                size={14}
-                                className="text-alloro-cobalt"
-                              />
+                    {alloroOpportunities ? (
+                      <div className="space-y-5">
+                        {alloroOpportunities
+                          .slice(0, 5)
+                          .map((item: string, i: number) => (
+                            <div
+                              key={i}
+                              className="flex items-start gap-4 animate-in fade-in slide-in-from-left duration-500"
+                              style={{ animationDelay: `${i * 100}ms` }}
+                            >
+                              <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 shrink-0">
+                                <CheckCircle2
+                                  size={14}
+                                  className="text-alloro-cobalt"
+                                />
+                              </div>
+                              <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
+                                {item.length > 50
+                                  ? item.substring(0, 50) + "..."
+                                  : item}
+                              </span>
                             </div>
-                            <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
-                              {item.length > 50
-                                ? item.substring(0, 50) + "..."
-                                : item}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        <LoadingSkeleton className="h-6 w-full" />
+                        <LoadingSkeleton className="h-6 w-4/5" />
+                        <LoadingSkeleton className="h-6 w-full" />
+                        <LoadingSkeleton className="h-6 w-3/4" />
+                        <LoadingSkeleton className="h-6 w-4/5" />
+                      </div>
+                    )}
                   </div>
 
-                  <div
-                    className={`relative p-10 sm:p-12 space-y-10 group bg-white hover:bg-slate-50/30 transition-all ${
-                      isPracticeResponsibilitiesStatic
-                        ? "border-2 border-dashed border-red-500 rounded-tr-2xl rounded-br-2xl"
-                        : ""
-                    }`}
-                  >
-                    {isPracticeResponsibilitiesStatic && (
-                      <StaticBadge label="STATIC: practice_action_plan" />
-                    )}
+                  <div className="relative p-10 sm:p-12 space-y-10 group bg-white hover:bg-slate-50/30 transition-all">
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 bg-alloro-navy rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-900/10 group-hover:scale-110 transition-transform">
                         <UserCheck size={28} />
@@ -1509,59 +1428,119 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="space-y-5">
-                      {(
-                        referralData?.practice_action_plan || [
-                          "Physical Patient Experience",
-                          "Treatment Coordinator (TC) Starts",
-                          "Referral Network Relationship Health",
-                          "Sales Protocol (Speed to Lead)",
-                          "Local Market Community Presence",
-                        ]
-                      )
-                        .slice(0, 5)
-                        .map((item: string, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-start gap-4 animate-in fade-in slide-in-from-right duration-500"
-                            style={{ animationDelay: `${i * 100}ms` }}
-                          >
-                            <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 border border-slate-200 shrink-0">
-                              <CircleCheck
-                                size={14}
-                                className="text-alloro-navy"
-                              />
+                    {practiceActionPlan ? (
+                      <div className="space-y-5">
+                        {practiceActionPlan
+                          .slice(0, 5)
+                          .map((item: string, i: number) => (
+                            <div
+                              key={i}
+                              className="flex items-start gap-4 animate-in fade-in slide-in-from-right duration-500"
+                              style={{ animationDelay: `${i * 100}ms` }}
+                            >
+                              <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 border border-slate-200 shrink-0">
+                                <CircleCheck
+                                  size={14}
+                                  className="text-alloro-navy"
+                                />
+                              </div>
+                              <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
+                                {item.length > 50
+                                  ? item.substring(0, 50) + "..."
+                                  : item}
+                              </span>
                             </div>
-                            <span className="text-[15px] font-semibold text-slate-600 tracking-tight leading-snug">
-                              {item.length > 50
-                                ? item.substring(0, 50) + "..."
-                                : item}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        <LoadingSkeleton className="h-6 w-full" />
+                        <LoadingSkeleton className="h-6 w-4/5" />
+                        <LoadingSkeleton className="h-6 w-full" />
+                        <LoadingSkeleton className="h-6 w-3/4" />
+                        <LoadingSkeleton className="h-6 w-4/5" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* TOP 3 GROWTH FIXES */}
-              <section
-                className={`relative bg-alloro-navy rounded-2xl p-10 lg:p-16 text-white overflow-hidden shadow-2xl border-t border-white/5 ${
-                  isTopFixesStatic || isEstimatedRevenueStatic
-                    ? "border-2 border-dashed border-red-500"
-                    : ""
-                }`}
-              >
-                {(isTopFixesStatic || isEstimatedRevenueStatic) && (
-                  <div className="absolute top-4 right-4 z-50 px-3 py-1.5 bg-red-500 text-white text-[9px] font-extrabold uppercase tracking-wider rounded shadow-lg">
-                    STATIC: top_three_fixes + estimated_revenue
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-br from-alloro-cobalt/20 to-transparent pointer-events-none opacity-40"></div>
-                <div className="absolute top-0 right-0 p-80 bg-alloro-cobalt/10 rounded-full -mr-40 -mt-40 blur-[150px] pointer-events-none opacity-50"></div>
+              {topFixes && estimatedRevenue ? (
+                <section className="relative bg-alloro-navy rounded-2xl p-10 lg:p-16 text-white overflow-hidden shadow-2xl border-t border-white/5">
+                  <div className="absolute inset-0 bg-gradient-to-br from-alloro-cobalt/20 to-transparent pointer-events-none opacity-40"></div>
+                  <div className="absolute top-0 right-0 p-80 bg-alloro-cobalt/10 rounded-full -mr-40 -mt-40 blur-[150px] pointer-events-none opacity-50"></div>
 
-                <div className="relative z-10 space-y-14">
-                  <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
+                  <div className="relative z-10 space-y-14">
+                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-alloro-cobalt/20 text-alloro-teal flex items-center justify-center border border-alloro-teal/20 backdrop-blur-md shadow-lg">
+                            <Target size={24} />
+                          </div>
+                          <span className="text-[11px] font-extrabold uppercase tracking-[0.4em] text-alloro-teal leading-none">
+                            AI Practice Roadmap
+                          </span>
+                        </div>
+                        <h2 className="text-4xl lg:text-6xl font-extrabold font-heading tracking-tight leading-[0.95]">
+                          Top 3 Fixes to Add{" "}
+                          <span className="text-alloro-teal shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                            {formatCurrency(estimatedRevenue)}+
+                          </span>
+                        </h2>
+                        <p className="text-blue-100/60 font-medium text-xl sm:text-2xl max-w-3xl leading-relaxed">
+                          Verified production potential unlocked via algorithmic
+                          leak analysis of current referral funnels.
+                        </p>
+                      </div>
+                      <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 backdrop-blur-sm shadow-xl">
+                        <Activity
+                          size={22}
+                          className="text-alloro-teal animate-pulse"
+                        />
+                        <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-blue-100/80 leading-none">
+                          Real-time Performance Projection
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      {topFixes.map((fix: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="relative group perspective-1000"
+                        >
+                          <div className="bg-white/5 border border-white/10 rounded-2xl p-10 h-full flex flex-col transition-all duration-500 hover:bg-white/10 hover:-translate-y-3 hover:shadow-2xl hover:border-alloro-teal/30 backdrop-blur-sm group">
+                            <div className="flex items-center justify-between mb-10">
+                              <div className="w-14 h-14 rounded-full bg-alloro-cobalt text-white flex items-center justify-center text-2xl font-extrabold shadow-[0_10px_20px_rgba(36,78,230,0.4)] group-hover:scale-110 transition-transform">
+                                {idx + 1}
+                              </div>
+                              <ArrowRightCircle
+                                size={28}
+                                className="text-white/20 group-hover:text-alloro-teal transition-all group-hover:rotate-45"
+                              />
+                            </div>
+                            <p className="text-[16px] font-normal text-blue-100/50 leading-relaxed tracking-tight flex-1">
+                              {fix}
+                            </p>
+                            <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100/30">
+                                Optimization Impact
+                              </span>
+                              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-alloro-teal">
+                                Critical Priority
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <section className="relative bg-alloro-navy rounded-2xl p-10 lg:p-16 text-white overflow-hidden shadow-2xl border-t border-white/5">
+                  <div className="absolute inset-0 bg-gradient-to-br from-alloro-cobalt/20 to-transparent pointer-events-none opacity-40"></div>
+                  <div className="relative z-10 space-y-14">
                     <div className="space-y-5">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-alloro-cobalt/20 text-alloro-teal flex items-center justify-center border border-alloro-teal/20 backdrop-blur-md shadow-lg">
@@ -1571,71 +1550,29 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                           AI Practice Roadmap
                         </span>
                       </div>
-                      <h2 className="text-4xl lg:text-6xl font-extrabold font-heading tracking-tight leading-[0.95]">
-                        Top 3 Fixes to Add{" "}
-                        <span
-                          className={`text-alloro-teal shadow-[0_0_20px_rgba(6,182,212,0.3)] ${
-                            isEstimatedRevenueStatic
-                              ? "underline decoration-red-500 decoration-wavy"
-                              : ""
-                          }`}
+                      <div className="space-y-4">
+                        <div className="h-16 bg-white/10 rounded-xl animate-pulse"></div>
+                        <div className="h-8 w-3/4 bg-white/10 rounded-lg animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      {[1, 2, 3].map((idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white/5 border border-white/10 rounded-2xl p-10 h-64 animate-pulse"
                         >
-                          {formatCurrency(
-                            referralData?.growth_opportunity_summary
-                              ?.estimated_additional_annual_revenue || 269520
-                          )}
-                          +
-                        </span>
-                      </h2>
-                      <p className="text-blue-100/60 font-medium text-xl sm:text-2xl max-w-3xl leading-relaxed">
-                        Verified production potential unlocked via algorithmic
-                        leak analysis of current referral funnels.
-                      </p>
-                    </div>
-                    <div className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 backdrop-blur-sm shadow-xl">
-                      <Activity
-                        size={22}
-                        className="text-alloro-teal animate-pulse"
-                      />
-                      <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-blue-100/80 leading-none">
-                        Real-time Performance Projection
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {STATIC_TOP_FIXES.map((fix: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="relative group perspective-1000"
-                      >
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-10 h-full flex flex-col transition-all duration-500 hover:bg-white/10 hover:-translate-y-3 hover:shadow-2xl hover:border-alloro-teal/30 backdrop-blur-sm group">
-                          <div className="flex items-center justify-between mb-10">
-                            <div className="w-14 h-14 rounded-full bg-alloro-cobalt text-white flex items-center justify-center text-2xl font-extrabold shadow-[0_10px_20px_rgba(36,78,230,0.4)] group-hover:scale-110 transition-transform">
-                              {idx + 1}
-                            </div>
-                            <ArrowRightCircle
-                              size={28}
-                              className="text-white/20 group-hover:text-alloro-teal transition-all group-hover:rotate-45"
-                            />
-                          </div>
-                          <p className="text-[16px] font-normal text-blue-100/50 leading-relaxed tracking-tight flex-1">
-                            {fix}
-                          </p>
-                          <div className="mt-10 pt-8 border-t border-white/10 flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100/30">
-                              Optimization Impact
-                            </span>
-                            <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-alloro-teal">
-                              Critical Priority
-                            </span>
+                          <div className="h-14 w-14 rounded-full bg-white/10 mb-10"></div>
+                          <div className="space-y-3">
+                            <div className="h-4 bg-white/10 rounded"></div>
+                            <div className="h-4 w-4/5 bg-white/10 rounded"></div>
+                            <div className="h-4 w-3/4 bg-white/10 rounded"></div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
             </div>
           )}
         </section>

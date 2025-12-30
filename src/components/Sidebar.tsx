@@ -252,6 +252,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
+      {/* Logout Confirmation Modal - positioned outside sidebar for full viewport coverage */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
+              onClick={() => setShowLogoutConfirm(false)}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-red-50 text-red-600">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-black text-alloro-navy font-heading">
+                    Log Out?
+                  </h3>
+                </div>
+
+                <p className="text-slate-600 mb-6 leading-relaxed text-[14px]">
+                  Are you sure you want to log out of your account?
+                </p>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    onClick={() => setShowLogoutConfirm(false)}
+                    className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-md"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar - matches newdesign exactly */}
       <aside
         className={`
@@ -390,61 +445,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Logout Confirmation Modal (PRESERVED from original) */}
-        <AnimatePresence>
-          {showLogoutConfirm && (
-            <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
-                onClick={() => setShowLogoutConfirm(false)}
-              />
-
-              {/* Modal */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", duration: 0.3 }}
-                className="relative bg-white rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden"
-              >
-                <div className="p-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 rounded-xl bg-red-50 text-red-600">
-                      <AlertTriangle className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-black text-alloro-navy font-heading">
-                      Log Out?
-                    </h3>
-                  </div>
-
-                  <p className="text-slate-600 mb-6 leading-relaxed text-[14px]">
-                    Are you sure you want to log out of your account?
-                  </p>
-
-                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                    <button
-                      onClick={() => setShowLogoutConfirm(false)}
-                      className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-md"
-                    >
-                      Log Out
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </aside>
     </>
   );

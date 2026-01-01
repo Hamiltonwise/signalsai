@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Trophy,
@@ -13,6 +14,7 @@ import {
   Target,
   Rocket,
   HelpCircle,
+  ExternalLink,
 } from "lucide-react";
 
 // Type for client GBP data
@@ -486,11 +488,17 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
           </div>
           <div className="hidden sm:flex items-center gap-5 bg-white px-6 py-3 rounded-2xl border border-black/5 shadow-premium">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Active Markets:
+              Latest Analysis:
             </span>
             <span className="text-[11px] font-black text-alloro-navy flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>{" "}
-              {rankings.length} Locations Synced
+              {rankings.length} Location{rankings.length !== 1 ? "s" : ""} •{" "}
+              {new Date(
+                rankings[0]?.observedAt || new Date()
+              ).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
             </span>
           </div>
         </div>
@@ -858,83 +866,86 @@ function PerformanceDashboard({
         </div>
       </section>
 
-      {/* 4. VISIBILITY PROTOCOL (Action Plan) */}
-      <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left">
-        <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
-          <div className="space-y-1">
-            <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-              Visibility Protocol
-            </h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Tactical rank acceleration steps
-            </p>
-          </div>
-          <div className="w-12 h-12 bg-alloro-orange/10 text-alloro-orange rounded-xl flex items-center justify-center shadow-inner">
-            <Rocket size={24} />
-          </div>
-        </div>
-        <div className="p-8 lg:p-12 space-y-6">
-          {/* Render tasks or fallback to recommendations */}
-          {(tasks && tasks.length > 0
-            ? tasks
-            : result.llmAnalysis?.top_recommendations?.map((r, i) => ({
-                id: i,
-                title: r.title,
-                description: r.description,
-                metadata: {
-                  priority: r.priority === 1 ? "High" : "Medium",
-                  effort: "Standard",
-                },
-              })) || []
-          )
-            .slice(0, 3)
-            .map((task) => (
-              <div
-                key={task.id}
-                className="p-8 bg-slate-50/50 rounded-2xl border border-black/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 hover:bg-white hover:border-alloro-orange/20 hover:shadow-premium transition-all group"
-              >
-                <div className="space-y-3">
-                  <h4 className="font-black text-alloro-navy text-xl tracking-tight leading-none group-hover:text-alloro-orange transition-colors">
-                    {task.title}
-                  </h4>
-                  <p className="text-[15px] text-slate-500 font-bold tracking-tight leading-relaxed max-w-2xl line-clamp-2">
-                    {task.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-6 shrink-0">
-                  <span
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${
-                      task.metadata?.priority === "High" ||
-                      task.metadata?.priority === "1"
-                        ? "bg-red-50 text-red-600 border-red-100"
-                        : "bg-blue-50 text-blue-600 border-blue-100"
-                    }`}
-                  >
-                    {task.metadata?.priority === "High" ||
-                    task.metadata?.priority === "1"
-                      ? "High"
-                      : "Medium"}{" "}
-                    Priority
-                  </span>
-                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">
-                    {task.metadata?.effort || "Standard"} Protocol
-                  </span>
-                </div>
-              </div>
-            ))}
+      {/* 4. VISIBILITY PROTOCOL (Action Plan) - Only approved tasks */}
+      <VisibilityProtocol tasks={tasks} />
+    </div>
+  );
+}
 
-          {(!tasks || tasks.length === 0) &&
-            (!result.llmAnalysis?.top_recommendations ||
-              result.llmAnalysis.top_recommendations.length === 0) && (
-              <div className="text-center py-8 text-slate-400">
-                <p className="text-sm font-bold">
-                  No active protocol tasks available.
+// Visibility Protocol Component - Only shows approved tasks with "View in Tasks" CTA
+function VisibilityProtocol({ tasks }: { tasks: RankingTask[] }) {
+  const navigate = useNavigate();
+
+  return (
+    <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left">
+      <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
+        <div className="space-y-1">
+          <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+            Visibility Protocol
+          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Tactical rank acceleration steps
+          </p>
+        </div>
+        <div className="w-12 h-12 bg-alloro-orange/10 text-alloro-orange rounded-xl flex items-center justify-center shadow-inner">
+          <Rocket size={24} />
+        </div>
+      </div>
+      <div className="p-8 lg:p-12 space-y-6">
+        {/* Only render approved tasks */}
+        {tasks && tasks.length > 0 ? (
+          tasks.slice(0, 3).map((task) => (
+            <div
+              key={task.id}
+              className="p-8 bg-slate-50/50 rounded-2xl border border-black/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 hover:bg-white hover:border-alloro-orange/20 hover:shadow-premium transition-all group"
+            >
+              <div className="space-y-3">
+                <h4 className="font-black text-alloro-navy text-xl tracking-tight leading-none group-hover:text-alloro-orange transition-colors">
+                  {task.title}
+                </h4>
+                <p className="text-[15px] text-slate-500 font-bold tracking-tight leading-relaxed max-w-2xl line-clamp-2">
+                  {task.description}
                 </p>
               </div>
-            )}
-        </div>
-      </section>
-    </div>
+              <div className="flex items-center gap-6 shrink-0">
+                <span
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                    task.metadata?.priority === "High" ||
+                    task.metadata?.priority === "1"
+                      ? "bg-red-50 text-red-600 border-red-100"
+                      : "bg-blue-50 text-blue-600 border-blue-100"
+                  }`}
+                >
+                  {task.metadata?.priority === "High" ||
+                  task.metadata?.priority === "1"
+                    ? "High"
+                    : "Medium"}{" "}
+                  Priority
+                </span>
+                <button
+                  onClick={() =>
+                    navigate("/tasks", { state: { scrollToTaskId: task.id } })
+                  }
+                  className="flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 text-alloro-orange rounded-xl text-[10px] font-black uppercase tracking-widest border border-alloro-orange/20 hover:bg-alloro-orange hover:text-white transition-all cursor-pointer"
+                >
+                  <ExternalLink size={14} />
+                  View in Tasks
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-8 text-slate-400">
+            <p className="text-sm font-bold">
+              No approved protocol tasks available yet.
+            </p>
+            <p className="text-xs text-slate-300 mt-2">
+              Tasks will appear here once they're approved by your team.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

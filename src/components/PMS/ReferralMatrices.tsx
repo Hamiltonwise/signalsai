@@ -135,10 +135,92 @@ const MatricesEmptyState = () => (
   </div>
 );
 
-// Loading Skeleton
+// Loading Skeleton - Detailed table skeleton with gradient animation
 const MatricesLoadingSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="bg-white rounded-2xl border border-slate-200 h-96" />
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
+    {/* Header Skeleton */}
+    <div className="px-6 py-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
+      <div className="space-y-2">
+        <div className="h-6 w-48 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-lg animate-shimmer" />
+        <div className="h-3 w-64 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+      </div>
+      <div className="flex gap-1 bg-slate-50 p-1 rounded-xl">
+        <div className="h-8 w-16 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-lg animate-shimmer" />
+        <div className="h-8 w-20 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded-lg animate-shimmer" />
+        <div className="h-8 w-24 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded-lg animate-shimmer" />
+      </div>
+    </div>
+
+    {/* Table Header Skeleton */}
+    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30">
+      <div className="flex items-center gap-4">
+        <div className="h-3 w-24 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-shimmer" />
+        <div className="h-3 w-12 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="h-3 w-10 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="h-3 w-14 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="h-3 w-14 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="h-3 w-14 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="flex-1" />
+        <div className="h-3 w-20 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+        <div className="h-3 w-32 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+      </div>
+    </div>
+
+    {/* Table Rows Skeleton */}
+    <div className="divide-y divide-slate-100">
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className="px-6 py-5 flex items-center gap-4"
+          style={{ animationDelay: `${i * 100}ms` }}
+        >
+          <div className="w-[20%] space-y-2">
+            <div
+              className="h-4 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-shimmer"
+              style={{ width: `${60 + Math.random() * 40}%` }}
+            />
+            <div className="h-3 w-16 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+          </div>
+          <div className="w-[8%] flex justify-center">
+            <div className="h-5 w-14 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+          </div>
+          <div className="w-[7%] flex justify-center">
+            <div className="h-4 w-8 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-shimmer" />
+          </div>
+          <div className="w-[9%] flex justify-center">
+            <div className="h-4 w-10 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+          </div>
+          <div className="w-[9%] flex justify-center">
+            <div className="h-4 w-10 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+          </div>
+          <div className="w-[9%] flex justify-center">
+            <div className="h-4 w-10 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+          </div>
+          <div className="w-[13%] flex justify-end">
+            <div className="h-4 w-16 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-shimmer" />
+          </div>
+          <div className="w-[25%] space-y-1">
+            <div className="h-3 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer" />
+            <div
+              className="h-3 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 rounded animate-shimmer"
+              style={{ width: `${50 + Math.random() * 50}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Add shimmer animation style */}
+    <style>{`
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .animate-shimmer {
+        background-size: 200% 100%;
+        animation: shimmer 1.5s ease-in-out infinite;
+      }
+    `}</style>
   </div>
 );
 

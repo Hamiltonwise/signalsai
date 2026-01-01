@@ -41,7 +41,7 @@ export const Notifications: React.FC = () => {
     document.title = "Notifications | Alloro";
   }, []);
 
-  // Fetch notifications
+  // Fetch notifications and auto-mark all as read on page load
   useEffect(() => {
     if (!googleAccountId) {
       setLoading(false);
@@ -59,9 +59,25 @@ export const Notifications: React.FC = () => {
       }
     };
 
-    loadNotifications();
+    // Auto-mark all notifications as read when page opens
+    const autoMarkAllRead = async () => {
+      try {
+        await markAllNotificationsRead(googleAccountId);
+        // Update local state to show all as read
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        // Dispatch event to update sidebar notification badge
+        window.dispatchEvent(new CustomEvent("notifications:updated"));
+      } catch (error) {
+        console.error("Error auto-marking notifications as read:", error);
+      }
+    };
 
-    // Poll every 10 seconds
+    loadNotifications().then(() => {
+      // Mark all as read after notifications are loaded
+      autoMarkAllRead();
+    });
+
+    // Poll every 10 seconds (but don't auto-mark on poll)
     const interval = setInterval(loadNotifications, 10000);
     return () => clearInterval(interval);
   }, [googleAccountId]);

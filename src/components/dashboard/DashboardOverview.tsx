@@ -710,25 +710,27 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           )}
         </section>
 
-        {/* SECTION 1: INTELLIGENCE BRIEFING BANNER - matches newdesign exactly */}
-        <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
-          <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
-            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
-              <div className="flex items-start sm:items-center gap-6">
-                <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shadow-inner shrink-0 group">
-                  <Zap
-                    size={24}
-                    className="text-white group-hover:scale-110 transition-transform"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
-                    Intelligence Briefing
-                  </h3>
-                  {tasksLoading || criticalActionsCount === 0 ? (
-                    <div className="h-6 w-80 bg-white/30 rounded-lg animate-pulse mt-2"></div>
-                  ) : (
+        {/* SECTION 1: INTELLIGENCE BRIEFING BANNER - Show skeleton while loading, hide if no data after load */}
+        {tasksLoading ? (
+          <section className="animate-pulse">
+            <div className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl h-32 skeleton-shimmer"></div>
+          </section>
+        ) : criticalActionsCount > 0 ? (
+          <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
+            <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
+              <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
+                <div className="flex items-start sm:items-center gap-6">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shadow-inner shrink-0 group">
+                    <Zap
+                      size={24}
+                      className="text-white group-hover:scale-110 transition-transform"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
+                      Intelligence Briefing
+                    </h3>
                     <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
                       You have{" "}
                       <span className="text-white font-black underline decoration-white/40 underline-offset-4">
@@ -736,25 +738,39 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                       </span>{" "}
                       to secure $50k+ in recovery.
                     </p>
-                  )}
+                  </div>
                 </div>
-              </div>
-              {tasksLoading ? (
-                <div className="w-full sm:w-48 h-14 bg-white/20 rounded-xl animate-pulse"></div>
-              ) : (
                 <button
                   onClick={() => navigate("/tasks")}
                   className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
                 >
                   REVIEW ACTIONS <ArrowRight size={16} />
                 </button>
-              )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
-        {/* SECTION 2: CRITICAL PRIORITY / URGENT INTERVENTION - matches newdesign */}
+        {/* SECTION 2: CRITICAL PRIORITY / URGENT INTERVENTION - Show skeleton while loading, hide if no data after load */}
         {(() => {
+          // Show skeleton while loading
+          if (tasksLoading) {
+            return (
+              <section className="animate-pulse">
+                <div className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1 space-y-4 w-full">
+                      <div className="h-6 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                      <div className="h-10 w-3/4 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                      <div className="h-6 w-full max-w-xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                    </div>
+                    <div className="h-14 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl skeleton-shimmer shrink-0"></div>
+                  </div>
+                </div>
+              </section>
+            );
+          }
+
           const immediateTask = tasks.find((task) => {
             try {
               const metadata =
@@ -770,20 +786,9 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             }
           });
 
-          // Extract potential risk amount from metadata if available
-          // let potentialRisk = "$50K";
-          try {
-            if (immediateTask) {
-              const metadata =
-                typeof immediateTask.metadata === "string"
-                  ? JSON.parse(immediateTask.metadata)
-                  : immediateTask.metadata;
-              if (metadata?.potential_risk) {
-                // potentialRisk = metadata.potential_risk;
-              }
-            }
-          } catch {
-            // Use default
+          // Hide section if no immediate task found after loading
+          if (!immediateTask) {
+            return null;
           }
 
           return (
@@ -794,35 +799,23 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     URGENT INTERVENTION
                   </span>
                 </div>
-                {immediateTask ? (
-                  <>
-                    <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                      {parseHighlightTags(
-                        (immediateTask.title || "").replace(/<[^>]*>/g, ""),
-                        "highlight-red"
-                      )}
-                    </h2>
-                    <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
-                      {parseHighlightTags(
-                        (immediateTask.description || "").replace(
-                          /<[^>]*>/g,
-                          ""
-                        ),
-                        "highlight-red"
-                      )}
-                    </p>
-                  </>
-                ) : (
-                  <div className="space-y-4 w-full">
-                    <LoadingSkeleton className="h-10 w-3/4 max-w-lg" />
-                    <LoadingSkeleton className="h-6 w-full max-w-xl" />
-                  </div>
-                )}
+                <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                  {parseHighlightTags(
+                    (immediateTask.title || "").replace(/<[^>]*>/g, ""),
+                    "highlight-red"
+                  )}
+                </h2>
+                <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
+                  {parseHighlightTags(
+                    (immediateTask.description || "").replace(/<[^>]*>/g, ""),
+                    "highlight-red"
+                  )}
+                </p>
               </div>
               <button
                 onClick={() => {
                   // Navigate to tasks with the task ID for scrolling
-                  const taskId = immediateTask?.id;
+                  const taskId = immediateTask.id;
                   navigate("/tasks", { state: { scrollToTaskId: taskId } });
                 }}
                 className="w-full sm:w-auto px-8 py-4 bg-[#11151C] text-white rounded-[1rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 shrink-0 active:scale-95 group"
@@ -1246,34 +1239,40 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           </div>
         )}
 
-        {/* HUB COLLAPSIBLE TRIGGER - matches newdesign */}
-        <div className="pt-10 text-center">
-          <button
-            onClick={() => setShowDataHub(!showDataHub)}
-            className="w-full sm:w-auto inline-flex items-center justify-center px-12 py-7 bg-white border border-alloro-orange/20 text-alloro-orange text-[12px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-alloro-orange hover:text-white transition-all shadow-premium active:scale-95 group"
-          >
-            {showDataHub
-              ? "Hide Detailed Intelligence"
-              : "Enter Practice Intelligence Hub"}
-            <div
-              className={`ml-4 transition-transform duration-500 ${
-                showDataHub ? "rotate-180" : "group-hover:translate-y-1"
-              }`}
+        {/* HUB COLLAPSIBLE TRIGGER - Show skeleton while loading, hide if no data after load */}
+        {referralLoading ? (
+          <div className="pt-10 text-center animate-pulse">
+            <div className="w-full sm:w-auto inline-flex items-center justify-center px-12 py-7 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl h-16 max-w-md mx-auto skeleton-shimmer"></div>
+          </div>
+        ) : referralData || referralPending ? (
+          <div className="pt-10 text-center">
+            <button
+              onClick={() => setShowDataHub(!showDataHub)}
+              className="w-full sm:w-auto inline-flex items-center justify-center px-12 py-7 bg-white border border-alloro-orange/20 text-alloro-orange text-[12px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-alloro-orange hover:text-white transition-all shadow-premium active:scale-95 group"
             >
-              <ChevronDown size={20} />
-            </div>
-          </button>
+              {showDataHub
+                ? "Hide Detailed Intelligence"
+                : "Enter Practice Intelligence Hub"}
+              <div
+                className={`ml-4 transition-transform duration-500 ${
+                  showDataHub ? "rotate-180" : "group-hover:translate-y-1"
+                }`}
+              >
+                <ChevronDown size={20} />
+              </div>
+            </button>
 
-          {showDataHub && (
-            <div className="mt-16 text-left animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
-              <ReferralMatrices
-                referralData={referralData}
-                isLoading={referralLoading}
-                isPending={referralPending}
-              />
-            </div>
-          )}
-        </div>
+            {showDataHub && (
+              <div className="mt-16 text-left animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
+                <ReferralMatrices
+                  referralData={referralData}
+                  isLoading={referralLoading}
+                  isPending={referralPending}
+                />
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {/* Footer Branding - matches newdesign exactly */}
         <footer className="pt-24 pb-12 flex flex-col items-center gap-10 text-center">

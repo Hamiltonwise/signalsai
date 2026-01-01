@@ -15,7 +15,6 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  Download,
   Loader2,
   Lock,
   Pencil,
@@ -143,7 +142,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   // Referral Engine data state
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
@@ -539,11 +537,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     }
   };
 
-  const handleExport = () => {
-    setIsExporting(true);
-    setTimeout(() => setIsExporting(false), 1500);
-  };
-
   // Get max value for bar chart scaling
   const maxBarValue = useMemo(() => {
     if (!monthlyData.length) return 25;
@@ -592,19 +585,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               </div>
             </div>
           </div>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white border border-slate-200 text-alloro-navy rounded-xl text-[10px] font-bold uppercase tracking-widest hover:border-alloro-orange transition-all shadow-sm"
-          >
-            <Download
-              size={14}
-              className={isExporting ? "animate-bounce" : ""}
-            />
-            <span className="hidden sm:inline">
-              {isExporting ? "Exporting..." : "Export Attribution"}
-            </span>
-            <span className="sm:hidden">{isExporting ? "..." : "Export"}</span>
-          </button>
         </div>
       </header>
 

@@ -155,23 +155,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [loadTaskCount]);
 
   // Fetch unread notification count
-  useEffect(() => {
-    const loadNotificationCount = async () => {
-      const googleAccountId = userProfile?.googleAccountId;
-      if (!googleAccountId || !onboardingCompleted) return;
+  const loadNotificationCount = useCallback(async () => {
+    const googleAccountId = userProfile?.googleAccountId;
+    if (!googleAccountId || !onboardingCompleted) return;
 
-      try {
-        const response = await fetchNotifications(googleAccountId);
-        if (response?.success) {
-          setUnreadNotificationCount(response.unreadCount || 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch notification count for sidebar:", err);
+    try {
+      const response = await fetchNotifications(googleAccountId);
+      if (response?.success) {
+        setUnreadNotificationCount(response.unreadCount || 0);
       }
+    } catch (err) {
+      console.error("Failed to fetch notification count for sidebar:", err);
+    }
+  }, [userProfile?.googleAccountId, onboardingCompleted]);
+
+  // Initial load and periodic refresh of notification count
+  useEffect(() => {
+    loadNotificationCount();
+
+    // Poll every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, [loadNotificationCount]);
+
+  // Listen for notification updates (when user marks all as read or deletes)
+  useEffect(() => {
+    const handleNotificationsUpdated = () => {
+      loadNotificationCount();
     };
 
-    loadNotificationCount();
-  }, [userProfile?.googleAccountId, onboardingCompleted]);
+    window.addEventListener(
+      "notifications:updated",
+      handleNotificationsUpdated
+    );
+    return () => {
+      window.removeEventListener(
+        "notifications:updated",
+        handleNotificationsUpdated
+      );
+    };
+  }, [loadNotificationCount]);
 
   const handleLogout = () => {
     disconnect();
@@ -213,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: userTaskCount > 0 ? String(userTaskCount) : undefined,
       },
       {
-        label: "Signals",
+        label: "Notifications",
         icon: <Bell size={18} />,
         path: "/notifications",
         showDuringOnboarding: false,

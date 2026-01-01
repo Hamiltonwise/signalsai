@@ -167,6 +167,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     null
   );
   const [referralLoading, setReferralLoading] = useState(true);
+  const [referralPending, setReferralPending] = useState(false);
 
   // Fetch PMS data
   useEffect(() => {
@@ -299,10 +300,21 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
         if (!response.ok) {
           setReferralData(null);
+          setReferralPending(false);
           return;
         }
 
         const result = await response.json();
+
+        // Check if referral engine output is pending (monthly agents still running)
+        if (result.success && result.pending === true) {
+          setReferralPending(true);
+          setReferralData(null);
+          return;
+        }
+
+        // Got actual data
+        setReferralPending(false);
         if (result.success && result.data) {
           const dataToSet = Array.isArray(result.data)
             ? result.data[0]
@@ -311,6 +323,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         }
       } catch (err) {
         console.error("Failed to fetch referral engine data:", err);
+        setReferralPending(false);
       } finally {
         setReferralLoading(false);
       }
@@ -447,6 +460,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       );
       if (response.ok) {
         const result = await response.json();
+
+        // Check if referral engine output is pending
+        if (result.success && result.pending === true) {
+          setReferralPending(true);
+          setReferralData(null);
+          return;
+        }
+
+        setReferralPending(false);
         if (result.success && result.data) {
           const dataToSet = Array.isArray(result.data)
             ? result.data[0]
@@ -456,6 +478,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       }
     } catch (err) {
       console.error("Failed to reload referral data:", err);
+      setReferralPending(false);
     } finally {
       setReferralLoading(false);
     }
@@ -1246,6 +1269,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <ReferralMatrices
                 referralData={referralData}
                 isLoading={referralLoading}
+                isPending={referralPending}
               />
             </div>
           )}

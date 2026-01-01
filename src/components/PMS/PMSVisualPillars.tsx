@@ -150,6 +150,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     null
   );
   const [referralLoading, setReferralLoading] = useState(false);
+  const [referralPending, setReferralPending] = useState(false);
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
@@ -308,10 +309,21 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
       if (!response.ok) {
         setReferralData(null);
+        setReferralPending(false);
         return;
       }
 
       const result = await response.json();
+
+      // Check if referral engine output is pending (monthly agents still running)
+      if (result.success && result.pending === true) {
+        setReferralPending(true);
+        setReferralData(null);
+        return;
+      }
+
+      // Got actual data
+      setReferralPending(false);
       if (result.success && result.data) {
         const dataToSet = Array.isArray(result.data)
           ? result.data[0]
@@ -321,6 +333,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     } catch (err) {
       console.error("Failed to fetch referral engine data:", err);
       setReferralData(null);
+      setReferralPending(false);
     } finally {
       setReferralLoading(false);
     }
@@ -428,6 +441,11 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setIsConfirming(true);
     setBannerError(null);
 
+    // Immediately set pending state to hide stale data
+    // This shows "Generating Your Attribution Matrix" right away
+    setReferralPending(true);
+    setReferralData(null);
+
     try {
       await updatePmsJobClientApproval(latestJobId, true);
 
@@ -441,18 +459,21 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       }
       await loadKeyData();
 
-      // Refetch referral data after confirmation (agents may have new output)
-      await loadReferralData();
+      // Don't refetch referral data immediately - it will return pending anyway
+      // The user will see the "Generating" state until they refresh
+      // or until we implement polling
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
           : "Unable to confirm PMS data approval.";
       setBannerError(message);
+      // Reset pending state on error
+      setReferralPending(false);
     } finally {
       setIsConfirming(false);
     }
-  }, [latestJobId, loadKeyData, loadReferralData, storageKey]);
+  }, [latestJobId, loadKeyData, storageKey]);
 
   const handleEditorSaved = useCallback(async () => {
     setIsEditorOpen(false);
@@ -713,7 +734,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             <section className="space-y-4">
               <div className="flex items-center gap-4 px-2">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
-                  Ledger Vitals (YTD)
+                  Your PMS Vitals (YTD)
                 </h3>
                 <div className="h-px flex-1 bg-slate-100"></div>
               </div>
@@ -754,14 +775,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-alloro-orange"></div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    <div className="w-3 h-3 rounded-full bg-alloro-orange"></div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                       Marketing
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-alloro-navy"></div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    <div className="w-3 h-3 rounded-full bg-alloro-navy"></div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                       Doctor
                     </span>
                   </div>
@@ -851,6 +872,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 <ReferralMatrices
                   referralData={referralData}
                   isLoading={referralLoading}
+                  isPending={referralPending}
                 />
               </section>
             )}
@@ -871,7 +893,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     Refresh statistics.
                   </h3>
                   <p className="text-base sm:text-lg text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg mx-auto md:mx-0">
-                    Upload latest Cloud9 or Dolphin exports to update models.
+                    Upload latest PMS data, (Referrals and Production value).
+                    Please{" "}
+                    <a
+                      href="/help"
+                      className="text-alloro-orange hover:text-alloro-navy underline underline-offset-2 transition-colors"
+                    >
+                      contact us
+                    </a>{" "}
+                    if you have any questions.
                   </p>
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
                     <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">

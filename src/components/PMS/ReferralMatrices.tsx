@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 
 // Types for Referral Engine Data
 export interface DoctorReferral {
@@ -136,14 +142,44 @@ const MatricesLoadingSkeleton = () => (
   </div>
 );
 
+// Processing State Component - Shows when monthly agents are generating new insights
+const MatricesProcessingState = () => (
+  <div className="bg-white rounded-2xl border border-alloro-orange/20 shadow-premium p-12 text-center">
+    <div className="w-16 h-16 bg-alloro-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <div className="relative">
+        <Loader2 size={32} className="text-alloro-orange animate-spin" />
+        <Sparkles
+          size={14}
+          className="text-alloro-orange absolute -top-1 -right-1"
+        />
+      </div>
+    </div>
+    <h3 className="text-lg font-bold text-alloro-navy mb-3">
+      Generating Your Attribution Matrix
+    </h3>
+    <p className="text-sm text-slate-500 font-medium mb-2 max-w-md mx-auto leading-relaxed">
+      We're analyzing your latest PMS data and building fresh insights.
+    </p>
+    <p className="text-sm text-alloro-orange font-semibold mb-6">
+      We'll notify you when your insights are ready!
+    </p>
+    <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+      <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange animate-pulse"></span>
+      Monthly agents processing • Usually 2-3 minutes
+    </div>
+  </div>
+);
+
 interface ReferralMatricesProps {
   referralData: ReferralEngineData | null;
   isLoading?: boolean;
+  isPending?: boolean;
 }
 
 export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
   referralData,
   isLoading = false,
+  isPending = false,
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -231,6 +267,11 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
     return <MatricesLoadingSkeleton />;
   }
 
+  // Show processing state when monthly agents are running
+  if (isPending) {
+    return <MatricesProcessingState />;
+  }
+
   if (!referralData || unifiedRows.length === 0) {
     return <MatricesEmptyState />;
   }
@@ -248,45 +289,49 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
           </p>
         </div>
 
-        {/* Filter Toggle */}
-        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveFilter("all")}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
-              activeFilter === "all"
-                ? "bg-white text-alloro-navy shadow-sm"
-                : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            All
-            <span className="ml-1.5 text-[9px] opacity-60">({counts.all})</span>
-          </button>
-          <button
-            onClick={() => setActiveFilter("doctor")}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
-              activeFilter === "doctor"
-                ? "bg-white text-blue-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            Doctor
-            <span className="ml-1.5 text-[9px] opacity-60">
-              ({counts.doctor})
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveFilter("marketing")}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
-              activeFilter === "marketing"
-                ? "bg-white text-orange-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            Marketing
-            <span className="ml-1.5 text-[9px] opacity-60">
-              ({counts.marketing})
-            </span>
-          </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Type Filter Toggle */}
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveFilter("all")}
+              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                activeFilter === "all"
+                  ? "bg-white text-alloro-navy shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              All
+              <span className="ml-1.5 text-[9px] opacity-60">
+                ({counts.all})
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveFilter("doctor")}
+              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                activeFilter === "doctor"
+                  ? "bg-white text-blue-700 shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Doctor
+              <span className="ml-1.5 text-[9px] opacity-60">
+                ({counts.doctor})
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveFilter("marketing")}
+              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                activeFilter === "marketing"
+                  ? "bg-white text-orange-700 shadow-sm"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              Marketing
+              <span className="ml-1.5 text-[9px] opacity-60">
+                ({counts.marketing})
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

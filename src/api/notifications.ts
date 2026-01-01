@@ -84,3 +84,25 @@ export const markAllNotificationsRead = async (
 
   return response.json();
 };
+
+/**
+ * Delete all notifications for a user
+ */
+export const deleteAllNotifications = async (
+  googleAccountId: number
+): Promise<{ success: boolean; message: string; count: number }> => {
+  const response = await fetch(`${API_BASE}/delete-all`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ googleAccountId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to delete all notifications");
+  }
+
+  return response.json();
+};

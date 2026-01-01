@@ -11,6 +11,7 @@ import {
   Activity,
   Lock,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -18,9 +19,11 @@ import {
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteAllNotifications,
   type Notification,
 } from "../api/notifications";
 import { formatDistanceToNow } from "date-fns";
+import { ConfirmModal } from "../components/settings/ConfirmModal";
 
 export const Notifications: React.FC = () => {
   const navigate = useNavigate();
@@ -28,8 +31,15 @@ export const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const googleAccountId = userProfile?.googleAccountId ?? null;
+
+  // Set page title
+  useEffect(() => {
+    document.title = "Notifications | Alloro";
+  }, []);
 
   // Fetch notifications
   useEffect(() => {
@@ -104,7 +114,7 @@ export const Notifications: React.FC = () => {
     if (type === "error") return "Critical Intervention";
     if (type === "warning") return "High Priority Alert";
     if ((notification.type as string) === "ranking") return "Strategic Alpha";
-    return "Verified Protocol";
+    return "Update";
   };
 
   // Handle notification click
@@ -142,18 +152,38 @@ export const Notifications: React.FC = () => {
     }
   };
 
-  // Handle clear all / mark all as read
-  const handleClearArchive = async () => {
+  // Handle mark all as read
+  const handleMarkAllRead = async () => {
     if (!googleAccountId) return;
 
     setMarkingAll(true);
     try {
       await markAllNotificationsRead(googleAccountId);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      // Dispatch event to update sidebar notification badge
+      window.dispatchEvent(new CustomEvent("notifications:updated"));
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     } finally {
       setMarkingAll(false);
+    }
+  };
+
+  // Handle delete all notifications
+  const handleDeleteAll = async () => {
+    if (!googleAccountId) return;
+
+    setDeletingAll(true);
+    try {
+      await deleteAllNotifications(googleAccountId);
+      setNotifications([]);
+      // Dispatch event to update sidebar notification badge
+      window.dispatchEvent(new CustomEvent("notifications:updated"));
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -170,25 +200,39 @@ export const Notifications: React.FC = () => {
             </div>
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Intelligence Signals
+                Notifications
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Real-time Practice Surveillance
+                Real-time Practice Updates
               </span>
             </div>
           </div>
-          <button
-            onClick={handleClearArchive}
-            disabled={markingAll || unreadCount === 0}
-            className="flex items-center gap-2.5 text-[10px] font-black text-slate-400 hover:text-alloro-orange uppercase tracking-[0.2em] transition-all group disabled:opacity-50"
-          >
-            {markingAll ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Trash2 size={16} className="group-hover:rotate-12" />
-            )}{" "}
-            Clear Feed Matrix
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleMarkAllRead}
+              disabled={markingAll || unreadCount === 0}
+              className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-alloro-orange uppercase tracking-[0.15em] transition-all group disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-slate-100"
+            >
+              {markingAll ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Check size={14} />
+              )}
+              <span className="hidden sm:inline">Mark all as read</span>
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deletingAll || notifications.length === 0}
+              className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-red-500 uppercase tracking-[0.15em] transition-all group disabled:opacity-50 px-3 py-2 rounded-lg hover:bg-red-50"
+            >
+              {deletingAll ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
+              <span className="hidden sm:inline">Delete all</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -198,11 +242,16 @@ export const Notifications: React.FC = () => {
           <div className="flex items-center gap-4 mb-3">
             <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange animate-pulse"></span>
-              Signals Active
+              Notifications Active
             </div>
+            {unreadCount > 0 && (
+              <div className="px-3 py-1.5 bg-alloro-navy/5 rounded-lg text-alloro-navy text-[10px] font-black uppercase tracking-widest border border-alloro-navy/10">
+                {unreadCount} unread
+              </div>
+            )}
           </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            Practice Pulse.
+            Practice Updates.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
             Live stream of{" "}
@@ -240,12 +289,20 @@ export const Notifications: React.FC = () => {
               {notifications.map((notif) => {
                 const type = getNotificationType(notif);
                 const impact = getImpactLabel(notif);
+                const isRead = notif.read;
                 return (
                   <div
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
-                    className="p-10 lg:p-14 hover:bg-slate-50/40 transition-all flex flex-col sm:flex-row gap-10 group cursor-pointer relative overflow-hidden"
+                    className={`p-10 lg:p-14 hover:bg-slate-50/40 transition-all flex flex-col sm:flex-row gap-10 group cursor-pointer relative overflow-hidden ${
+                      isRead ? "opacity-60" : ""
+                    }`}
                   >
+                    {/* Unread indicator - orange left border */}
+                    {!isRead && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-alloro-orange"></div>
+                    )}
+                    {/* Hover indicator */}
                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-alloro-orange opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
 
                     <div
@@ -268,9 +325,20 @@ export const Notifications: React.FC = () => {
 
                     <div className="flex-1 space-y-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                        <h3 className="text-2xl font-black text-alloro-navy font-heading tracking-tight leading-none group-hover:text-alloro-orange transition-colors">
-                          {notif.title}
-                        </h3>
+                        <div className="flex items-center gap-3">
+                          <h3
+                            className={`text-2xl font-black font-heading tracking-tight leading-none group-hover:text-alloro-orange transition-colors ${
+                              isRead ? "text-slate-500" : "text-alloro-navy"
+                            }`}
+                          >
+                            {notif.title}
+                          </h3>
+                          {!isRead && (
+                            <span className="px-2 py-1 bg-alloro-orange text-white text-[8px] font-black uppercase tracking-widest rounded-md">
+                              New
+                            </span>
+                          )}
+                        </div>
                         <span
                           className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shrink-0 w-fit shadow-sm ${
                             impact.includes("Critical")
@@ -283,7 +351,11 @@ export const Notifications: React.FC = () => {
                           {impact}
                         </span>
                       </div>
-                      <p className="text-lg lg:text-xl text-slate-500 font-medium leading-relaxed tracking-tight max-w-4xl">
+                      <p
+                        className={`text-lg lg:text-xl font-medium leading-relaxed tracking-tight max-w-4xl ${
+                          isRead ? "text-slate-400" : "text-slate-500"
+                        }`}
+                      >
                         {notif.message}
                       </p>
                       <div className="flex items-center justify-between pt-6 border-t border-black/[0.03]">
@@ -291,19 +363,28 @@ export const Notifications: React.FC = () => {
                           <span className="flex items-center gap-2.5">
                             <Clock
                               size={18}
-                              className="text-alloro-orange/30"
+                              className={
+                                isRead
+                                  ? "text-slate-300"
+                                  : "text-alloro-orange/30"
+                              }
                             />{" "}
                             {formatDistanceToNow(new Date(notif.created_at), {
                               addSuffix: true,
                             })}
                           </span>
-                          {!notif.read && (
+                          {!isRead && (
                             <button
                               onClick={(e) => handleMarkAsRead(notif.id, e)}
                               className="text-alloro-navy hover:text-alloro-orange transition-colors"
                             >
-                              Mark as Resolved
+                              Mark as read
                             </button>
+                          )}
+                          {isRead && (
+                            <span className="text-slate-300 flex items-center gap-1.5">
+                              <CheckCircle2 size={14} /> Read
+                            </span>
                           )}
                         </div>
                         <div className="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center text-slate-200 group-hover:text-alloro-orange group-hover:border-alloro-orange/20 transition-all group-hover:translate-x-2">
@@ -333,7 +414,7 @@ export const Notifications: React.FC = () => {
           </div>
         )}
 
-        {/* Bottom Section - Signal Surveillance */}
+        {/* Bottom Section - Notification Monitoring */}
         <section className="p-12 lg:p-20 bg-alloro-navy rounded-[2.5rem] border border-white/5 shadow-2xl flex flex-col items-center text-center space-y-8 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-80 bg-alloro-orange/5 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none group-hover:bg-alloro-orange/10 transition-all duration-700"></div>
 
@@ -342,11 +423,11 @@ export const Notifications: React.FC = () => {
           </div>
           <div className="space-y-4 relative z-10">
             <h4 className="text-2xl font-black font-heading text-white tracking-tight">
-              Signal Surveillance Active
+              Notification Monitoring Active
             </h4>
             <p className="text-blue-100/40 font-bold text-lg max-w-lg leading-relaxed tracking-tight">
-              Alloro AI is continuously processing clinical health signals
-              across your entire digital and practice footprint.
+              Alloro AI is continuously monitoring your practice and will notify
+              you of important events and updates.
             </p>
           </div>
           <div className="flex items-center gap-12 pt-6 relative z-10">
@@ -365,10 +446,23 @@ export const Notifications: React.FC = () => {
             A
           </div>
           <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
-            Alloro Signal Protocol • v2.6.0
+            Alloro Notifications • v2.6.0
           </p>
         </footer>
       </main>
+
+      {/* Delete All Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteAll}
+        title="Delete All Notifications?"
+        message="Are you sure you want to delete all notifications? This action cannot be undone."
+        confirmText="Delete All"
+        cancelText="Cancel"
+        isLoading={deletingAll}
+        type="danger"
+      />
     </div>
   );
 };

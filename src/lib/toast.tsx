@@ -18,31 +18,32 @@ interface GlassToastProps {
   variant?: "success" | "error" | "info" | "upload" | "sparkle";
 }
 
+// All variants now use unified Alloro branding colors
 const variantStyles = {
   success: {
-    iconColor: "text-emerald-400",
-    bgGradient: "from-blue-500/20 to-emerald-500/20",
-    border: "border-emerald-400/30",
+    iconColor: "text-[#d66853]",
+    bgGradient: "",
+    border: "border-[#d66853]/30",
   },
   error: {
-    iconColor: "text-red-400",
-    bgGradient: "from-blue-500/20 to-red-500/20",
-    border: "border-red-400/30",
+    iconColor: "text-[#d66853]",
+    bgGradient: "",
+    border: "border-[#d66853]/30",
   },
   info: {
-    iconColor: "text-blue-400",
-    bgGradient: "from-blue-500/20 to-cyan-500/20",
-    border: "border-blue-400/30",
+    iconColor: "text-[#d66853]",
+    bgGradient: "",
+    border: "border-[#d66853]/30",
   },
   upload: {
-    iconColor: "text-emerald-400",
-    bgGradient: "from-blue-500/20 to-emerald-500/20",
-    border: "border-emerald-400/30",
+    iconColor: "text-[#d66853]",
+    bgGradient: "",
+    border: "border-[#d66853]/30",
   },
   sparkle: {
-    iconColor: "text-purple-400",
-    bgGradient: "from-blue-500/20 to-purple-500/20",
-    border: "border-purple-400/30",
+    iconColor: "text-[#d66853]",
+    bgGradient: "",
+    border: "border-[#d66853]/30",
   },
 };
 
@@ -69,31 +70,19 @@ const GlassToast = ({
       <div
         className={`
           relative overflow-hidden rounded-xl
-          bg-gradient-to-br ${styles.bgGradient}
-          backdrop-blur-xl backdrop-saturate-150
           border ${styles.border}
-          shadow-2xl shadow-blue-500/10
+          shadow-2xl shadow-black/20
           p-4
         `}
         style={{
-          background: "rgba(30, 58, 138, 0.15)",
-          backdropFilter: "blur(16px) saturate(180%)",
-          WebkitBackdropFilter: "blur(16px) saturate(180%)",
+          background: "#212D40",
         }}
       >
-        {/* Animated gradient overlay */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-transparent pointer-events-none"
-          style={{
-            animation: "shimmer 3s ease-in-out infinite",
-          }}
-        />
-
         <div className="relative flex items-start gap-3">
           <div className={`flex-shrink-0 ${styles.iconColor}`}>{icon}</div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-black">{title}</p>
-            {message && <p className="mt-1 text-sm text-black">{message}</p>}
+            <p className="text-sm font-semibold text-white">{title}</p>
+            {message && <p className="mt-1 text-sm text-white/80">{message}</p>}
           </div>
         </div>
       </div>

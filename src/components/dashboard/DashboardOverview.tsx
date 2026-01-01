@@ -144,6 +144,9 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     text: string;
   } | null>(null);
 
+  // Modal state for Proofline trajectory details
+  const [showProoflineModal, setShowProoflineModal] = useState(false);
+
   // PMS data state
   const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
     null
@@ -505,7 +508,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const summaryData = data?.agents?.summary?.results?.[0] as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prooflineData = (data?.agents as any)?.proofline;
-  const trajectory = prooflineData?.trajectory;
+  // Proofline data is inside the first result object
+  const prooflineResult = prooflineData?.results?.[0];
+  const trajectory = prooflineResult?.trajectory;
+  const prooflineTitle = prooflineResult?.title;
+  const prooflineExplanation = prooflineResult?.explanation;
+  const prooflineLastUpdated = prooflineData?.lastUpdated;
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -699,14 +707,23 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
           )}
           {trajectory && (
-            <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-              Your practice momentum is{" "}
-              <span className="text-alloro-orange underline underline-offset-8 font-black">
-                {trajectory}
-              </span>
-              . We have identified {criticalActionsCount} refinements for your
-              attention today.
-            </p>
+            <div className="space-y-4">
+              <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
+                {parseHighlightTags(trajectory, "glow-blue")}
+              </p>
+              {prooflineExplanation && (
+                <button
+                  onClick={() => setShowProoflineModal(true)}
+                  className="text-[11px] font-black text-alloro-orange uppercase tracking-[0.2em] hover:text-alloro-navy transition-colors flex items-center gap-2 group"
+                >
+                  Learn More
+                  <ArrowRight
+                    size={14}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </button>
+              )}
+            </div>
           )}
         </section>
 
@@ -1229,6 +1246,56 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <div className="pt-4 flex justify-end">
                   <button
                     onClick={() => setSelectedFix(null)}
+                    className="px-6 py-3 bg-alloro-navy text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Proofline Details Modal */}
+        {showProoflineModal && (
+          <div
+            className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            onClick={() => setShowProoflineModal(false)}
+          >
+            <div
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8 lg:p-10 space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Last Updated:{" "}
+                      {prooflineLastUpdated
+                        ? format(new Date(prooflineLastUpdated), "MMM d, yyyy")
+                        : "N/A"}
+                    </span>
+                    <h3 className="text-2xl lg:text-3xl font-black font-heading text-alloro-navy tracking-tight">
+                      {prooflineTitle || "Practice Trajectory Update"}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowProoflineModal(false)}
+                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    <X size={24} className="text-slate-400" />
+                  </button>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <p className="text-lg text-slate-600 font-medium leading-relaxed">
+                    {prooflineExplanation}
+                  </p>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    onClick={() => setShowProoflineModal(false)}
                     className="px-6 py-3 bg-alloro-navy text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
                   >
                     Close

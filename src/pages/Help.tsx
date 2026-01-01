@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   HelpCircle,
   Mail,
@@ -9,7 +9,9 @@ import {
   Zap,
   ChevronRight,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
+import { AuthContext } from "../contexts/authContext";
 const SupportCard = ({
   icon,
   title,
@@ -40,16 +42,89 @@ const SupportCard = ({
 );
 
 const Help = () => {
+  const authContext = useContext(AuthContext);
+  const userProfile = authContext?.userProfile;
+  const selectedDomain = authContext?.selectedDomain;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Form state
+  const [formData, setFormData] = useState({
+    userName: "",
+    userEmail: "",
+    subject: "General Support",
+    urgency: "Normal Protocol",
+    message: "",
+  });
+
+  // Pre-fill name and email from user profile
+  React.useEffect(() => {
+    if (userProfile) {
+      const fullName = [userProfile.firstName, userProfile.lastName]
+        .filter(Boolean)
+        .join(" ");
+      setFormData((prev) => ({
+        ...prev,
+        ...(fullName && { userName: fullName }),
+        ...(userProfile.email && { userEmail: userProfile.email }),
+      }));
+    }
+  }, [userProfile]);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/support/inquiry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userName: formData.userName,
+          userEmail: formData.userEmail,
+          practiceName:
+            userProfile?.practiceName || selectedDomain?.displayName || null,
+          subject: `[${formData.urgency}] ${formData.subject}`,
+          message: formData.message,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to send message");
+      }
+
       setSubmitted(true);
-    }, 1500);
+      // Reset form
+      setFormData({
+        userName: "",
+        userEmail: "",
+        subject: "General Support",
+        urgency: "Normal Protocol",
+        message: "",
+      });
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Something went wrong.";
+      setError(errorMessage || "Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -164,12 +239,55 @@ const Help = () => {
                     </p>
                   </div>
 
+                  {error && (
+                    <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700">
+                      <AlertCircle size={18} />
+                      <span className="text-sm font-bold">{error}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 text-left">
+                      <label className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] ml-1">
+                        Your Name
+                      </label>
+                      <input
+                        type="text"
+                        name="userName"
+                        value={formData.userName}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="John Doe"
+                        className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2 text-left">
+                      <label className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] ml-1">
+                        Your Email
+                      </label>
+                      <input
+                        type="email"
+                        name="userEmail"
+                        value={formData.userEmail}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="john@practice.com"
+                        className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 text-left">
                       <label className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] ml-1">
                         Subject Matter
                       </label>
-                      <select className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all appearance-none cursor-pointer">
+                      <select
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleInputChange}
+                        className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all appearance-none cursor-pointer"
+                      >
                         <option>General Support</option>
                         <option>Technical Issue</option>
                         <option>Marketing Strategy</option>
@@ -180,7 +298,12 @@ const Help = () => {
                       <label className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] ml-1">
                         Urgency Tier
                       </label>
-                      <select className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all appearance-none cursor-pointer">
+                      <select
+                        name="urgency"
+                        value={formData.urgency}
+                        onChange={handleInputChange}
+                        className="w-full bg-alloro-bg border border-black/5 rounded-2xl px-6 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all appearance-none cursor-pointer"
+                      >
                         <option>Normal Protocol</option>
                         <option>High Priority</option>
                         <option>Immediate Assistance Required</option>
@@ -193,6 +316,9 @@ const Help = () => {
                       Directive Details
                     </label>
                     <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
                       required
                       placeholder="Please describe your challenge or question in detail..."
                       className="w-full h-40 bg-alloro-bg border border-black/5 rounded-3xl px-6 py-5 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all resize-none"

@@ -173,8 +173,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     loadNotificationCount();
 
-    // Poll every 30 seconds
-    const interval = setInterval(loadNotificationCount, 30000);
+    // Poll every 3 seconds for real-time notification updates
+    const interval = setInterval(loadNotificationCount, 3000);
     return () => clearInterval(interval);
   }, [loadNotificationCount]);
 

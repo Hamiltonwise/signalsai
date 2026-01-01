@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           lastName: status.profile?.lastName || null,
           practiceName: status.profile?.practiceName || null,
           domainName: status.profile?.domainName || null,
+          email: status.profile?.email || null,
           googleAccountId,
         });
 

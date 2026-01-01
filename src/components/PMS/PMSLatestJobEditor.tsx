@@ -25,6 +25,7 @@ interface PMSLatestJobEditorProps {
   initialData: unknown;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
+  onConfirmApproval?: () => Promise<void> | void;
 }
 
 const toNumber = (value: unknown): number => {
@@ -88,6 +89,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
   initialData,
   onClose,
   onSaved,
+  onConfirmApproval,
 }) => {
   const initialFormState = useMemo(
     () => normaliseMonthEntries(initialData),
@@ -170,7 +172,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
     });
   };
 
-  const handleSave = async () => {
+  const handleSaveAndConfirm = async () => {
     if (!jobId) {
       return;
     }
@@ -188,6 +190,12 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
         );
       }
 
+      // Trigger confirmation FIRST while modal is still mounted
+      if (onConfirmApproval) {
+        await onConfirmApproval();
+      }
+
+      // Then close the modal and reload data
       await onSaved();
     } catch (err) {
       const message =
@@ -207,14 +215,16 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 200 }}
-            className="flex h-full max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="relative flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl my-auto"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <div>
@@ -405,7 +415,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleSave}
+                  onClick={handleSaveAndConfirm}
                   disabled={isSaving || !jobId}
                   className="inline-flex items-center gap-2 rounded-full border border-alloro-orange bg-alloro-orange px-4 py-2 text-xs font-semibold uppercase text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -414,7 +424,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Save changes
+                  Confirm and get insights
                 </button>
               </div>
             </div>

@@ -8,6 +8,7 @@ import {
   CheckSquare,
   Square,
   Eye,
+  Trash2,
 } from "lucide-react";
 import {
   fetchAgentOutputs,
@@ -17,6 +18,8 @@ import {
   unarchiveAgentOutput,
   bulkArchiveAgentOutputs,
   bulkUnarchiveAgentOutputs,
+  deleteAgentOutput,
+  bulkDeleteAgentOutputs,
 } from "../../api/agentOutputs";
 import type {
   AgentOutput,
@@ -51,6 +54,7 @@ export default function AgentOutputsList() {
 
   // Individual action loading
   const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Filter states
   const [filters, setFilters] = useState<FetchAgentOutputsRequest>({
@@ -241,6 +245,51 @@ export default function AgentOutputsList() {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (deletingId) return;
+    if (
+      !confirm(
+        "Are you sure you want to PERMANENTLY DELETE this agent output? This action cannot be undone."
+      )
+    )
+      return;
+
+    try {
+      setDeletingId(id);
+      await deleteAgentOutput(id);
+      await loadOutputs();
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Failed to delete agent output"
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to PERMANENTLY DELETE ${selectedIds.size} agent output(s)? This action cannot be undone.`
+      )
+    )
+      return;
+
+    try {
+      setBulkOperationLoading(true);
+      await bulkDeleteAgentOutputs(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      await loadOutputs();
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Failed to delete agent outputs"
+      );
+    } finally {
+      setBulkOperationLoading(false);
+    }
+  };
+
   const formatDateRange = (dateString: string) => {
     const date = new Date(dateString);
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -381,6 +430,18 @@ export default function AgentOutputsList() {
                 Restore
               </button>
             )}
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkOperationLoading}
+              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkOperationLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Delete
+            </button>
             <button
               onClick={() => setSelectedIds(new Set())}
               disabled={bulkOperationLoading}
@@ -582,7 +643,7 @@ export default function AgentOutputsList() {
                 ) : (
                   <button
                     onClick={() => handleArchive(output.id)}
-                    disabled={archivingId !== null}
+                    disabled={archivingId !== null || deletingId !== null}
                     className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Archive output"
                   >
@@ -594,6 +655,19 @@ export default function AgentOutputsList() {
                     Archive
                   </button>
                 )}
+                <button
+                  onClick={() => handleDelete(output.id)}
+                  disabled={archivingId !== null || deletingId !== null}
+                  className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete output permanently"
+                >
+                  {deletingId === output.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Delete
+                </button>
               </div>
             </div>
           ))

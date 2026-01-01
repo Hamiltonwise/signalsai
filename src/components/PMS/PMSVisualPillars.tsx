@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { showSparkleToast, showUploadToast } from "../../lib/toast";
 import {
   AlertCircle,
+  ArrowDownCircle,
   ArrowUpRight,
   BarChart3,
   Calendar,
@@ -29,12 +30,13 @@ import {
   updatePmsJobClientApproval,
   uploadPMSData,
   type PmsKeyDataResponse,
-  type PmsKeyDataSource,
 } from "../../api/pms";
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
+import { ReferralMatrices, type ReferralEngineData } from "./ReferralMatrices";
 
 interface PMSVisualPillarsProps {
   domain?: string;
+  googleAccountId?: number | null;
 }
 
 const DEFAULT_DOMAIN = "artfulorthodontics.com";
@@ -108,23 +110,6 @@ const MetricCard = ({
   </div>
 );
 
-const CompactTag = ({ status }: { status: string }) => {
-  const styles: Record<string, string> = {
-    Marketing: "text-alloro-orange bg-indigo-50 border-indigo-100",
-    Doctor: "text-alloro-navy bg-slate-100 border-slate-200",
-    Insurance: "text-green-600 bg-green-50 border-green-100",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border leading-none mt-1 w-fit ${
-        styles[status] || styles["Doctor"]
-      }`}
-    >
-      {status}
-    </span>
-  );
-};
-
 // Temporarily hidden - Practice Diagnosis section
 // const DiagnosisBlock = ({ title, desc }: { title: string; desc: string }) => (
 //   <div>
@@ -139,6 +124,7 @@ const CompactTag = ({ status }: { status: string }) => {
 
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain = DEFAULT_DOMAIN,
+  googleAccountId,
 }) => {
   const [inlineFile, setInlineFile] = useState<File | null>(null);
   const [inlineIsUploading, setInlineIsUploading] = useState(false);
@@ -157,8 +143,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("All");
   const [isExporting, setIsExporting] = useState(false);
+
+  // Referral Engine data state
+  const [referralData, setReferralData] = useState<ReferralEngineData | null>(
+    null
+  );
+  const [referralLoading, setReferralLoading] = useState(false);
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
@@ -301,6 +292,44 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     }
   }, [latestJobStatus]);
 
+  // Fetch Referral Engine data
+  const loadReferralData = useCallback(async () => {
+    if (!googleAccountId) {
+      setReferralLoading(false);
+      return;
+    }
+
+    setReferralLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`
+      );
+
+      if (!response.ok) {
+        setReferralData(null);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        const dataToSet = Array.isArray(result.data)
+          ? result.data[0]
+          : result.data;
+        setReferralData(dataToSet);
+      }
+    } catch (err) {
+      console.error("Failed to fetch referral engine data:", err);
+      setReferralData(null);
+    } finally {
+      setReferralLoading(false);
+    }
+  }, [googleAccountId]);
+
+  useEffect(() => {
+    loadReferralData();
+  }, [loadReferralData]);
+
   const monthlyData = useMemo(() => {
     if (!keyData?.months?.length) {
       return [];
@@ -323,28 +352,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     });
   }, [keyData]);
 
-  const topSources: PmsKeyDataSource[] = useMemo(
-    () => keyData?.sources ?? [],
-    [keyData]
-  );
-
-  // Filter sources based on activeFilter
-  const filteredSources = useMemo(() => {
-    if (activeFilter === "All") return topSources;
-    // Filter by category
-    return topSources.filter((source) => {
-      const category = source.percentage > 10 ? "Marketing" : "Doctor";
-      return category === activeFilter;
-    });
-  }, [topSources, activeFilter]);
-
   const latestTimestamp = keyData?.stats?.latestJobTimestamp
     ? new Date(keyData.stats.latestJobTimestamp)
     : null;
 
-  const monthCount = keyData?.stats?.distinctMonths ?? 0;
+  // Temporarily unused - Data Confidence card removed
+  // const monthCount = keyData?.stats?.distinctMonths ?? 0;
 
-  // Calculate KPI metrics
+  // Calculate total production from sources
+  const topSources = keyData?.sources ?? [];
+
   const totalProduction = useMemo(() => {
     return topSources.reduce((sum, s) => sum + (s.production || 0), 0);
   }, [topSources]);
@@ -379,6 +396,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     latestJobIsClientApproved !== true &&
     latestJobId !== null;
 
+  // Show upload prompt banner when no PMS data exists yet
+  const showUploadPromptBanner =
+    !isLoading && !error && (!keyData || monthlyData.length === 0);
+
   // Only show processing notice if:
   // 1. Not loading
   // 2. Not showing client approval banner
@@ -391,6 +412,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     latestJobId !== null &&
     latestJobIsApproved !== true &&
     (localProcessing || latestJobStatus?.toLowerCase() === "pending");
+
+  // Auto-open disabled - user requested manual control
+  // useEffect(() => {
+  //   if (showClientApprovalBanner && hasLatestJobRaw && latestJobId) {
+  //     setIsEditorOpen(true);
+  //   }
+  // }, [showClientApprovalBanner, hasLatestJobRaw, latestJobId]);
 
   const handleConfirmApproval = useCallback(async () => {
     if (!latestJobId) {
@@ -412,6 +440,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         window.localStorage.removeItem(storageKey);
       }
       await loadKeyData();
+
+      // Refetch referral data after confirmation (agents may have new output)
+      await loadReferralData();
     } catch (err) {
       const message =
         err instanceof Error
@@ -421,7 +452,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     } finally {
       setIsConfirming(false);
     }
-  }, [latestJobId, loadKeyData, storageKey]);
+  }, [latestJobId, loadKeyData, loadReferralData, storageKey]);
 
   const handleEditorSaved = useCallback(async () => {
     setIsEditorOpen(false);
@@ -503,6 +534,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
+      {/* Upload Prompt Banner - Show when no PMS data exists */}
+      {showUploadPromptBanner && canUploadPMS && (
+        <div className="bg-alloro-orange text-white text-[10px] font-black uppercase tracking-widest py-3 px-4 text-center border-b border-white/10 flex items-center justify-center gap-2 shadow-sm relative z-[60]">
+          <ArrowDownCircle size={14} className="text-white animate-bounce" />
+          <span>
+            Scroll down to the bottom of this page to upload your first PMS data
+          </span>
+        </div>
+      )}
+
       {/* Professional Header - Matching newdesign */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
@@ -604,13 +645,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                Confirm
+                Confirm and get insights
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditorOpen(true)}
                 disabled={latestJobId == null || !hasLatestJobRaw}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-orange px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-orange px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
               >
                 <Pencil className="h-4 w-4" />
                 Make changes
@@ -623,8 +664,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         {isLoading && (
           <div className="animate-pulse space-y-6">
             {/* KPI Strip Skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
                   className="bg-white rounded-2xl p-5 lg:p-6 border border-slate-100"
@@ -676,7 +717,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 </h3>
                 <div className="h-px flex-1 bg-slate-100"></div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <MetricCard
                   label="MKT Production"
                   value={`$${(totalProduction / 1000).toFixed(1)}K`}
@@ -695,21 +736,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   trend={monthlyData.length > 1 ? "+4%" : undefined}
                 />
                 <MetricCard
-                  label="Total Starts"
+                  label="Total Referrals"
                   value={totalReferrals.toString()}
                   sub="Synced Ledger"
-                />
-                <MetricCard
-                  label="Data Confidence"
-                  value={`${
-                    monthCount >= 6 ? "99.4" : (90 + monthCount).toFixed(1)
-                  }%`}
-                  sub="Verification Score"
                 />
               </div>
             </section>
 
-            {/* 2. VELOCITY PIPELINE - Matching newdesign */}
+            {/* 2. REFERRAL VELOCITY - Matching newdesign */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
               <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
@@ -805,107 +839,21 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               </div>
             </section>
 
-            {/* 3. ATTRIBUTION MATRIX - Matching newdesign */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
-              <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <h2 className="text-xl font-bold font-heading text-alloro-navy tracking-tight">
-                  Attribution Matrix
-                </h2>
-                <div className="flex p-1 bg-slate-50 border border-slate-200 rounded-xl overflow-x-auto w-full lg:w-auto">
-                  {["All", "Doctor", "Marketing"].map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setActiveFilter(filter)}
-                      className={`flex-1 lg:flex-none px-5 py-2 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${
-                        activeFilter === filter
-                          ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
-                          : "text-slate-400 hover:text-alloro-navy"
-                      }`}
-                    >
-                      {filter}
-                    </button>
-                  ))}
+            {/* 3. INTELLIGENCE HUB MATRICES - Only show when not in client approval state */}
+            {!showClientApprovalBanner && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-4 px-2">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                    Intelligence Hub Matrices
+                  </h3>
+                  <div className="h-px flex-1 bg-slate-100"></div>
                 </div>
-              </div>
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead className="bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100">
-                    <tr>
-                      <th className="px-10 py-5">Source</th>
-                      <th className="px-4 py-5 text-center">Ref.</th>
-                      <th className="px-4 py-5 text-center">Capture %</th>
-                      <th className="px-4 py-5 text-right">Production</th>
-                      <th className="px-10 py-5 w-[35%]">Note</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredSources.slice(0, 10).map((source, idx) => {
-                      const category =
-                        source.percentage > 10 ? "Marketing" : "Doctor";
-                      return (
-                        <tr
-                          key={source.rank || idx}
-                          className="hover:bg-slate-50/30 transition-colors group"
-                        >
-                          <td className="px-10 py-6">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-alloro-navy text-[15px] leading-tight tracking-tight">
-                                {source.name}
-                              </span>
-                              <CompactTag status={category} />
-                            </div>
-                          </td>
-                          <td className="px-4 py-6 text-center font-bold text-alloro-navy text-lg">
-                            {source.referrals}
-                          </td>
-                          <td className="px-4 py-6">
-                            <div className="flex flex-col items-center gap-1.5">
-                              <span className="text-[11px] font-bold text-slate-500">
-                                {source.percentage.toFixed(1)}%
-                              </span>
-                              <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-alloro-orange"
-                                  style={{ width: `${source.percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-6 text-right font-bold text-alloro-navy tabular-nums text-lg">
-                            ${source.production.toLocaleString()}
-                          </td>
-                          <td className="px-10 py-6">
-                            <p className="text-[13px] text-slate-500 font-medium leading-relaxed tracking-tight">
-                              {category === "Marketing"
-                                ? "High-intent digital lead. Focus on GBP visibility."
-                                : "Key peer-to-peer referral source."}
-                            </p>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {filteredSources.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-10 py-12 text-center">
-                          <div className="text-slate-400">
-                            <BarChart3
-                              size={32}
-                              className="mx-auto mb-3 opacity-50"
-                            />
-                            <p className="text-sm font-semibold">
-                              No source data available
-                            </p>
-                            <p className="text-[10px] uppercase tracking-widest mt-1">
-                              Upload PMS data to see attribution
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                <ReferralMatrices
+                  referralData={referralData}
+                  isLoading={referralLoading}
+                />
+              </section>
+            )}
 
             {/* 4. INGESTION HUB - Matching newdesign full-width style */}
             {canUploadPMS ? (
@@ -1064,6 +1012,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           initialData={latestJobRaw}
           onClose={() => setIsEditorOpen(false)}
           onSaved={handleEditorSaved}
+          onConfirmApproval={handleConfirmApproval}
         />
       )}
     </div>

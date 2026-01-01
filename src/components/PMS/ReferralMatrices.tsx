@@ -1,0 +1,386 @@
+import React, { useState, useMemo } from "react";
+import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
+
+// Types for Referral Engine Data
+export interface DoctorReferral {
+  referrer_id?: string;
+  referrer_name?: string;
+  referred?: number;
+  pct_scheduled?: number | null;
+  pct_examined?: number | null;
+  pct_started?: number | null;
+  net_production?: number | null;
+  trend_label?: "increasing" | "decreasing" | "new" | "dormant" | "stable";
+  notes?: string;
+}
+
+export interface NonDoctorReferral {
+  source_key?: string;
+  source_label?: string;
+  source_type?: "digital" | "patient" | "other";
+  referred?: number;
+  pct_scheduled?: number | null;
+  pct_examined?: number | null;
+  pct_started?: number | null;
+  net_production?: number | null;
+  trend_label?: "increasing" | "decreasing" | "new" | "dormant" | "stable";
+  notes?: string;
+}
+
+export interface ReferralEngineData {
+  lineage?: string;
+  citations?: string[];
+  freshness?: string;
+  agent_name?: string;
+  confidence?: number;
+  practice_id?: string;
+  agent_version?: string;
+  observed_period?: {
+    end_date: string;
+    start_date: string;
+  };
+  executive_summary?: string[];
+  doctor_referral_matrix?: DoctorReferral[];
+  non_doctor_referral_matrix?: NonDoctorReferral[];
+  growth_opportunity_summary?: {
+    top_three_fixes?: string[];
+    estimated_additional_annual_revenue?: number;
+  };
+  practice_action_plan?: string[];
+  alloro_automation_opportunities?: string[];
+}
+
+// Unified row type for combined table
+interface UnifiedReferralRow {
+  id: string;
+  name: string;
+  type: "doctor" | "marketing";
+  referred: number;
+  pct_scheduled: number | null;
+  pct_examined: number | null;
+  pct_started: number | null;
+  net_production: number | null;
+  trend_label?: "increasing" | "decreasing" | "new" | "dormant" | "stable";
+  notes: string;
+}
+
+type FilterType = "all" | "doctor" | "marketing";
+
+// Helper Components
+const CompactTag = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Increasing: "text-green-700 bg-green-50 border-green-100",
+    increasing: "text-green-700 bg-green-50 border-green-100",
+    Decreasing: "text-red-700 bg-red-50 border-red-100",
+    decreasing: "text-red-700 bg-red-50 border-red-100",
+    New: "text-indigo-700 bg-indigo-50 border-indigo-100",
+    new: "text-indigo-700 bg-indigo-50 border-indigo-100",
+    Dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
+    dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
+    Stable: "text-slate-500 bg-slate-50 border-slate-200",
+    stable: "text-slate-500 bg-slate-50 border-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none mt-1 w-fit ${
+        styles[status] || styles["Stable"]
+      }`}
+    >
+      {status}
+    </span>
+  );
+};
+
+const TypeBadge = ({ type }: { type: "doctor" | "marketing" }) => {
+  const isDoctor = type === "doctor";
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none ${
+        isDoctor
+          ? "text-blue-700 bg-blue-50 border-blue-100"
+          : "text-orange-700 bg-orange-50 border-orange-100"
+      }`}
+    >
+      {isDoctor ? "Doctor" : "Marketing"}
+    </span>
+  );
+};
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return "N/A";
+  return `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+};
+
+// Empty State Component
+const MatricesEmptyState = () => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium p-12 text-center">
+    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <BarChart3 size={32} className="text-slate-300 opacity-50" />
+    </div>
+    <h3 className="text-sm font-semibold text-slate-600 mb-1">
+      No source data available
+    </h3>
+    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+      Upload PMS data to see attribution
+    </p>
+  </div>
+);
+
+// Loading Skeleton
+const MatricesLoadingSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="bg-white rounded-2xl border border-slate-200 h-96" />
+  </div>
+);
+
+interface ReferralMatricesProps {
+  referralData: ReferralEngineData | null;
+  isLoading?: boolean;
+}
+
+export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
+  referralData,
+  isLoading = false,
+}) => {
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  const toggleNoteExpansion = (id: string) => {
+    setExpandedNotes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Combine doctor and non-doctor data into unified rows
+  const unifiedRows = useMemo((): UnifiedReferralRow[] => {
+    if (!referralData) return [];
+
+    const rows: UnifiedReferralRow[] = [];
+
+    // Add doctor referrals
+    if (referralData.doctor_referral_matrix) {
+      referralData.doctor_referral_matrix.forEach((doc, idx) => {
+        rows.push({
+          id: doc.referrer_id || `doctor-${idx}`,
+          name: doc.referrer_name || "Unknown",
+          type: "doctor",
+          referred: doc.referred || 0,
+          pct_scheduled: doc.pct_scheduled ?? null,
+          pct_examined: doc.pct_examined ?? null,
+          pct_started: doc.pct_started ?? null,
+          net_production: doc.net_production ?? null,
+          trend_label: doc.trend_label,
+          notes: doc.notes || "No notes available.",
+        });
+      });
+    }
+
+    // Add non-doctor (marketing) referrals
+    if (referralData.non_doctor_referral_matrix) {
+      referralData.non_doctor_referral_matrix
+        .filter((s) => (s.referred || 0) > 0)
+        .forEach((source, idx) => {
+          rows.push({
+            id: source.source_key || `marketing-${idx}`,
+            name: source.source_label || source.source_key || "Unknown",
+            type: "marketing",
+            referred: source.referred || 0,
+            pct_scheduled: source.pct_scheduled ?? null,
+            pct_examined: source.pct_examined ?? null,
+            pct_started: source.pct_started ?? null,
+            net_production: source.net_production ?? null,
+            trend_label: source.trend_label,
+            notes:
+              source.notes ||
+              (source.source_type === "digital"
+                ? "High-intent digital lead. Focus on GBP visibility."
+                : "Key peer-to-peer referral source."),
+          });
+        });
+    }
+
+    // Sort by production (highest first)
+    return rows.sort(
+      (a, b) => (b.net_production || 0) - (a.net_production || 0)
+    );
+  }, [referralData]);
+
+  // Filter rows based on active filter
+  const filteredRows = useMemo(() => {
+    if (activeFilter === "all") return unifiedRows;
+    return unifiedRows.filter((row) => row.type === activeFilter);
+  }, [unifiedRows, activeFilter]);
+
+  // Count by type for filter badges
+  const counts = useMemo(() => {
+    const doctor = unifiedRows.filter((r) => r.type === "doctor").length;
+    const marketing = unifiedRows.filter((r) => r.type === "marketing").length;
+    return { all: unifiedRows.length, doctor, marketing };
+  }, [unifiedRows]);
+
+  if (isLoading) {
+    return <MatricesLoadingSkeleton />;
+  }
+
+  if (!referralData || unifiedRows.length === 0) {
+    return <MatricesEmptyState />;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
+      {/* Header with Filter Toggle */}
+      <div className="px-6 py-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
+        <div>
+          <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
+            Attribution Matrix (YTD)
+          </h2>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+            Combined Doctor & Marketing Sources
+          </p>
+        </div>
+
+        {/* Filter Toggle */}
+        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+              activeFilter === "all"
+                ? "bg-white text-alloro-navy shadow-sm"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            All
+            <span className="ml-1.5 text-[9px] opacity-60">({counts.all})</span>
+          </button>
+          <button
+            onClick={() => setActiveFilter("doctor")}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+              activeFilter === "doctor"
+                ? "bg-white text-blue-700 shadow-sm"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Doctor
+            <span className="ml-1.5 text-[9px] opacity-60">
+              ({counts.doctor})
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveFilter("marketing")}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+              activeFilter === "marketing"
+                ? "bg-white text-orange-700 shadow-sm"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Marketing
+            <span className="ml-1.5 text-[9px] opacity-60">
+              ({counts.marketing})
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Combined Table */}
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
+          <thead className="bg-slate-50/30 text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-100">
+            <tr>
+              <th className="px-6 py-4 w-[20%]">Source</th>
+              <th className="px-2 py-4 text-center w-[8%]">Type</th>
+              <th className="px-2 py-4 text-center w-[7%]">Ref</th>
+              <th className="px-2 py-4 text-center w-[9%]">Sched</th>
+              <th className="px-2 py-4 text-center w-[9%]">Exam</th>
+              <th className="px-2 py-4 text-center w-[9%]">Start</th>
+              <th className="px-4 py-4 text-right w-[13%]">Production</th>
+              <th className="px-6 py-4 w-[25%]">Note</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredRows.map((row) => (
+              <tr
+                key={row.id}
+                className="hover:bg-slate-50/50 transition-all group"
+              >
+                <td className="px-6 py-5">
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-black text-alloro-navy text-[13px] leading-tight group-hover:text-alloro-orange transition-colors truncate">
+                      {row.name}
+                    </span>
+                    {row.trend_label && <CompactTag status={row.trend_label} />}
+                  </div>
+                </td>
+                <td className="px-2 py-5 text-center">
+                  <TypeBadge type={row.type} />
+                </td>
+                <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
+                  {row.referred}
+                </td>
+                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                  {row.pct_scheduled?.toFixed(0) || 0}%
+                </td>
+                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                  {row.pct_examined?.toFixed(0) || 0}%
+                </td>
+                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                  {row.pct_started?.toFixed(0) || 0}%
+                </td>
+                <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
+                  {formatCurrency(row.net_production)}
+                </td>
+                <td className="px-6 py-5">
+                  <div className="space-y-1">
+                    <p
+                      className={`text-[11px] text-slate-500 font-medium leading-tight tracking-tight ${
+                        expandedNotes.has(row.id) ? "" : "line-clamp-2"
+                      }`}
+                    >
+                      {row.notes}
+                    </p>
+                    {row.notes && row.notes.length > 80 && (
+                      <button
+                        onClick={() => toggleNoteExpansion(row.id)}
+                        className="flex items-center gap-1 text-[10px] font-bold text-alloro-orange hover:text-alloro-navy transition-colors"
+                      >
+                        {expandedNotes.has(row.id) ? (
+                          <>
+                            Show less <ChevronUp size={12} />
+                          </>
+                        ) : (
+                          <>
+                            Read more <ChevronDown size={12} />
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Empty state for filtered results */}
+      {filteredRows.length === 0 && (
+        <div className="p-12 text-center">
+          <p className="text-slate-400 text-sm font-medium">
+            No {activeFilter === "doctor" ? "doctor" : "marketing"} referrals
+            found.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ReferralMatrices;

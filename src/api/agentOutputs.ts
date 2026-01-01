@@ -8,6 +8,8 @@ import type {
   ArchiveResponse,
   BulkArchiveResponse,
   BulkUnarchiveResponse,
+  DeleteResponse,
+  BulkDeleteResponse,
 } from "../types/agentOutputs";
 
 const API_BASE = "/api/admin/agent-outputs";
@@ -167,6 +169,46 @@ export const bulkUnarchiveAgentOutputs = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || "Failed to bulk unarchive agent outputs");
+  }
+
+  return response.json();
+};
+
+/**
+ * Delete a single agent output permanently
+ */
+export const deleteAgentOutput = async (
+  id: number
+): Promise<DeleteResponse> => {
+  const response = await fetch(`${API_BASE}/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to delete agent output");
+  }
+
+  return response.json();
+};
+
+/**
+ * Bulk delete agent outputs permanently
+ */
+export const bulkDeleteAgentOutputs = async (
+  ids: number[]
+): Promise<BulkDeleteResponse> => {
+  const response = await fetch(`${API_BASE}/bulk/delete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to bulk delete agent outputs");
   }
 
   return response.json();

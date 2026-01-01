@@ -329,7 +329,10 @@ export default function Dashboard() {
                         </div>
                       }
                     >
-                      <PMSVisualPillars domain={selectedDomain?.domain} />
+                      <PMSVisualPillars
+                        domain={selectedDomain?.domain}
+                        googleAccountId={userProfile?.googleAccountId ?? null}
+                      />
                     </React.Suspense>
                   )}
 

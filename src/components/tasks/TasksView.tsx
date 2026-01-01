@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CheckSquare,
@@ -20,6 +21,23 @@ import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
 import { parseHighlightTags } from "../../utils/textFormatting";
 
+// CSS for pulse animation
+const pulseAnimationStyle = `
+  @keyframes task-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(214, 104, 83, 0);
+      border-color: rgba(214, 104, 83, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 0 12px rgba(214, 104, 83, 0.15);
+      border-color: rgba(214, 104, 83, 0.6);
+    }
+  }
+  .task-pulse-animation {
+    animation: task-pulse 0.8s ease-in-out 2;
+  }
+`;
+
 interface TasksViewProps {
   googleAccountId: number | null;
 }
@@ -34,6 +52,7 @@ interface TaskCardProps {
   isExpanded?: boolean;
   isClamped?: boolean;
   descriptionRef?: (el: HTMLParagraphElement | null) => void;
+  isPulsing?: boolean;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -46,6 +65,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   isExpanded,
   isClamped,
   descriptionRef,
+  isPulsing,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [comment, setComment] = useState("");
@@ -89,6 +109,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <div
+      id={`task-${task.id}`}
       onClick={!isReadOnly && canEdit ? onToggle : undefined}
       className={`
         group relative bg-white rounded-3xl p-8 border transition-all duration-500 select-none text-left
@@ -98,6 +119,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             : "border-black/5 shadow-premium hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1"
         }
         ${!isReadOnly && canEdit ? "cursor-pointer active:scale-[0.98]" : ""}
+        ${isPulsing ? "task-pulse-animation" : ""}
       `}
     >
       <div className="flex flex-row gap-8 items-start">
@@ -242,6 +264,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 };
 
 export function TasksView({ googleAccountId }: TasksViewProps) {
+  const location = useLocation();
   const [tasks, setTasks] = useState<GroupedActionItems | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,11 +273,41 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const [clampedTasks, setClampedTasks] = useState<Set<number>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [completionPct, setCompletionPct] = useState(0);
+  const [pulsingTaskId, setPulsingTaskId] = useState<number | null>(null);
   const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
+  const hasScrolledToTask = useRef(false);
+
+  // Get scrollToTaskId from navigation state
+  const scrollToTaskId = (location.state as { scrollToTaskId?: number } | null)
+    ?.scrollToTaskId;
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
   const canEditTasks = userRole === "admin" || userRole === "manager";
+
+  // Scroll to task and pulse when navigated from dashboard
+  useEffect(() => {
+    if (scrollToTaskId && tasks && !hasScrolledToTask.current) {
+      hasScrolledToTask.current = true;
+
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const taskElement = document.getElementById(`task-${scrollToTaskId}`);
+        if (taskElement) {
+          // Scroll to element with offset for header
+          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+
+          // Trigger pulse animation
+          setPulsingTaskId(scrollToTaskId);
+
+          // Remove pulse after animation completes
+          setTimeout(() => {
+            setPulsingTaskId(null);
+          }, 1700); // 2 pulses * 0.8s + small buffer
+        }
+      }, 300);
+    }
+  }, [scrollToTaskId, tasks]);
 
   // Check which descriptions are clamped after tasks load
   useEffect(() => {
@@ -411,6 +464,8 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
 
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
+      {/* Inject pulse animation styles */}
+      <style>{pulseAnimationStyle}</style>
       <header className="glass-header border-b border-black/5 lg:sticky lg:top-0 z-40">
         <div className="max-w-[1100px] mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
           <div className="flex items-center gap-5">
@@ -564,6 +619,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                     canEdit={false}
                     isExpanded={expandedTaskId === task.id}
                     isClamped={clampedTasks.has(task.id)}
+                    isPulsing={pulsingTaskId === task.id}
                     onExpand={() =>
                       setExpandedTaskId(
                         expandedTaskId === task.id ? null : task.id
@@ -614,6 +670,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                     onToggle={() => handleToggleTask(task.id, task.status)}
                     isExpanded={expandedTaskId === task.id}
                     isClamped={clampedTasks.has(task.id)}
+                    isPulsing={pulsingTaskId === task.id}
                     onExpand={() =>
                       setExpandedTaskId(
                         expandedTaskId === task.id ? null : task.id

@@ -9,16 +9,14 @@ import {
   ChevronRight,
   Zap,
   CheckCircle2,
-  ShieldCheck,
   Activity,
   ChevronDown,
-  Cpu,
-  UserCircle,
-  CircleCheck,
   ChevronLeft,
   MapPin,
   TrendingDown,
   DollarSign,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAgentData } from "../../hooks/useAgentData";
@@ -28,6 +26,10 @@ import { fetchPmsKeyData, type PmsKeyDataResponse } from "../../api/pms";
 import { fetchClientTasks } from "../../api/tasks";
 import type { ActionItem } from "../../types/tasks";
 import { parseHighlightTags } from "../../utils/textFormatting";
+import {
+  ReferralMatrices,
+  type ReferralEngineData,
+} from "../PMS/ReferralMatrices";
 
 // Ranking data types
 interface RankingResult {
@@ -52,44 +54,6 @@ interface RankingResult {
   errorMessage: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-// Referral Engine Data types
-interface ReferralEngineData {
-  executive_summary?: string[];
-  doctor_referral_matrix?: DoctorReferral[];
-  non_doctor_referral_matrix?: NonDoctorReferral[];
-  growth_opportunity_summary?: {
-    top_three_fixes?: string[];
-    estimated_additional_annual_revenue?: number;
-  };
-  practice_action_plan?: string[];
-  alloro_automation_opportunities?: string[];
-}
-
-interface DoctorReferral {
-  referrer_id?: string;
-  referrer_name?: string;
-  referred?: number;
-  pct_scheduled?: number | null;
-  pct_examined?: number | null;
-  pct_started?: number | null;
-  net_production?: number | null;
-  trend_label?: "increasing" | "decreasing" | "new" | "dormant" | "stable";
-  notes?: string;
-}
-
-interface NonDoctorReferral {
-  source_key?: string;
-  source_label?: string;
-  source_type?: "digital" | "patient" | "other";
-  referred?: number;
-  pct_scheduled?: number | null;
-  pct_examined?: number | null;
-  pct_started?: number | null;
-  net_production?: number | null;
-  trend_label?: "increasing" | "decreasing" | "new" | "dormant" | "stable";
-  notes?: string;
 }
 
 interface DashboardOverviewProps {
@@ -157,30 +121,6 @@ const MetricCard = ({
   );
 };
 
-const CompactTag = ({ status }: { status: string }) => {
-  const styles: Record<string, string> = {
-    Increasing: "text-green-700 bg-green-50 border-green-100",
-    increasing: "text-green-700 bg-green-50 border-green-100",
-    Decreasing: "text-red-700 bg-red-50 border-red-100",
-    decreasing: "text-red-700 bg-red-50 border-red-100",
-    New: "text-indigo-700 bg-indigo-50 border-indigo-100",
-    new: "text-indigo-700 bg-indigo-50 border-indigo-100",
-    Dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
-    dormant: "text-alloro-textDark/20 bg-alloro-bg border-black/5",
-    Stable: "text-slate-500 bg-slate-50 border-slate-200",
-    stable: "text-slate-500 bg-slate-50 border-slate-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border leading-none mt-1 w-fit ${
-        styles[status] || styles["Stable"]
-      }`}
-    >
-      {status}
-    </span>
-  );
-};
-
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return "N/A";
   return `$${value.toLocaleString("en-US", {
@@ -197,6 +137,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDataHub, setShowDataHub] = useState(false);
   const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
+
+  // Modal state for Strategic Growth fixes
+  const [selectedFix, setSelectedFix] = useState<{
+    index: number;
+    text: string;
+  } | null>(null);
 
   // PMS data state
   const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
@@ -220,7 +166,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
     null
   );
-  const [, setReferralLoading] = useState(true);
+  const [referralLoading, setReferralLoading] = useState(true);
 
   // Fetch PMS data
   useEffect(() => {
@@ -425,11 +371,110 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   const pmsMetrics = calculatePmsMetrics();
 
-  // Handle refresh
+  // Function to reload PMS data
+  const reloadPmsData = useCallback(async () => {
+    const domain = userProfile?.domainName;
+    if (!domain) return;
+
+    setPmsLoading(true);
+    try {
+      const response = await fetchPmsKeyData(domain);
+      if (response?.success && response.data) {
+        setPmsData(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to reload PMS data:", err);
+    } finally {
+      setPmsLoading(false);
+    }
+  }, [userProfile?.domainName]);
+
+  // Function to reload ranking data
+  const reloadRankingData = useCallback(async () => {
+    if (!googleAccountId) return;
+
+    setRankingLoading(true);
+    try {
+      const response = await fetch(
+        `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.rankings) {
+          const rankings = Array.isArray(result.rankings)
+            ? result.rankings
+            : [result.rankings];
+          setRankingData(rankings);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to reload ranking data:", err);
+    } finally {
+      setRankingLoading(false);
+    }
+  }, [googleAccountId]);
+
+  // Function to reload tasks
+  const reloadTasks = useCallback(async () => {
+    if (!googleAccountId) return;
+
+    setTasksLoading(true);
+    try {
+      const response = await fetchClientTasks(googleAccountId);
+      if (response?.success && response.tasks) {
+        const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
+        const opportunityTasks = allTasks.filter(
+          (task) => task.agent_type === "OPPORTUNITY"
+        );
+        setTasks(opportunityTasks);
+        setAllUserTasks(response.tasks.USER);
+      }
+    } catch (err) {
+      console.error("Failed to reload tasks:", err);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [googleAccountId]);
+
+  // Function to reload referral data
+  const reloadReferralData = useCallback(async () => {
+    if (!googleAccountId) return;
+
+    setReferralLoading(true);
+    try {
+      const response = await fetch(
+        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const dataToSet = Array.isArray(result.data)
+            ? result.data[0]
+            : result.data;
+          setReferralData(dataToSet);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to reload referral data:", err);
+    } finally {
+      setReferralLoading(false);
+    }
+  }, [googleAccountId]);
+
+  // Handle refresh - now refreshes ALL data sources
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refetch();
-    setTimeout(() => setIsRefreshing(false), 2000);
+
+    // Refresh all data sources in parallel
+    await Promise.all([
+      refetch(),
+      reloadPmsData(),
+      reloadRankingData(),
+      reloadTasks(),
+      reloadReferralData(),
+    ]);
+
+    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   // Extract agent data
@@ -593,15 +638,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-black/5">
-              <ShieldCheck
-                size={14}
-                className="text-alloro-orange opacity-60"
-              />
-              <span className="text-[9px] font-black text-alloro-orange/60 uppercase tracking-widest">
-                Secure Pulse Protocol
-              </span>
-            </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -639,7 +675,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           ) : (
             <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
           )}
-          {trajectory ? (
+          {trajectory && (
             <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
               Your practice momentum is{" "}
               <span className="text-alloro-orange underline underline-offset-8 font-black">
@@ -648,8 +684,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               . We have identified {criticalActionsCount} refinements for your
               attention today.
             </p>
-          ) : (
-            <LoadingSkeleton className="h-8 w-full max-w-3xl mt-4" />
           )}
         </section>
 
@@ -763,10 +797,14 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 )}
               </div>
               <button
-                onClick={() => navigate("/tasks")}
+                onClick={() => {
+                  // Navigate to tasks with the task ID for scrolling
+                  const taskId = immediateTask?.id;
+                  navigate("/tasks", { state: { scrollToTaskId: taskId } });
+                }}
                 className="w-full sm:w-auto px-8 py-4 bg-[#11151C] text-white rounded-[1rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 shrink-0 active:scale-95 group"
               >
-                EXECUTE CALL{" "}
+                See in Tasks{" "}
                 <ChevronRight
                   size={16}
                   className="group-hover:translate-x-1 transition-transform"
@@ -777,154 +815,159 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         })()}
 
         {/* SECTION 3: RANKING STRATEGY - PREMIUM DESIGN - matches newdesign */}
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <div className="bg-[#FDFDFD] rounded-3xl border border-slate-100 p-10 lg:px-12 lg:py-10 shadow-premium relative overflow-hidden group">
-            {/* Decorative Gradient Elements */}
-            <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-alloro-orange/[0.03] to-transparent pointer-events-none"></div>
-            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-alloro-orange/[0.04] rounded-full blur-[100px] pointer-events-none"></div>
+        {rankingData && rankingData.length > 0 && (
+          <section
+            className="animate-in fade-in slide-in-from-bottom-4 duration-1000 cursor-pointer"
+            onClick={() => navigate("/rankings")}
+          >
+            <div className="bg-[#FDFDFD] rounded-3xl border border-slate-100 p-10 lg:px-12 lg:py-10 shadow-premium relative overflow-hidden group hover:border-alloro-orange/20 hover:shadow-2xl transition-all duration-300">
+              {/* Decorative Gradient Elements */}
+              <div className="absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l from-alloro-orange/[0.03] to-transparent pointer-events-none"></div>
+              <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-alloro-orange/[0.04] rounded-full blur-[100px] pointer-events-none"></div>
 
-            {/* Carousel Navigation Header */}
-            {totalLocations > 1 && (
-              <div className="relative z-20 mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-alloro-orange" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    Location {currentLocationIndex + 1} of {totalLocations}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={prevLocation}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-95"
-                  >
-                    <ChevronLeft size={16} className="text-slate-600" />
-                  </button>
-                  <div className="flex gap-1.5">
-                    {rankingData?.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentLocationIndex(idx)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          idx === currentLocationIndex
-                            ? "bg-alloro-orange w-6"
-                            : "bg-slate-300 hover:bg-slate-400"
-                        }`}
-                      />
-                    ))}
+              {/* Carousel Navigation Header */}
+              {totalLocations > 1 && (
+                <div className="relative z-20 mb-6 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <MapPin size={16} className="text-alloro-orange" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      Location {currentLocationIndex + 1} of {totalLocations}
+                    </span>
                   </div>
-                  <button
-                    onClick={nextLocation}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-95"
-                  >
-                    <ChevronRight size={16} className="text-slate-600" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-12 text-left">
-              <div className="flex-1 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg shadow-sm">
-                    RANKING STRATEGY
-                  </div>
-                  <div className="h-px w-20 bg-slate-100"></div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    {currentLocationData?.location || "LOCAL MARKET"}
-                  </span>
-                </div>
-                <div className="space-y-4">
-                  {currentLocationData ? (
-                    <div
-                      className="animate-in fade-in duration-500"
-                      key={currentLocationIndex}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={prevLocation}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-95"
                     >
-                      <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tight leading-[1.05]">
-                        You're ranked{" "}
-                        <span className="text-alloro-orange">
-                          #{currentLocationData.rank} of{" "}
-                          {currentLocationData.totalCompetitors}
-                        </span>{" "}
-                        locally — <br className="hidden md:block" />
-                        growth is accelerating.
-                      </h2>
-                      <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
-                        Your authority score has increased by 12 points since
-                        last month. Focus on review velocity to challenge the #
-                        {Math.max(1, currentLocationData.rank - 1)} position.
-                      </p>
+                      <ChevronLeft size={16} className="text-slate-600" />
+                    </button>
+                    <div className="flex gap-1.5">
+                      {rankingData?.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentLocationIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === currentLocationIndex
+                              ? "bg-alloro-orange w-6"
+                              : "bg-slate-300 hover:bg-slate-400"
+                          }`}
+                        />
+                      ))}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <LoadingSkeleton className="h-16 w-full max-w-xl" />
-                      <LoadingSkeleton className="h-8 w-96 max-w-full" />
-                    </div>
-                  )}
+                    <button
+                      onClick={nextLocation}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-95"
+                    >
+                      <ChevronRight size={16} className="text-slate-600" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex flex-wrap items-center gap-10 shrink-0">
-                <div className="flex flex-col items-center group/stat">
-                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
-                    Authority Score
-                  </span>
-                  <div className="relative">
+              <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-12 text-left">
+                <div className="flex-1 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg shadow-sm">
+                      RANKING STRATEGY
+                    </div>
+                    <div className="h-px w-20 bg-slate-100"></div>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      {currentLocationData?.location || "LOCAL MARKET"}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
                     {currentLocationData ? (
-                      <>
-                        <span className="text-7xl font-black font-heading text-alloro-navy tabular-nums group-hover/stat:text-alloro-orange transition-colors duration-500">
-                          {currentLocationData.score}
-                        </span>
-                        <div className="absolute -top-1 -right-4 w-2 h-2 rounded-full bg-alloro-orange animate-pulse"></div>
-                      </>
+                      <div
+                        className="animate-in fade-in duration-500"
+                        key={currentLocationIndex}
+                      >
+                        <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tight leading-[1.05]">
+                          You're ranked{" "}
+                          <span className="text-alloro-orange">
+                            #{currentLocationData.rank} of{" "}
+                            {currentLocationData.totalCompetitors}
+                          </span>{" "}
+                          locally — <br className="hidden md:block" />
+                          growth is accelerating.
+                        </h2>
+                        <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
+                          Your authority score has increased by 12 points since
+                          last month. Focus on review velocity to challenge the
+                          #{Math.max(1, currentLocationData.rank - 1)} position.
+                        </p>
+                      </div>
                     ) : (
-                      <LoadingSkeleton className="h-16 w-24" />
+                      <div className="space-y-4">
+                        <LoadingSkeleton className="h-16 w-full max-w-xl" />
+                        <LoadingSkeleton className="h-8 w-96 max-w-full" />
+                      </div>
                     )}
                   </div>
                 </div>
-                <div className="w-px h-16 bg-slate-100 hidden sm:block"></div>
-                <div className="flex flex-col items-center group/stat">
-                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
-                    Patient Sentiment
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`text-3xl font-black font-heading transition-colors ${
-                        sentiment.label === "High"
-                          ? "text-alloro-navy group-hover/stat:text-green-500"
-                          : sentiment.label === "Okay"
-                          ? "text-alloro-navy group-hover/stat:text-yellow-500"
-                          : "text-alloro-navy"
-                      }`}
-                    >
-                      {sentiment.label}
+
+                <div className="flex flex-wrap items-center gap-10 shrink-0">
+                  <div className="flex flex-col items-center group/stat">
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
+                      Authority Score
                     </span>
-                    <div
-                      className={`w-4 h-4 rounded-full ${
-                        sentiment.label === "High"
-                          ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                          : sentiment.label === "Okay"
-                          ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
-                          : sentiment.label === "Low"
-                          ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
-                          : "bg-slate-400"
-                      }`}
-                    ></div>
+                    <div className="relative">
+                      {currentLocationData ? (
+                        <>
+                          <span className="text-7xl font-black font-heading text-alloro-navy tabular-nums group-hover/stat:text-alloro-orange transition-colors duration-500">
+                            {currentLocationData.score}
+                          </span>
+                          <div className="absolute -top-1 -right-4 w-2 h-2 rounded-full bg-alloro-orange animate-pulse"></div>
+                        </>
+                      ) : (
+                        <LoadingSkeleton className="h-16 w-24" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-px h-16 bg-slate-100 hidden sm:block"></div>
+                  <div className="flex flex-col items-center group/stat">
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
+                      Patient Sentiment
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-3xl font-black font-heading transition-colors ${
+                          sentiment.label === "High"
+                            ? "text-alloro-navy group-hover/stat:text-green-500"
+                            : sentiment.label === "Okay"
+                            ? "text-alloro-navy group-hover/stat:text-yellow-500"
+                            : "text-alloro-navy"
+                        }`}
+                      >
+                        {sentiment.label}
+                      </span>
+                      <div
+                        className={`w-4 h-4 rounded-full ${
+                          sentiment.label === "High"
+                            ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                            : sentiment.label === "Okay"
+                            ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+                            : sentiment.label === "Low"
+                            ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                            : "bg-slate-400"
+                        }`}
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* SECTION 4: VITALS & QUICK WINS & RISKS - matches newdesign */}
-        <section className="space-y-8 pt-4">
-          <div className="flex items-center gap-4 px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-              Clinical Performance Vitals
-            </h3>
-            <div className="h-px w-full bg-black/10"></div>
-          </div>
-          {pmsMetrics ? (
+        {pmsMetrics && (
+          <section className="space-y-8 pt-4">
+            <div className="flex items-center gap-4 px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+                Clinical Performance Vitals
+              </h3>
+              <div className="h-px w-full bg-black/10"></div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
               <MetricCard
                 label="Monthly Starts"
@@ -975,173 +1018,210 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 trend={currentLocationData ? "+1%" : undefined}
               />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-              <LoadingSkeleton className="h-32 w-full" />
-              <LoadingSkeleton className="h-32 w-full" />
-              <LoadingSkeleton className="h-32 w-full" />
-              <LoadingSkeleton className="h-32 w-full" />
-            </div>
-          )}
-          <div className="pt-8 space-y-8">
-            <div className="flex items-center gap-4 px-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-                Growth Signals & Operational Risks
-              </h3>
-              <div className="h-px w-full bg-black/10"></div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-              <div className="space-y-5">
-                <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
-                  <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
-                    <TrendingUp size={16} />
-                  </div>
-                  Wins
+            {(wins || risks) && (
+              <div className="pt-8 space-y-8">
+                <div className="flex items-center gap-4 px-1">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+                    Growth Signals & Operational Risks
+                  </h3>
+                  <div className="h-px w-full bg-black/10"></div>
                 </div>
-                <div className="space-y-3">
-                  {wins ? (
-                    wins.map((win: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
-                      >
-                        <CheckCircle2
-                          className="text-green-500 shrink-0 mt-0.5"
-                          size={20}
-                        />
-                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
-                          {win}
-                        </span>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+                  {wins && (
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                        <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
+                          <TrendingUp size={16} />
+                        </div>
+                        Wins
                       </div>
-                    ))
-                  ) : (
-                    <div className="space-y-3">
-                      <LoadingSkeleton className="h-16 w-full" />
-                      <LoadingSkeleton className="h-16 w-full" />
+                      <div className="space-y-3">
+                        {wins.map((win: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                          >
+                            <CheckCircle2
+                              className="text-green-500 shrink-0 mt-0.5"
+                              size={20}
+                            />
+                            <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                              {win}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {risks && (
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
+                          <AlertTriangle size={16} />
+                        </div>
+                        Risks
+                      </div>
+                      <div className="space-y-3">
+                        {risks.map((risk: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                          >
+                            <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
+                            <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                              {risk}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-
-              <div className="space-y-5">
-                <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
-                  <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
-                    <AlertTriangle size={16} />
-                  </div>
-                  Risks
-                </div>
-                <div className="space-y-3">
-                  {risks ? (
-                    risks.map((risk: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
-                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
-                          {risk}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="space-y-3">
-                      <LoadingSkeleton className="h-16 w-full" />
-                      <LoadingSkeleton className="h-16 w-full" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+            )}
+          </section>
+        )}
 
         {/* SECTION: PREMIUM TOP 3 STRATEGIC FIXES - matches newdesign (visible, not in hub) */}
-        <section className="space-y-10 pt-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg leading-none">
-                  STRATEGIC GROWTH
+        {topFixes && estimatedRevenue && (
+          <section className="space-y-10 pt-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg leading-none">
+                    STRATEGIC GROWTH
+                  </div>
+                  <div className="h-px w-24 bg-alloro-navy/10"></div>
                 </div>
-                <div className="h-px w-24 bg-alloro-navy/10"></div>
+                <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
+                  Top 3 Fixes to Add{" "}
+                  <span className="text-alloro-orange inline-flex items-baseline gap-1">
+                    {formatCurrency(estimatedRevenue)}+
+                  </span>{" "}
+                  <br className="hidden md:block" />
+                  to your Annual Revenue.
+                </h2>
+                <p className="text-slate-400 font-bold text-lg tracking-tight max-w-3xl leading-relaxed">
+                  Precision refinements identified by Alloro to capture leaking
+                  production and accelerate your practice growth.
+                </p>
               </div>
-              <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
-                Top 3 Fixes to Add{" "}
-                <span className="text-alloro-orange inline-flex items-baseline gap-1">
-                  {estimatedRevenue ? (
-                    <>{formatCurrency(estimatedRevenue)}+</>
-                  ) : (
-                    <LoadingSkeleton className="h-10 lg:h-12 w-48 lg:w-64 inline-block translate-y-2" />
-                  )}
-                </span>{" "}
-                <br className="hidden md:block" />
-                to your Annual Revenue.
-              </h2>
-              <p className="text-slate-400 font-bold text-lg tracking-tight max-w-3xl leading-relaxed">
-                Precision refinements identified by Alloro to capture leaking
-                production and accelerate your practice growth.
-              </p>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {topFixes
-              ? topFixes.map((fix: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[440px] overflow-hidden"
-                  >
-                    {/* Elite Background Gradient Glow */}
-                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+              {topFixes.map((fix: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[440px] overflow-hidden"
+                >
+                  {/* Elite Background Gradient Glow */}
+                  <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
 
-                    {/* Orange Sidebar Indicator */}
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
+                  {/* Orange Sidebar Indicator */}
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
 
-                    <div className="relative z-10 space-y-12">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                          <DollarSign size={14} /> Revenue Asset
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] leading-none">
-                          Estimated Annual Growth
-                        </div>
-                        <div className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tighter tabular-nums leading-none group-hover:text-alloro-orange transition-colors duration-500">
-                          {estimatedRevenue ? (
-                            `$${Math.round(estimatedRevenue / 3 / 1000)}K+`
-                          ) : (
-                            <LoadingSkeleton className="h-12 w-32" />
-                          )}
-                        </div>
+                  <div className="relative z-10 space-y-12">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
+                        <DollarSign size={14} /> Revenue Asset
                       </div>
                     </div>
 
-                    <div className="mt-auto space-y-8 relative z-10">
-                      <div className="space-y-3">
-                        <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
-                          Fix #{idx + 1}
-                        </h4>
-                        <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-2">
-                          {fix}
-                        </p>
+                    <div className="space-y-3">
+                      <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] leading-none">
+                        Estimated Annual Growth
                       </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                        <span className="flex items-center gap-3 text-[10px] font-black text-alloro-navy uppercase tracking-[0.3em] group-hover:text-alloro-orange transition-colors cursor-pointer">
-                          VIEW PROTOCOL <ArrowRight size={16} />
-                        </span>
+                      <div className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tighter tabular-nums leading-none group-hover:text-alloro-orange transition-colors duration-500">
+                        ${Math.round(estimatedRevenue / 3 / 1000)}K+
                       </div>
                     </div>
                   </div>
-                ))
-              : // Loading state for top fixes
-                [1, 2, 3].map((idx) => (
-                  <LoadingSkeleton key={idx} className="h-[440px] w-full" />
-                ))}
+
+                  <div className="mt-auto space-y-8 relative z-10">
+                    <div className="space-y-3">
+                      <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
+                        Fix #{idx + 1}
+                      </h4>
+                      <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-2">
+                        {fix}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                      <button
+                        onClick={() =>
+                          setSelectedFix({ index: idx + 1, text: fix })
+                        }
+                        className="flex items-center gap-3 text-[10px] font-black text-alloro-navy uppercase tracking-[0.3em] group-hover:text-alloro-orange transition-colors cursor-pointer hover:gap-4"
+                      >
+                        View More <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Strategic Growth Fix Modal */}
+        {selectedFix && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedFix(null)}
+          >
+            <div
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8 lg:p-10 space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
+                      <DollarSign size={14} /> Revenue Asset
+                    </div>
+                    <h3 className="text-2xl lg:text-3xl font-black font-heading text-alloro-navy tracking-tight">
+                      Fix #{selectedFix.index}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedFix(null)}
+                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    <X size={24} className="text-slate-400" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
+                    Estimated Annual Growth
+                  </div>
+                  <div className="text-4xl font-black font-heading text-alloro-orange tracking-tighter">
+                    {estimatedRevenue
+                      ? `$${Math.round(estimatedRevenue / 3 / 1000)}K+`
+                      : "N/A"}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <p className="text-lg text-slate-600 font-medium leading-relaxed">
+                    {selectedFix.text}
+                  </p>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    onClick={() => setSelectedFix(null)}
+                    className="px-6 py-3 bg-alloro-navy text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
+        )}
 
         {/* HUB COLLAPSIBLE TRIGGER - matches newdesign */}
         <div className="pt-10 text-center">
@@ -1162,300 +1242,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           </button>
 
           {showDataHub && (
-            <div className="mt-16 space-y-16 text-left animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
-              {/* DOCTOR REFERRAL MATRIX - matches newdesign exactly */}
-              {referralData?.doctor_referral_matrix &&
-                referralData.doctor_referral_matrix.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
-                    <div className="px-6 py-8 border-b border-slate-50 flex justify-between items-center bg-white">
-                      <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
-                        Referring Doctor Matrix (YTD)
-                      </h2>
-                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                        2025 Ledger Hub
-                      </span>
-                    </div>
-                    <div className="w-full">
-                      <table className="w-full text-left border-collapse table-fixed">
-                        <thead className="bg-slate-50/30 text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-100">
-                          <tr>
-                            <th className="px-6 py-4 w-[22%]">Source</th>
-                            <th className="px-2 py-4 text-center w-[8%]">
-                              Ref
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Sched
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Exam
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Start
-                            </th>
-                            <th className="px-4 py-4 text-right w-[15%]">
-                              Production
-                            </th>
-                            <th className="px-6 py-4 w-[25%]">Note</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {referralData.doctor_referral_matrix.map(
-                            (doc, idx) => (
-                              <tr
-                                key={doc.referrer_id || idx}
-                                className="hover:bg-slate-50/50 transition-all group"
-                              >
-                                <td className="px-6 py-5">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-black text-alloro-navy text-[13px] leading-tight group-hover:text-alloro-orange transition-colors truncate">
-                                      {doc.referrer_name || "Unknown"}
-                                    </span>
-                                    {doc.trend_label && (
-                                      <CompactTag status={doc.trend_label} />
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
-                                  {doc.referred || 0}
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {doc.pct_scheduled?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {doc.pct_examined?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {doc.pct_started?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
-                                  {formatCurrency(doc.net_production)}
-                                </td>
-                                <td className="px-6 py-5">
-                                  <p className="text-[11px] text-slate-500 font-medium leading-tight tracking-tight line-clamp-2">
-                                    {doc.notes || "No notes available."}
-                                  </p>
-                                </td>
-                              </tr>
-                            )
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-              {/* NON-DOCTOR REFERRAL MATRIX - matches newdesign exactly */}
-              {referralData?.non_doctor_referral_matrix &&
-                referralData.non_doctor_referral_matrix.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium overflow-hidden">
-                    <div className="px-6 py-8 border-b border-slate-50 flex justify-between items-center bg-white">
-                      <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
-                        Non-Doctor Referral Matrix (YTD)
-                      </h2>
-                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                        Attribution Hub
-                      </span>
-                    </div>
-                    <div className="w-full">
-                      <table className="w-full text-left border-collapse table-fixed">
-                        <thead className="bg-slate-50/30 text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-100">
-                          <tr>
-                            <th className="px-6 py-4 w-[22%]">
-                              Marketing Source
-                            </th>
-                            <th className="px-2 py-4 text-center w-[8%]">
-                              Ref
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Sched
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Exam
-                            </th>
-                            <th className="px-2 py-4 text-center w-[10%]">
-                              Start
-                            </th>
-                            <th className="px-4 py-4 text-right w-[15%]">
-                              Production
-                            </th>
-                            <th className="px-6 py-4 w-[25%]">Note</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {referralData.non_doctor_referral_matrix
-                            .filter((s) => (s.referred || 0) > 0)
-                            .map((source, idx) => (
-                              <tr
-                                key={source.source_key || idx}
-                                className="hover:bg-slate-50/50 transition-all group"
-                              >
-                                <td className="px-6 py-5">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-black text-alloro-navy text-[13px] leading-tight group-hover:text-alloro-orange transition-colors truncate">
-                                      {source.source_label ||
-                                        source.source_key ||
-                                        "Unknown"}
-                                    </span>
-                                    {source.trend_label && (
-                                      <CompactTag status={source.trend_label} />
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
-                                  {source.referred || 0}
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {source.pct_scheduled?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {source.pct_examined?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
-                                  {source.pct_started?.toFixed(0) || 0}%
-                                </td>
-                                <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
-                                  {formatCurrency(source.net_production)}
-                                </td>
-                                <td className="px-6 py-5">
-                                  <p className="text-[11px] text-slate-500 font-medium leading-tight tracking-tight line-clamp-2">
-                                    {source.notes ||
-                                      (source.source_type === "digital"
-                                        ? "High-intent digital lead. Focus on GBP visibility."
-                                        : "Key peer-to-peer referral source.")}
-                                  </p>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-              {/* RESPONSIBILITY HUB - matches newdesign exactly */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="bg-white rounded-2xl border border-slate-100 p-12 space-y-10 shadow-premium text-left group">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 bg-alloro-orange/10 text-alloro-orange rounded-2xl flex items-center justify-center border border-alloro-orange/10 shadow-inner-soft">
-                      <Cpu size={32} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black font-heading text-alloro-navy leading-none">
-                        Handled By Alloro
-                      </h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                        Digital Operations
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-6">
-                    {alloroOpportunities ? (
-                      alloroOpportunities
-                        .slice(0, 5)
-                        .map((item: string, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-6 group/item"
-                          >
-                            <CheckCircle2
-                              size={20}
-                              className="text-alloro-orange/30 group-hover/item:text-alloro-orange transition-colors shrink-0"
-                            />
-                            <span className="text-base font-bold text-slate-500 tracking-tight leading-tight">
-                              {item.length > 50
-                                ? item.substring(0, 50) + "..."
-                                : item}
-                            </span>
-                          </div>
-                        ))
-                    ) : (
-                      <>
-                        {[
-                          "Automating Reputation Guarding",
-                          "GMB & Local Rank Stabilization",
-                          "Analyzing Competitive Review Velocity",
-                          "Live Conversion Data Attribution",
-                          "Syncing PMS Yield with Marketing",
-                        ].map((item, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-6 group/item"
-                          >
-                            <CheckCircle2
-                              size={20}
-                              className="text-alloro-orange/30 group-hover/item:text-alloro-orange transition-colors shrink-0"
-                            />
-                            <span className="text-base font-bold text-slate-500 tracking-tight leading-tight">
-                              {item}
-                            </span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-alloro-navy rounded-2xl p-12 space-y-10 text-white shadow-2xl text-left relative overflow-hidden group">
-                  <div className="flex items-center gap-6 relative z-10">
-                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg">
-                      <UserCircle size={32} className="text-white/60" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black font-heading leading-none">
-                        Handled by Practice
-                      </h3>
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mt-1">
-                        Team Protocols
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-6 relative z-10">
-                    {practiceActionPlan ? (
-                      practiceActionPlan
-                        .slice(0, 5)
-                        .map((item: string, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-6 group/item"
-                          >
-                            <CircleCheck
-                              size={20}
-                              className="text-white/20 group-hover/item:text-white/80 transition-colors shrink-0"
-                            />
-                            <span className="text-base font-bold text-white/50 tracking-tight leading-tight">
-                              {item.length > 50
-                                ? item.substring(0, 50) + "..."
-                                : item}
-                            </span>
-                          </div>
-                        ))
-                    ) : (
-                      <>
-                        {[
-                          "Executing Peer-to-Peer Outreach",
-                          "Managing TC Closure Refinements",
-                          "Nurturing Referral Relationships",
-                          "Optimizing In-office Experience",
-                          "Responding to Lead Velocity Signals",
-                        ].map((item, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-6 group/item"
-                          >
-                            <CircleCheck
-                              size={20}
-                              className="text-white/20 group-hover/item:text-white/80 transition-colors shrink-0"
-                            />
-                            <span className="text-base font-bold text-white/50 tracking-tight leading-tight">
-                              {item}
-                            </span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div className="mt-16 text-left animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards">
+              <ReferralMatrices
+                referralData={referralData}
+                isLoading={referralLoading}
+              />
             </div>
           )}
         </div>

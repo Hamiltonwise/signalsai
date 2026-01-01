@@ -91,3 +91,15 @@ export interface BulkUnarchiveResponse {
   message: string;
   data: { unarchived: number };
 }
+
+export interface DeleteResponse {
+  success: boolean;
+  message: string;
+  data: { id: number };
+}
+
+export interface BulkDeleteResponse {
+  success: boolean;
+  message: string;
+  data: { deleted: number };
+}

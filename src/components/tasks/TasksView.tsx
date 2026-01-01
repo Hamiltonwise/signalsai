@@ -107,10 +107,17 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const priority = getPriority();
   const isHighPriority = priority === "Immediate" || priority === "High";
 
+  // Handle checkbox click - this is the only way to toggle task status
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isReadOnly && canEdit && onToggle) {
+      onToggle();
+    }
+  };
+
   return (
     <div
       id={`task-${task.id}`}
-      onClick={!isReadOnly && canEdit ? onToggle : undefined}
       className={`
         group relative bg-white rounded-3xl p-8 border transition-all duration-500 select-none text-left
         ${
@@ -118,7 +125,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
             ? "border-green-100 bg-green-50/20 opacity-60 shadow-none"
             : "border-black/5 shadow-premium hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1"
         }
-        ${!isReadOnly && canEdit ? "cursor-pointer active:scale-[0.98]" : ""}
         ${isPulsing ? "task-pulse-animation" : ""}
       `}
     >
@@ -129,15 +135,23 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <Loader2 size={18} className="animate-spin text-alloro-orange" />
             </div>
           ) : isDone ? (
-            <div className="w-8 h-8 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-lg shadow-green-500/20">
+            <div
+              onClick={handleCheckboxClick}
+              className={`w-8 h-8 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-lg shadow-green-500/20 ${
+                !isReadOnly && canEdit
+                  ? "cursor-pointer hover:bg-green-600"
+                  : ""
+              }`}
+            >
               <CheckSquare size={20} />
             </div>
           ) : (
             <div
+              onClick={handleCheckboxClick}
               className={`w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all duration-300 ${
                 isReadOnly
                   ? "bg-alloro-navy/5 text-alloro-navy border-transparent"
-                  : "bg-white border-slate-200 group-hover:border-alloro-orange group-hover:bg-alloro-orange/5 text-slate-200 group-hover:text-alloro-orange"
+                  : "bg-white border-slate-200 hover:border-alloro-orange hover:bg-alloro-orange/5 text-slate-200 hover:text-alloro-orange cursor-pointer"
               }`}
             >
               {isReadOnly ? <Zap size={18} /> : <Square size={18} />}
@@ -327,12 +341,12 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
     setTimeout(checkClamped, 100);
   }, [tasks]);
 
-  // Calculate completion percentage
+  // Calculate completion percentage based on USER tasks only
   useEffect(() => {
     if (!tasks) return;
-    const allTasks = [...(tasks.ALLORO || []), ...(tasks.USER || [])];
-    const total = allTasks.length;
-    const done = allTasks.filter((t) => t.status === "complete").length;
+    const userTasksList = tasks.USER || [];
+    const total = userTasksList.length;
+    const done = userTasksList.filter((t) => t.status === "complete").length;
     setCompletionPct(total > 0 ? Math.round((done / total) * 100) : 0);
   }, [tasks]);
 
@@ -457,10 +471,6 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
 
   const alloroTasks = tasks?.ALLORO || [];
   const userTasks = tasks?.USER || [];
-  const totalTasks = alloroTasks.length + userTasks.length;
-  const doneTasks = [...alloroTasks, ...userTasks].filter(
-    (t) => t.status === "complete"
-  ).length;
 
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
@@ -484,16 +494,15 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
           <button
             onClick={handleSync}
             disabled={loading}
-            className="flex items-center gap-3 px-6 py-3.5 bg-white border border-black/5 text-alloro-navy rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:border-alloro-orange/20 transition-all shadow-premium active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-3 px-5 py-3 bg-white border border-black/5 text-alloro-navy rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:border-alloro-orange/20 transition-all shadow-premium active:scale-95 disabled:opacity-50"
           >
             <RotateCw
               size={14}
               className={isRefreshing ? "animate-spin" : ""}
             />
             <span className="hidden sm:inline">
-              {isRefreshing ? "Synchronizing..." : "Sync Execution Hub"}
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </span>
-            <span className="sm:hidden">{isRefreshing ? "..." : "Sync"}</span>
           </button>
         </div>
       </header>
@@ -501,21 +510,15 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
       <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
         {/* HERO SECTION */}
         <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
-              Sprint v2.4 Live
-            </div>
-          </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
             Operational Flow.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Coordinating{" "}
+            Alloro partners with your team to pinpoint the{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
-              Alloro Intelligence & Practice Effort
+              most important actions
             </span>{" "}
-            to eliminate bottlenecks and capture production.
+            to drive growth.
           </p>
         </section>
 
@@ -524,42 +527,72 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-alloro-orange/[0.03] rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
 
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 lg:gap-20">
-            <div className="w-40 h-40 rounded-full border-[12px] border-slate-50 flex items-center justify-center text-4xl font-black font-heading text-alloro-navy relative shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-700">
-              <svg className="absolute inset-0 w-full h-full -rotate-90">
+            <div
+              className={`w-40 h-40 rounded-full border-[12px] flex items-center justify-center text-2xl font-black font-heading text-alloro-navy relative shrink-0 shadow-inner group-hover:scale-105 transition-all duration-700 ${
+                completionPct === 100
+                  ? "border-green-100 shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                  : "border-slate-50"
+              }`}
+            >
+              <svg
+                className="absolute inset-0 w-full h-full -rotate-90"
+                viewBox="0 0 160 160"
+              >
                 <circle
-                  cx="50%"
-                  cy="50%"
-                  r="42%"
+                  cx="80"
+                  cy="80"
+                  r="67"
                   stroke="currentColor"
                   strokeWidth="12"
                   fill="transparent"
-                  className="text-slate-50"
+                  className={
+                    completionPct === 100 ? "text-green-50" : "text-slate-100"
+                  }
                 />
                 <circle
-                  cx="50%"
-                  cy="50%"
-                  r="42%"
+                  cx="80"
+                  cy="80"
+                  r="67"
                   stroke="currentColor"
                   strokeWidth="12"
                   fill="transparent"
-                  strokeDasharray="264"
-                  strokeDashoffset={264 - (264 * completionPct) / 100}
+                  strokeDasharray={2 * Math.PI * 67}
+                  strokeDashoffset={
+                    2 * Math.PI * 67 - (2 * Math.PI * 67 * completionPct) / 100
+                  }
                   strokeLinecap="round"
-                  className="text-alloro-orange transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(214,104,83,0.3)]"
+                  className={`transition-all duration-1000 ease-out ${
+                    completionPct === 100
+                      ? "text-green-500"
+                      : "text-alloro-orange"
+                  }`}
+                  style={{
+                    filter:
+                      completionPct === 100
+                        ? "drop-shadow(0 0 12px rgba(34,197,94,0.5))"
+                        : "drop-shadow(0 0 8px rgba(214,104,83,0.4))",
+                  }}
                 />
               </svg>
-              <span className="font-sans tabular-nums">{completionPct}%</span>
+              <span
+                className={`font-sans tabular-nums ${
+                  completionPct === 100 ? "text-green-600" : ""
+                }`}
+              >
+                {completionPct}%
+              </span>
             </div>
             <div className="flex-1 space-y-4 text-center md:text-left">
               <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tighter leading-none">
-                Sprint Integrity Monitor
+                Task Tracker
               </h2>
               <p className="text-lg lg:text-xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg">
-                You have verified{" "}
+                There are{" "}
                 <span className="text-alloro-orange font-black">
-                  {doneTasks} of {totalTasks} tactical directives
+                  {userTasks.filter((t) => t.status !== "complete").length}{" "}
+                  tasks
                 </span>{" "}
-                in the current window.
+                awaiting your action.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
@@ -597,6 +630,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                 </h2>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
                   Algorithmic Operations
+                </p>
+                <p className="text-[11px] text-slate-400 font-medium mt-2 max-w-xs leading-relaxed">
+                  These are automated tasks handled by Alloro's AI systems on
+                  your behalf.
                 </p>
               </div>
             </div>
@@ -646,6 +683,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                 </h2>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
                   Staff Execution Steps
+                </p>
+                <p className="text-[11px] text-slate-400 font-medium mt-2 max-w-xs leading-relaxed">
+                  If you see a recurring task that's already done, please mark
+                  it complete so Alloro can learn from your actions.
                 </p>
               </div>
             </div>

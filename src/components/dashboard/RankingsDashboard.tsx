@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Target,
   Rocket,
+  HelpCircle,
 } from "lucide-react";
 
 // Type for client GBP data
@@ -192,6 +193,7 @@ const KPICard = ({
   rating,
   suffix,
   warning,
+  tooltip,
 }: {
   label: string;
   value: string | number;
@@ -201,12 +203,27 @@ const KPICard = ({
   rating?: boolean;
   suffix?: string;
   warning?: boolean;
+  tooltip?: string;
 }) => (
   <div className="bg-white border border-black/5 rounded-2xl p-8 shadow-premium flex flex-col transition-all hover:shadow-2xl hover:-translate-y-1 group">
     <div className="flex justify-between items-start mb-8">
-      <span className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.25em] leading-none">
-        {label}
-      </span>
+      <div className="flex items-center gap-2">
+        {tooltip && (
+          <div className="relative group/tooltip">
+            <HelpCircle
+              size={14}
+              className="text-slate-300 hover:text-alloro-orange cursor-help transition-colors"
+            />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-alloro-navy text-white text-[11px] font-medium rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 w-48 text-center leading-relaxed z-50">
+              {tooltip}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-alloro-navy"></div>
+            </div>
+          </div>
+        )}
+        <span className="text-[10px] font-black text-alloro-navy uppercase tracking-[0.25em] leading-none">
+          {label}
+        </span>
+      </div>
       {trend && (
         <span
           className={`text-[10px] font-black px-2.5 py-1 rounded-lg border tabular-nums leading-none ${
@@ -482,12 +499,6 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
         {/* HERO SECTION */}
         <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
-              Local SEO Mastery Active
-            </div>
-          </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
             Market Authority.
           </h1>
@@ -678,6 +689,7 @@ function PerformanceDashboard({
           value={Number(clientRating).toFixed(1)}
           rating
           sub={`Market Avg: ${marketAvgRating.toFixed(1)}`}
+          tooltip="Measures overall patient satisfaction based on review ratings and feedback sentiment analysis."
         />
         <KPICard
           label="Review Volume"
@@ -686,6 +698,7 @@ function PerformanceDashboard({
           sub={
             reviewGap > 0 ? `${reviewGap} behind Leader` : "Leading position"
           }
+          tooltip="Total number of reviews across all platforms. Higher volume improves local search visibility."
         />
         <KPICard
           label="Authority Impact"
@@ -700,6 +713,7 @@ function PerformanceDashboard({
           }
           trend={scoreTrend?.value}
           dir={scoreTrend?.dir}
+          tooltip="Alloro's proprietary score measuring your practice's overall digital authority and local search dominance."
         />
       </section>
 
@@ -708,14 +722,19 @@ function PerformanceDashboard({
         <div className="px-10 py-8 border-b border-black/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="text-left">
             <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
-              Competitive Matrix (L30)
+              Competitive Matrix
             </h2>
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
               Benchmarked against market leaders
             </p>
           </div>
-          <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-black/5 text-[10px] font-black text-alloro-orange uppercase tracking-widest animate-pulse">
-            Live Surveillance Mode
+          <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-black/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            Last updated:{" "}
+            {new Date(result.observedAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
           </div>
         </div>
         <div className="overflow-x-auto">

@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   Globe,
   MapPin,
-  Database,
   Mail,
   RefreshCw,
   LayoutGrid,
@@ -14,12 +13,16 @@ import {
   Activity,
   Phone,
   ChevronRight,
+  Edit3,
+  Check,
+  X,
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../hooks/useAuth";
 import { PropertySelectionModal } from "../components/settings/PropertySelectionModal";
 import { ConfirmModal } from "../components/settings/ConfirmModal";
 import { UsersTab } from "../components/settings/UsersTab";
+import { getProfile, updateProfile, type ProfileData } from "../api/profile";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -59,6 +62,107 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
   </div>
 );
 
+interface EditableInfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null;
+  placeholder: string;
+  onSave: (value: string) => Promise<void>;
+  isSaving?: boolean;
+}
+
+const EditableInfoRow = ({
+  icon,
+  label,
+  value,
+  placeholder,
+  onSave,
+  isSaving = false,
+}: EditableInfoRowProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value || "");
+
+  const handleSave = async () => {
+    if (editValue.trim()) {
+      await onSave(editValue.trim());
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditValue(value || "");
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-4 group">
+      <div className="p-3 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
+        {icon}
+      </div>
+      <div className="min-w-0 text-left flex-1">
+        <div className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.3em] mb-1 leading-none">
+          {label}
+        </div>
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="text-lg font-black text-alloro-navy tracking-tight bg-white border border-alloro-orange/30 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-alloro-orange/50 w-full"
+              autoFocus
+              disabled={isSaving}
+            />
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !editValue.trim()}
+              className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+            >
+              <Check size={16} />
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : value ? (
+          <div className="flex items-center gap-2">
+            <div className="text-lg font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
+              {value}
+            </div>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="opacity-0 group-hover:opacity-100 p-1.5 text-alloro-navy/30 hover:text-alloro-orange transition-all"
+            >
+              <Edit3 size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-sm font-bold text-alloro-orange hover:text-alloro-orange/80 transition-colors flex items-center gap-2"
+          >
+            <Edit3 size={14} />
+            {placeholder}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const Settings: React.FC = () => {
   const { userProfile, selectedDomain } = useAuth();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
@@ -70,6 +174,13 @@ export const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Profile State
+  const [profileData, setProfileData] = useState<ProfileData>({
+    phone: null,
+    operational_jurisdiction: null,
+  });
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -91,7 +202,36 @@ export const Settings: React.FC = () => {
     const role = localStorage.getItem("user_role") as UserRole | null;
     setUserRole(role);
     fetchProperties();
+    fetchProfile();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await getProfile();
+      if (response.success && response.data) {
+        setProfileData(response.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    }
+  };
+
+  const handleUpdateProfile = async (
+    field: keyof ProfileData,
+    value: string
+  ) => {
+    setIsProfileSaving(true);
+    try {
+      const response = await updateProfile({ [field]: value });
+      if (response.success) {
+        setProfileData((prev) => ({ ...prev, [field]: value }));
+      }
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
 
   const canManageConnections = userRole === "admin";
 
@@ -415,10 +555,15 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-5 relative z-10">
-                    <InfoRow
+                    <EditableInfoRow
                       icon={<MapPin size={24} />}
-                      label="Operational Jurisdiction"
-                      value="Winter Garden, FL 34787"
+                      label="Primary Location"
+                      value={profileData.operational_jurisdiction}
+                      placeholder="Enter your Primary Location"
+                      onSave={(value) =>
+                        handleUpdateProfile("operational_jurisdiction", value)
+                      }
+                      isSaving={isProfileSaving}
                     />
                     <InfoRow
                       icon={<Globe size={24} />}
@@ -426,23 +571,21 @@ export const Settings: React.FC = () => {
                       value={
                         selectedDomain?.domain ||
                         userProfile?.domainName ||
-                        "artfulorthodontics.com"
+                        "Not configured"
                       }
-                    />
-                    <InfoRow
-                      icon={<Database size={24} />}
-                      label="Ledger Infrastructure"
-                      value="Cloud9 Integrated"
                     />
                     <InfoRow
                       icon={<Mail size={24} />}
                       label="Command Outreach"
-                      value="dr.pawlak@artfulortho.com"
+                      value={userProfile?.email || "Not configured"}
                     />
-                    <InfoRow
+                    <EditableInfoRow
                       icon={<Phone size={24} />}
                       label="Clinical Contact"
-                      value="(407) 555-0123"
+                      value={profileData.phone}
+                      placeholder="Enter your Phone"
+                      onSave={(value) => handleUpdateProfile("phone", value)}
+                      isSaving={isProfileSaving}
                     />
                   </div>
                 </motion.div>

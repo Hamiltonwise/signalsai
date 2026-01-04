@@ -1147,7 +1147,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               {topFixes.map((fix: string, idx: number) => (
                 <div
                   key={idx}
-                  className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[440px] overflow-hidden"
+                  className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[280px] overflow-hidden"
                 >
                   {/* Elite Background Gradient Glow */}
                   <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
@@ -1155,29 +1155,18 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   {/* Orange Sidebar Indicator */}
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
 
-                  <div className="relative z-10 space-y-12">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                        <DollarSign size={14} /> Revenue Asset
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] leading-none">
-                        Estimated Annual Growth
-                      </div>
-                      <div className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tighter tabular-nums leading-none group-hover:text-alloro-orange transition-colors duration-500">
-                        ${Math.round(estimatedRevenue / 3 / 1000)}K+
-                      </div>
+                  <div className="relative z-10 mb-6">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
+                      <DollarSign size={14} /> Revenue Asset
                     </div>
                   </div>
 
-                  <div className="mt-auto space-y-8 relative z-10">
+                  <div className="mt-auto space-y-6 relative z-10">
                     <div className="space-y-3">
                       <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
                         Fix #{idx + 1}
                       </h4>
-                      <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-2">
+                      <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-3">
                         {fix}
                       </p>
                     </div>
@@ -1224,17 +1213,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   >
                     <X size={24} className="text-slate-400" />
                   </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
-                    Estimated Annual Growth
-                  </div>
-                  <div className="text-4xl font-black font-heading text-alloro-orange tracking-tighter">
-                    {estimatedRevenue
-                      ? `$${Math.round(estimatedRevenue / 3 / 1000)}K+`
-                      : "N/A"}
-                  </div>
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
@@ -1343,9 +1321,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
         {/* Footer Branding - matches newdesign exactly */}
         <footer className="pt-24 pb-12 flex flex-col items-center gap-10 text-center">
-          <div className="w-16 h-16 bg-alloro-orange text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl">
-            A
-          </div>
+          <img
+            src="/logo.png"
+            alt="Alloro"
+            className="w-16 h-16 rounded-2xl shadow-2xl"
+          />
           <div className="space-y-4">
             <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
               Alloro Practice Intelligence • v2.6.0

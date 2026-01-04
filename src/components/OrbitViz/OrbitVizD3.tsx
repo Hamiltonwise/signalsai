@@ -123,7 +123,10 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   // Responsive scale to better fit laptop screens; scales entire viz around center
   const targetW = 1100;
   const targetH = 760;
-  const visScale = Math.min(1, Math.max(0.8, Math.min(size.w / targetW, size.h / targetH)));
+  const visScale = Math.min(
+    1,
+    Math.max(0.8, Math.min(size.w / targetW, size.h / targetH))
+  );
 
   const toXY = (r: number, a: number) => {
     const rad = (a * Math.PI) / 180;
@@ -248,13 +251,29 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
 
     // Route links via AI intermediary orbs
     links.push({ source: centerNode, target: aiGoogle, distance: AI_DIST });
-    links.push({ source: aiGoogle, target: googleHub, distance: rings[1] - AI_DIST });
+    links.push({
+      source: aiGoogle,
+      target: googleHub,
+      distance: rings[1] - AI_DIST,
+    });
     links.push({ source: centerNode, target: aiWebsite, distance: AI_DIST });
-    links.push({ source: aiWebsite, target: websiteHub, distance: rings[1] - AI_DIST });
+    links.push({
+      source: aiWebsite,
+      target: websiteHub,
+      distance: rings[1] - AI_DIST,
+    });
     links.push({ source: centerNode, target: aiClarity, distance: AI_DIST });
-    links.push({ source: aiClarity, target: clarityHub, distance: rings[1] * 0.85 - AI_DIST });
+    links.push({
+      source: aiClarity,
+      target: clarityHub,
+      distance: rings[1] * 0.85 - AI_DIST,
+    });
     links.push({ source: centerNode, target: aiTasks, distance: AI_DIST });
-    links.push({ source: aiTasks, target: tasksHub, distance: rings[2] - AI_DIST });
+    links.push({
+      source: aiTasks,
+      target: tasksHub,
+      distance: rings[2] - AI_DIST,
+    });
 
     // Google metrics (3 children around hub)
     const gChildren = [data.ga4[0], data.gsc[0], data.gbp[0]].filter(Boolean);
@@ -447,13 +466,10 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
 
     if (id in hubToAi)
       return (
-        (a === "center" && b === hubToAi[id]) ||
-        (a === hubToAi[id] && b === id)
+        (a === "center" && b === hubToAi[id]) || (a === hubToAi[id] && b === id)
       );
     if (id in aiToHub)
-      return (
-        (a === "center" && b === id) || (a === id && b === aiToHub[id])
-      );
+      return (a === "center" && b === id) || (a === id && b === aiToHub[id]);
     if (googleChildIds.includes(id))
       return (
         (a === "hub_google" && b === id) ||
@@ -546,7 +562,9 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
         />
 
         {/* content scale wrapper */}
-        <g transform={`translate(${cx}, ${cy}) scale(${visScale}) translate(${-cx}, ${-cy})`}>
+        <g
+          transform={`translate(${cx}, ${cy}) scale(${visScale}) translate(${-cx}, ${-cy})`}
+        >
           {/* rings */}
           {rings.map((r, i) => (
             <circle
@@ -577,313 +595,552 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
           })}
 
           {/* nodes */}
-        {/* center */}
-        <g transform={`translate(${P("center").x}, ${P("center").y})`}>
-          <g
-            className="bubble orbit-float"
-            style={{ cursor: "pointer" }}
-            onClick={() => onNavigate?.("PMS Statistics")}
-            onMouseEnter={() =>
-              setHovered({
-                id: "center",
-                title: "Production",
-                value: `$${Intl.NumberFormat().format(
-                  data.center.totalProduction
-                )} • ${Intl.NumberFormat().format(
-                  data.center.totalPatients
-                )} patients`,
-                desc: "Practice production and patients summarized from PMS.",
-                r: centerR,
-              })
-            }
-            onMouseLeave={() => setHovered(null)}
-          >
-            <circle
-              r={centerR}
-              fill="rgba(255,255,255,0.72)"
-              stroke="rgba(59,130,246,0)"
-              filter="url(#softShadow)"
-              data-core
-            />
-            <circle className="hover-outline" r={centerR} pathLength={100} />
-            <circle
-              r={centerR - 2}
-              fill="none"
-              stroke="rgba(203,213,225,0.7)"
-            />
-            <ellipse
-              className="glare"
-              rx={centerR * 0.6}
-              ry={centerR * 0.36}
-              cx={-centerR * 0.28}
-              cy={-centerR * 0.52}
-              fill="white"
-              opacity={0.22}
-              filter="url(#glareBlur)"
-            />
-            <text
-              textAnchor="middle"
-              y={-centerR * 0.28}
-              fontSize={10}
-              letterSpacing={1.2}
-              fill="#64748b"
+          {/* center */}
+          <g transform={`translate(${P("center").x}, ${P("center").y})`}>
+            <g
+              className="bubble orbit-float"
+              style={{ cursor: "pointer" }}
+              onClick={() => onNavigate?.("PMS Statistics")}
+              onMouseEnter={() =>
+                setHovered({
+                  id: "center",
+                  title: "Production",
+                  value: `$${Intl.NumberFormat().format(
+                    data.center.totalProduction
+                  )} • ${Intl.NumberFormat().format(
+                    data.center.totalPatients
+                  )} patients`,
+                  desc: "Practice production and patients summarized from PMS.",
+                  r: centerR,
+                })
+              }
+              onMouseLeave={() => setHovered(null)}
             >
-              PRODUCTION
-            </text>
-            <text
-              textAnchor="middle"
-              y={0}
-              fontSize={30}
-              fontWeight={800}
-              fill="#0f172a"
-            >
-              ${Intl.NumberFormat().format(data.center.totalProduction)}
-            </text>
-            <text
-              textAnchor="middle"
-              y={centerR * 0.34}
-              fontSize={12}
-              fill="#475569"
-            >
-              Patients{" "}
-              <tspan fontWeight={700}>
-                {Intl.NumberFormat().format(data.center.totalPatients)}
-              </tspan>
-            </text>
-          </g>
-        </g>
-
-        {/* AI intermediary orbs */}
-        {(["ai_google", "ai_clarity", "ai_tasks", "ai_website"] as const).map(
-          (id, idx) => (
-            <g key={id} transform={`translate(${P(id).x}, ${P(id).y})`}>
-              <g
-                className="bubble orbit-float"
-                style={{ animationDelay: `${0.25 + idx * 0.05}s`, cursor: "default" }}
-                onMouseEnter={() =>
-                  setHovered({
-                    id,
-                    title: "AI Integration",
-                    desc: "Powering integrations with Alloro AI",
-                    r: AI_R,
-                  })
-                }
-                onMouseLeave={() => setHovered(null)}
+              <circle
+                r={centerR}
+                fill="rgba(255,255,255,0.72)"
+                stroke="rgba(59,130,246,0)"
+                filter="url(#softShadow)"
+                data-core
+              />
+              <circle className="hover-outline" r={centerR} pathLength={100} />
+              <circle
+                r={centerR - 2}
+                fill="none"
+                stroke="rgba(203,213,225,0.7)"
+              />
+              <ellipse
+                className="glare"
+                rx={centerR * 0.6}
+                ry={centerR * 0.36}
+                cx={-centerR * 0.28}
+                cy={-centerR * 0.52}
+                fill="white"
+                opacity={0.22}
+                filter="url(#glareBlur)"
+              />
+              <text
+                textAnchor="middle"
+                y={-centerR * 0.28}
+                fontSize={10}
+                letterSpacing={1.2}
+                fill="#64748b"
               >
-                <circle
-                  r={AI_R}
-                  fill="rgba(255,255,255,0.7)"
-                  stroke="rgba(59,130,246,0)"
-                  filter="url(#softShadow)"
-                  data-core
-                />
-                <circle className="hover-outline" r={AI_R} pathLength={100} />
-                <g transform={`translate(${-AI_R + 3}, ${-AI_R + 3})`}>
-                  <image
-                    href="/ai-logo.png"
-                    width={AI_R * 2 - 6}
-                    height={AI_R * 2 - 6}
-                    preserveAspectRatio="xMidYMid meet"
+                PRODUCTION
+              </text>
+              <text
+                textAnchor="middle"
+                y={0}
+                fontSize={30}
+                fontWeight={800}
+                fill="#0f172a"
+              >
+                ${Intl.NumberFormat().format(data.center.totalProduction)}
+              </text>
+              <text
+                textAnchor="middle"
+                y={centerR * 0.34}
+                fontSize={12}
+                fill="#475569"
+              >
+                Patients{" "}
+                <tspan fontWeight={700}>
+                  {Intl.NumberFormat().format(data.center.totalPatients)}
+                </tspan>
+              </text>
+            </g>
+          </g>
+
+          {/* AI intermediary orbs */}
+          {(["ai_google", "ai_clarity", "ai_tasks", "ai_website"] as const).map(
+            (id, idx) => (
+              <g key={id} transform={`translate(${P(id).x}, ${P(id).y})`}>
+                <g
+                  className="bubble orbit-float"
+                  style={{
+                    animationDelay: `${0.25 + idx * 0.05}s`,
+                    cursor: "default",
+                  }}
+                  onMouseEnter={() =>
+                    setHovered({
+                      id,
+                      title: "AI Integration",
+                      desc: "Powering integrations with Alloro AI",
+                      r: AI_R,
+                    })
+                  }
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <circle
+                    r={AI_R}
+                    fill="rgba(255,255,255,0.7)"
+                    stroke="rgba(59,130,246,0)"
+                    filter="url(#softShadow)"
+                    data-core
+                  />
+                  <circle className="hover-outline" r={AI_R} pathLength={100} />
+                  <g transform={`translate(${-AI_R + 3}, ${-AI_R + 3})`}>
+                    <image
+                      href="/logo.png"
+                      width={AI_R * 2 - 6}
+                      height={AI_R * 2 - 6}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  </g>
+                  <ellipse
+                    className="glare"
+                    rx={AI_R * 0.6}
+                    ry={AI_R * 0.36}
+                    cx={-AI_R * 0.28}
+                    cy={-AI_R * 0.52}
+                    fill="white"
+                    opacity={0.22}
+                    filter="url(#glareBlur)"
                   />
                 </g>
-                <ellipse
-                  className="glare"
-                  rx={AI_R * 0.6}
-                  ry={AI_R * 0.36}
-                  cx={-AI_R * 0.28}
-                  cy={-AI_R * 0.52}
-                  fill="white"
-                  opacity={0.22}
-                  filter="url(#glareBlur)"
+              </g>
+            )
+          )}
+
+          {/* hubs and metrics */}
+          {/* Google hub (logo) */}
+          <g
+            transform={`translate(${P("hub_google").x}, ${P("hub_google").y})`}
+            aria-label="Google metrics"
+          >
+            <g
+              className="bubble orbit-float"
+              style={{ animationDelay: "0.2s", cursor: "pointer" }}
+              onClick={() => onNavigate?.("Patient Journey Insights")}
+              onMouseEnter={() =>
+                setHovered({
+                  id: "hub_google",
+                  title: "Google",
+                  desc: "Your Google integrations powered by Alloro AI.",
+                  r: 46,
+                })
+              }
+              onMouseLeave={() => setHovered(null)}
+            >
+              <circle
+                r={46}
+                fill="rgba(255,255,255,0.68)"
+                stroke="rgba(59,130,246,0)"
+                filter="url(#softShadow)"
+                data-core
+              />
+              <circle className="hover-outline" r={46} pathLength={100} />
+              <image
+                href="/google-logo.webp"
+                width={70}
+                height={70}
+                x={-35}
+                y={-35}
+                preserveAspectRatio="xMidYMid meet"
+              />
+              <ellipse
+                className="glare"
+                rx={46 * 0.6}
+                ry={46 * 0.36}
+                cx={-46 * 0.28}
+                cy={-46 * 0.52}
+                fill="white"
+                opacity={0.22}
+                filter="url(#glareBlur)"
+              />
+            </g>
+          </g>
+
+          {/* Google children */}
+          {[data.ga4[0], data.gsc[0], data.gbp[0]].map((n) =>
+            n ? (
+              <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
+                <g
+                  className="bubble orbit-float"
+                  style={{
+                    animationDelay: `${
+                      0.3 +
+                      (n.id.includes("gsc")
+                        ? 0.1
+                        : n.id.includes("gbp")
+                        ? 0.2
+                        : 0)
+                    }s`,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => onNavigate?.("Patient Journey Insights")}
+                  onMouseEnter={() =>
+                    setHovered({
+                      id: n.id,
+                      title: n.label,
+                      // Keep value inside the orb, omit in tooltip per request
+                      value: undefined,
+                      desc:
+                        n.id === "ga4_users"
+                          ? "Unique users tracked across your website this period."
+                          : n.id === "gsc_clicks"
+                          ? "Number of people who opened your site from Google Search."
+                          : n.id === "gbp_calls"
+                          ? "Calls to your practice from your Google Business Profile."
+                          : "Google metric.",
+                      r: 36,
+                    })
+                  }
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <circle
+                    r={36}
+                    fill="rgba(255,255,255,0.7)"
+                    stroke="rgba(59,130,246,0)"
+                    filter="url(#softShadow)"
+                    data-core
+                  />
+                  <circle className="hover-outline" r={36} pathLength={100} />
+                  <ellipse
+                    className="glare"
+                    rx={36 * 0.6}
+                    ry={36 * 0.36}
+                    cx={-36 * 0.28}
+                    cy={-36 * 0.52}
+                    fill="white"
+                    opacity={0.22}
+                    filter="url(#glareBlur)"
+                  />
+                  <text textAnchor="middle" y={-4} fontSize={10} fill="#64748b">
+                    {n.label}
+                  </text>
+                  <text
+                    textAnchor="middle"
+                    y={14}
+                    fontSize={16}
+                    fontWeight={800}
+                    fill="#0f172a"
+                  >
+                    {n.value as any}
+                  </text>
+                </g>
+              </g>
+            ) : null
+          )}
+
+          {/* Website hub (icon) */}
+          <g
+            transform={`translate(${P("hub_website").x}, ${
+              P("hub_website").y
+            })`}
+            aria-label="Website metrics"
+          >
+            <g
+              className="bubble orbit-float"
+              style={{ animationDelay: "0.32s", cursor: "pointer" }}
+              onClick={() => onNavigate?.("Patient Journey Insights")}
+              onMouseEnter={() =>
+                setHovered({
+                  id: "hub_website",
+                  title: "Website",
+                  desc: "Your website performance powered by Alloro AI.",
+                  r: 44,
+                })
+              }
+              onMouseLeave={() => setHovered(null)}
+            >
+              <circle
+                r={44}
+                fill="rgba(255,255,255,0.68)"
+                stroke="rgba(59,130,246,0)"
+                filter="url(#softShadow)"
+                data-core
+              />
+              <circle className="hover-outline" r={44} pathLength={100} />
+              <g transform="translate(-17,-17)">
+                <Globe width={34} height={34} className="text-slate-700" />
+              </g>
+              <ellipse
+                className="glare"
+                rx={44 * 0.6}
+                ry={44 * 0.36}
+                cx={-44 * 0.28}
+                cy={-44 * 0.52}
+                fill="white"
+                opacity={0.22}
+                filter="url(#glareBlur)"
+              />
+            </g>
+          </g>
+
+          {/* Website children */}
+          {[data.website[0], data.website[1], data.website[2]].map((n, idx) =>
+            n ? (
+              <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
+                <g
+                  className="bubble orbit-float"
+                  style={{
+                    animationDelay: `${0.4 + idx * 0.05}s`,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => onNavigate?.("Patient Journey Insights")}
+                  onMouseEnter={() =>
+                    setHovered({
+                      id: n.id,
+                      title: n.label,
+                      value: undefined,
+                      desc:
+                        n.id === "web_forms"
+                          ? "Leads captured via website forms."
+                          : n.id === "web_visitors"
+                          ? "Unique visitors to your website."
+                          : "Composite site performance score.",
+                      r: 32,
+                    })
+                  }
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <circle
+                    r={32}
+                    fill="rgba(255,255,255,0.7)"
+                    stroke="rgba(59,130,246,0)"
+                    filter="url(#softShadow)"
+                    data-core
+                  />
+                  <circle className="hover-outline" r={32} pathLength={100} />
+                  <ellipse
+                    className="glare"
+                    rx={32 * 0.6}
+                    ry={32 * 0.36}
+                    cx={-32 * 0.28}
+                    cy={-32 * 0.52}
+                    fill="white"
+                    opacity={0.22}
+                    filter="url(#glareBlur)"
+                  />
+                  <text textAnchor="middle" y={-3} fontSize={10} fill="#64748b">
+                    {n.label}
+                  </text>
+                  <text
+                    textAnchor="middle"
+                    y={14}
+                    fontSize={15}
+                    fontWeight={800}
+                    fill="#0f172a"
+                  >
+                    {n.value as any}
+                  </text>
+                </g>
+              </g>
+            ) : null
+          )}
+
+          {/* Clarity hub (logo) */}
+          <g
+            transform={`translate(${P("hub_clarity").x}, ${
+              P("hub_clarity").y
+            })`}
+            aria-label="Clarity metrics"
+          >
+            <g
+              className="bubble orbit-float"
+              style={{ animationDelay: "0.35s", cursor: "pointer" }}
+              onClick={() => onNavigate?.("Patient Journey Insights")}
+              onMouseEnter={() =>
+                setHovered({
+                  id: "hub_clarity",
+                  title: "Clarity",
+                  desc: "Your Microsoft Clarity integration powered by Alloro AI.",
+                  r: 44,
+                })
+              }
+              onMouseLeave={() => setHovered(null)}
+            >
+              <circle
+                r={44}
+                fill="rgba(255,255,255,0.68)"
+                stroke="rgba(59,130,246,0)"
+                filter="url(#softShadow)"
+                data-core
+              />
+              <circle className="hover-outline" r={44} pathLength={100} />
+              <image
+                href="/clarity-logo.png"
+                width={70}
+                height={70}
+                x={-35}
+                y={-35}
+                preserveAspectRatio="xMidYMid meet"
+              />
+              <ellipse
+                className="glare"
+                rx={44 * 0.6}
+                ry={44 * 0.36}
+                cx={-44 * 0.28}
+                cy={-44 * 0.52}
+                fill="white"
+                opacity={0.22}
+                filter="url(#glareBlur)"
+              />
+            </g>
+          </g>
+
+          {[data.clarity[0], data.clarity[1]].map((n) =>
+            n ? (
+              <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
+                <g
+                  className="bubble orbit-float"
+                  style={{
+                    animationDelay: `${
+                      0.45 + (n.id.includes("bounce") ? 0.1 : 0)
+                    }s`,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => onNavigate?.("Patient Journey Insights")}
+                  onMouseEnter={() =>
+                    setHovered({
+                      id: n.id,
+                      title: n.label,
+                      value: undefined,
+                      desc:
+                        n.id === "clar_sessions"
+                          ? "Total sessions recorded by Microsoft Clarity."
+                          : n.id === "clar_bounce"
+                          ? "Percentage of sessions with no further interaction."
+                          : "Microsoft Clarity metric.",
+                      r: 30,
+                    })
+                  }
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  <circle
+                    r={30}
+                    fill="rgba(255,255,255,0.7)"
+                    stroke="rgba(59,130,246,0)"
+                    filter="url(#softShadow)"
+                    data-core
+                  />
+                  <circle className="hover-outline" r={30} pathLength={100} />
+                  <ellipse
+                    className="glare"
+                    rx={30 * 0.6}
+                    ry={30 * 0.36}
+                    cx={-30 * 0.28}
+                    cy={-30 * 0.52}
+                    fill="white"
+                    opacity={0.22}
+                    filter="url(#glareBlur)"
+                  />
+                  <text textAnchor="middle" y={-2} fontSize={10} fill="#64748b">
+                    {n.label}
+                  </text>
+                  <text
+                    textAnchor="middle"
+                    y={14}
+                    fontSize={15}
+                    fontWeight={800}
+                    fill="#0f172a"
+                  >
+                    {n.value as any}
+                  </text>
+                </g>
+              </g>
+            ) : null
+          )}
+
+          {/* Monday (Tasks) hub with logo */}
+          <g
+            transform={`translate(${P("hub_tasks").x}, ${P("hub_tasks").y})`}
+            aria-label="Monday tasks"
+          >
+            <g
+              className="bubble orbit-float"
+              style={{ animationDelay: "0.5s", cursor: "pointer" }}
+              onClick={() => onNavigate?.("Tasks")}
+              onMouseEnter={() =>
+                setHovered({
+                  id: "hub_tasks",
+                  title: "Tasks",
+                  value: data.tasks,
+                  desc: "Your tasks powered by Alloro AI.",
+                  r: 50,
+                })
+              }
+              onMouseLeave={() => setHovered(null)}
+            >
+              <circle
+                r={50}
+                fill="rgba(255,255,255,0.66)"
+                stroke="rgba(59,130,246,0)"
+                filter="url(#softShadow)"
+                data-core
+              />
+              <circle className="hover-outline" r={50} pathLength={100} />
+              <g transform="translate(-17,-17)">
+                <ClipboardList
+                  width={34}
+                  height={34}
+                  className="text-slate-700"
                 />
               </g>
+              <ellipse
+                className="glare"
+                rx={50 * 0.6}
+                ry={50 * 0.36}
+                cx={-50 * 0.28}
+                cy={-50 * 0.52}
+                fill="white"
+                opacity={0.22}
+                filter="url(#glareBlur)"
+              />
             </g>
-          )
-        )}
-
-        {/* hubs and metrics */}
-        {/* Google hub (logo) */}
-        <g
-          transform={`translate(${P("hub_google").x}, ${P("hub_google").y})`}
-          aria-label="Google metrics"
-        >
-          <g
-            className="bubble orbit-float"
-            style={{ animationDelay: "0.2s", cursor: "pointer" }}
-            onClick={() => onNavigate?.("Patient Journey Insights")}
-            onMouseEnter={() =>
-              setHovered({
-                id: "hub_google",
-                title: "Google",
-                desc: "Your Google integrations powered by Alloro AI.",
-                r: 46,
-              })
-            }
-            onMouseLeave={() => setHovered(null)}
-          >
-            <circle
-              r={46}
-              fill="rgba(255,255,255,0.68)"
-              stroke="rgba(59,130,246,0)"
-              filter="url(#softShadow)"
-              data-core
-            />
-            <circle className="hover-outline" r={46} pathLength={100} />
-            <image
-              href="/google-logo.webp"
-              width={70}
-              height={70}
-              x={-35}
-              y={-35}
-              preserveAspectRatio="xMidYMid meet"
-            />
-            <ellipse
-              className="glare"
-              rx={46 * 0.6}
-              ry={46 * 0.36}
-              cx={-46 * 0.28}
-              cy={-46 * 0.52}
-              fill="white"
-              opacity={0.22}
-              filter="url(#glareBlur)"
-            />
           </g>
-        </g>
 
-        {/* Google children */}
-        {[data.ga4[0], data.gsc[0], data.gbp[0]].map((n) =>
-          n ? (
+          {/* Monday cluster children */}
+          {[
+            {
+              id: "monday_pending",
+              label: "Pending",
+              value: data.tasksPending,
+            },
+            {
+              id: "monday_completed",
+              label: "Completed",
+              value: data.tasksCompleted,
+            },
+          ].map((n, idx) => (
             <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
               <g
                 className="bubble orbit-float"
                 style={{
-                  animationDelay: `${
-                    0.3 +
-                    (n.id.includes("gsc")
-                      ? 0.1
-                      : n.id.includes("gbp")
-                      ? 0.2
-                      : 0)
-                  }s`,
+                  animationDelay: `${0.55 + idx * 0.1}s`,
                   cursor: "pointer",
                 }}
-                onClick={() => onNavigate?.("Patient Journey Insights")}
-                onMouseEnter={() =>
-                  setHovered({
-                    id: n.id,
-                    title: n.label,
-                    // Keep value inside the orb, omit in tooltip per request
-                    value: undefined,
-                    desc:
-                      n.id === "ga4_users"
-                        ? "Unique users tracked across your website this period."
-                        : n.id === "gsc_clicks"
-                        ? "Number of people who opened your site from Google Search."
-                        : n.id === "gbp_calls"
-                        ? "Calls to your practice from your Google Business Profile."
-                        : "Google metric.",
-                    r: 36,
-                  })
-                }
-                onMouseLeave={() => setHovered(null)}
-              >
-                <circle
-                  r={36}
-                  fill="rgba(255,255,255,0.7)"
-                  stroke="rgba(59,130,246,0)"
-                  filter="url(#softShadow)"
-                  data-core
-                />
-                <circle className="hover-outline" r={36} pathLength={100} />
-                <ellipse
-                  className="glare"
-                  rx={36 * 0.6}
-                  ry={36 * 0.36}
-                  cx={-36 * 0.28}
-                  cy={-36 * 0.52}
-                  fill="white"
-                  opacity={0.22}
-                  filter="url(#glareBlur)"
-                />
-                <text textAnchor="middle" y={-4} fontSize={10} fill="#64748b">
-                  {n.label}
-                </text>
-                <text
-                  textAnchor="middle"
-                  y={14}
-                  fontSize={16}
-                  fontWeight={800}
-                  fill="#0f172a"
-                >
-                  {n.value as any}
-                </text>
-              </g>
-            </g>
-          ) : null
-        )}
-
-        {/* Website hub (icon) */}
-        <g
-          transform={`translate(${P("hub_website").x}, ${P("hub_website").y})`}
-          aria-label="Website metrics"
-        >
-          <g
-            className="bubble orbit-float"
-            style={{ animationDelay: "0.32s", cursor: "pointer" }}
-            onClick={() => onNavigate?.("Patient Journey Insights")}
-            onMouseEnter={() =>
-              setHovered({
-                id: "hub_website",
-                title: "Website",
-                desc: "Your website performance powered by Alloro AI.",
-                r: 44,
-              })
-            }
-            onMouseLeave={() => setHovered(null)}
-          >
-            <circle
-              r={44}
-              fill="rgba(255,255,255,0.68)"
-              stroke="rgba(59,130,246,0)"
-              filter="url(#softShadow)"
-              data-core
-            />
-            <circle className="hover-outline" r={44} pathLength={100} />
-            <g transform="translate(-17,-17)">
-              <Globe width={34} height={34} className="text-slate-700" />
-            </g>
-            <ellipse
-              className="glare"
-              rx={44 * 0.6}
-              ry={44 * 0.36}
-              cx={-44 * 0.28}
-              cy={-44 * 0.52}
-              fill="white"
-              opacity={0.22}
-              filter="url(#glareBlur)"
-            />
-          </g>
-        </g>
-
-        {/* Website children */}
-        {[data.website[0], data.website[1], data.website[2]].map((n, idx) =>
-          n ? (
-            <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
-              <g
-                className="bubble orbit-float"
-                style={{ animationDelay: `${0.4 + idx * 0.05}s`, cursor: "pointer" }}
-                onClick={() => onNavigate?.("Patient Journey Insights")}
+                onClick={() => onNavigate?.("Tasks")}
                 onMouseEnter={() =>
                   setHovered({
                     id: n.id,
                     title: n.label,
                     value: undefined,
                     desc:
-                      n.id === "web_forms"
-                        ? "Leads captured via website forms."
-                        : n.id === "web_visitors"
-                        ? "Unique visitors to your website."
-                        : "Composite site performance score.",
+                      n.id === "monday_pending"
+                        ? "Open tasks awaiting action."
+                        : "Tasks completed.",
                     r: 32,
                   })
                 }
@@ -907,124 +1164,13 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
                   opacity={0.22}
                   filter="url(#glareBlur)"
                 />
-                <text textAnchor="middle" y={-3} fontSize={10} fill="#64748b">
-                  {n.label}
-                </text>
-                <text
-                  textAnchor="middle"
-                  y={14}
-                  fontSize={15}
-                  fontWeight={800}
-                  fill="#0f172a"
-                >
-                  {n.value as any}
-                </text>
-              </g>
-            </g>
-          ) : null
-        )}
-
-        {/* Clarity hub (logo) */}
-        <g
-          transform={`translate(${P("hub_clarity").x}, ${P("hub_clarity").y})`}
-          aria-label="Clarity metrics"
-        >
-          <g
-            className="bubble orbit-float"
-            style={{ animationDelay: "0.35s", cursor: "pointer" }}
-            onClick={() => onNavigate?.("Patient Journey Insights")}
-            onMouseEnter={() =>
-              setHovered({
-                id: "hub_clarity",
-                title: "Clarity",
-                desc: "Your Microsoft Clarity integration powered by Alloro AI.",
-                r: 44,
-              })
-            }
-            onMouseLeave={() => setHovered(null)}
-          >
-            <circle
-              r={44}
-              fill="rgba(255,255,255,0.68)"
-              stroke="rgba(59,130,246,0)"
-              filter="url(#softShadow)"
-              data-core
-            />
-            <circle className="hover-outline" r={44} pathLength={100} />
-            <image
-              href="/clarity-logo.png"
-              width={70}
-              height={70}
-              x={-35}
-              y={-35}
-              preserveAspectRatio="xMidYMid meet"
-            />
-            <ellipse
-              className="glare"
-              rx={44 * 0.6}
-              ry={44 * 0.36}
-              cx={-44 * 0.28}
-              cy={-44 * 0.52}
-              fill="white"
-              opacity={0.22}
-              filter="url(#glareBlur)"
-            />
-          </g>
-        </g>
-
-        {[data.clarity[0], data.clarity[1]].map((n) =>
-          n ? (
-            <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
-              <g
-                className="bubble orbit-float"
-                style={{
-                  animationDelay: `${
-                    0.45 + (n.id.includes("bounce") ? 0.1 : 0)
-                  }s`,
-                  cursor: "pointer",
-                }}
-                onClick={() => onNavigate?.("Patient Journey Insights")}
-                onMouseEnter={() =>
-                  setHovered({
-                    id: n.id,
-                    title: n.label,
-                    value: undefined,
-                    desc:
-                      n.id === "clar_sessions"
-                        ? "Total sessions recorded by Microsoft Clarity."
-                        : n.id === "clar_bounce"
-                        ? "Percentage of sessions with no further interaction."
-                        : "Microsoft Clarity metric.",
-                    r: 30,
-                  })
-                }
-                onMouseLeave={() => setHovered(null)}
-              >
-                <circle
-                  r={30}
-                  fill="rgba(255,255,255,0.7)"
-                  stroke="rgba(59,130,246,0)"
-                  filter="url(#softShadow)"
-                  data-core
-                />
-                <circle className="hover-outline" r={30} pathLength={100} />
-                <ellipse
-                  className="glare"
-                  rx={30 * 0.6}
-                  ry={30 * 0.36}
-                  cx={-30 * 0.28}
-                  cy={-30 * 0.52}
-                  fill="white"
-                  opacity={0.22}
-                  filter="url(#glareBlur)"
-                />
                 <text textAnchor="middle" y={-2} fontSize={10} fill="#64748b">
                   {n.label}
                 </text>
                 <text
                   textAnchor="middle"
                   y={14}
-                  fontSize={15}
+                  fontSize={16}
                   fontWeight={800}
                   fill="#0f172a"
                 >
@@ -1032,117 +1178,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
                 </text>
               </g>
             </g>
-          ) : null
-        )}
-
-        {/* Monday (Tasks) hub with logo */}
-        <g
-          transform={`translate(${P("hub_tasks").x}, ${P("hub_tasks").y})`}
-          aria-label="Monday tasks"
-        >
-          <g
-            className="bubble orbit-float"
-            style={{ animationDelay: "0.5s", cursor: "pointer" }}
-            onClick={() => onNavigate?.("Tasks")}
-            onMouseEnter={() =>
-              setHovered({
-                id: "hub_tasks",
-                title: "Tasks",
-                value: data.tasks,
-                desc: "Your tasks powered by Alloro AI.",
-                r: 50,
-              })
-            }
-            onMouseLeave={() => setHovered(null)}
-          >
-            <circle
-              r={50}
-              fill="rgba(255,255,255,0.66)"
-              stroke="rgba(59,130,246,0)"
-              filter="url(#softShadow)"
-              data-core
-            />
-            <circle className="hover-outline" r={50} pathLength={100} />
-            <g transform="translate(-17,-17)">
-              <ClipboardList width={34} height={34} className="text-slate-700" />
-            </g>
-            <ellipse
-              className="glare"
-              rx={50 * 0.6}
-              ry={50 * 0.36}
-              cx={-50 * 0.28}
-              cy={-50 * 0.52}
-              fill="white"
-              opacity={0.22}
-              filter="url(#glareBlur)"
-            />
-          </g>
-        </g>
-
-        {/* Monday cluster children */}
-        {[
-          { id: "monday_pending", label: "Pending", value: data.tasksPending },
-          {
-            id: "monday_completed",
-            label: "Completed",
-            value: data.tasksCompleted,
-          },
-        ].map((n, idx) => (
-          <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
-            <g
-              className="bubble orbit-float"
-              style={{
-                animationDelay: `${0.55 + idx * 0.1}s`,
-                cursor: "pointer",
-              }}
-              onClick={() => onNavigate?.("Tasks")}
-              onMouseEnter={() =>
-                setHovered({
-                  id: n.id,
-                  title: n.label,
-                  value: undefined,
-                  desc:
-                    n.id === "monday_pending"
-                      ? "Open tasks awaiting action."
-                      : "Tasks completed.",
-                  r: 32,
-                })
-              }
-              onMouseLeave={() => setHovered(null)}
-            >
-              <circle
-                r={32}
-                fill="rgba(255,255,255,0.7)"
-                stroke="rgba(59,130,246,0)"
-                filter="url(#softShadow)"
-                data-core
-              />
-              <circle className="hover-outline" r={32} pathLength={100} />
-              <ellipse
-                className="glare"
-                rx={32 * 0.6}
-                ry={32 * 0.36}
-                cx={-32 * 0.28}
-                cy={-32 * 0.52}
-                fill="white"
-                opacity={0.22}
-                filter="url(#glareBlur)"
-              />
-              <text textAnchor="middle" y={-2} fontSize={10} fill="#64748b">
-                {n.label}
-              </text>
-              <text
-                textAnchor="middle"
-                y={14}
-                fontSize={16}
-                fontWeight={800}
-                fill="#0f172a"
-              >
-                {n.value as any}
-              </text>
-            </g>
-          </g>
-        ))}
+          ))}
         </g>
       </svg>
       {tooltip && hovered && (

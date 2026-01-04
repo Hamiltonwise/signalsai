@@ -119,9 +119,11 @@ export default function SignIn() {
         <div className="relative p-8 rounded-2xl bg-white border border-slate-200 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
           {/* Logo/Brand */}
           <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-alloro-orange rounded-xl flex items-center justify-center text-2xl font-bold font-heading text-white shadow-lg shadow-blue-900/20">
-              A
-            </div>
+            <img
+              src="/logo.png"
+              alt="Alloro"
+              className="w-14 h-14 rounded-xl shadow-lg shadow-blue-900/20"
+            />
           </div>
 
           {/* Welcome Message */}

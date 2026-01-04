@@ -261,7 +261,7 @@ export const Settings: React.FC = () => {
     {
       id: "ga4",
       name: "Google Analytics 4",
-      icon: "https://www.gstatic.com/analytics-suite/header/suite/v2/ic_analytics.svg",
+      icon: "/google-analytics.png",
       connected: !!properties.ga4,
       lastSync: properties.ga4 ? "10 mins ago" : "Not connected",
       property: properties.ga4,
@@ -269,7 +269,7 @@ export const Settings: React.FC = () => {
     {
       id: "gbp",
       name: "Google Business Profile",
-      icon: "https://www.gstatic.com/marketing-cms/assets/images/ads/ea/91/8b79515441068a3e0018d56c19cd/logo-googleg-gradient-color-2x-web-64dp.webp",
+      icon: "/google-business-profile.png",
       connected: properties.gbp && properties.gbp.length > 0,
       lastSync: properties.gbp.length > 0 ? "1 hour ago" : "Not connected",
       locations: properties.gbp,
@@ -277,7 +277,7 @@ export const Settings: React.FC = () => {
     {
       id: "gsc",
       name: "Google Search Console",
-      icon: "https://www.gstatic.com/images/branding/product/1x/search_console_64dp.png",
+      icon: "/google-search-console.png",
       connected: !!properties.gsc,
       lastSync: properties.gsc ? "2 hours ago" : "Not connected",
       property: properties.gsc,
@@ -285,7 +285,7 @@ export const Settings: React.FC = () => {
     {
       id: "clarity",
       name: "Microsoft Clarity",
-      icon: "https://clarity.microsoft.com/favicon.ico",
+      icon: "/microsoft-clarity.png",
       connected: true,
       lastSync: "30 mins ago",
     },
@@ -530,26 +530,11 @@ export const Settings: React.FC = () => {
                     >
                       <div className="flex items-center justify-between mb-10">
                         <div className="w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-4 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500">
-                          {app.id === "clarity" ? (
-                            <Activity
-                              className="text-alloro-orange"
-                              size={28}
-                            />
-                          ) : app.id === "ga4" ||
-                            app.id === "gsc" ||
-                            app.id === "gbp" ? (
-                            <img
-                              src={app.icon}
-                              alt={app.name}
-                              className="w-full h-full object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
-                            />
-                          ) : (
-                            <img
-                              src={app.icon}
-                              alt={app.name}
-                              className="w-full h-full object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
-                            />
-                          )}
+                          <img
+                            src={app.icon}
+                            alt={app.name}
+                            className="w-full h-full object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
+                          />
                         </div>
                         {app.connected ? (
                           <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">

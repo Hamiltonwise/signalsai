@@ -345,9 +345,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-4 group cursor-pointer"
             onClick={() => handleNavigate("/dashboard")}
           >
-            <div className="w-10 h-10 bg-alloro-orange rounded-xl flex items-center justify-center text-xl font-black font-heading text-white shadow-soft-glow transition-transform group-hover:scale-105">
-              A
-            </div>
+            <img
+              src="/logo.png"
+              alt="Alloro"
+              className="w-10 h-10 rounded-xl shadow-soft-glow transition-transform group-hover:scale-105"
+            />
             <div className="flex flex-col">
               <h1 className="font-heading font-black text-xl tracking-tight leading-none">
                 Alloro

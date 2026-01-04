@@ -14,7 +14,6 @@ import {
   Activity,
   Phone,
   ChevronRight,
-  Award,
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../hooks/useAuth";
@@ -45,15 +44,15 @@ interface InfoRowProps {
 }
 
 const InfoRow = ({ icon, label, value }: InfoRowProps) => (
-  <div className="flex items-start gap-8 group">
-    <div className="p-4 bg-alloro-bg text-alloro-navy/40 rounded-2xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
+  <div className="flex items-start gap-4 group">
+    <div className="p-3 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
       {icon}
     </div>
     <div className="min-w-0 text-left">
-      <div className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.3em] mb-2 leading-none">
+      <div className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.3em] mb-1 leading-none">
         {label}
       </div>
-      <div className="text-xl font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
+      <div className="text-lg font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
         {value}
       </div>
     </div>
@@ -308,20 +307,8 @@ export const Settings: React.FC = () => {
                 <h1 className="text-3xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-none mb-4">
                   {userProfile?.practiceName || "Artful Orthodontics"}
                 </h1>
-                <div className="flex flex-wrap items-center gap-6">
-                  <p className="text-alloro-orange font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-2.5">
-                    <Globe size={16} /> LICENSE 2025-AO-ACTIVE
-                  </p>
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-200 hidden md:block"></div>
-                  <p className="text-slate-400 font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-2.5">
-                    <Award size={16} /> Platinum Authority Tier
-                  </p>
-                </div>
               </div>
             </div>
-            <button className="hidden xl:flex px-10 py-5 bg-alloro-navy text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-2xl hover:bg-black active:scale-95 transition-all">
-              Access Audit Logs
-            </button>
           </div>
         </header>
 
@@ -408,13 +395,13 @@ export const Settings: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 lg:gap-20">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12">
               {/* Left Column - Practice Identity */}
-              <section className="xl:col-span-5 space-y-12">
+              <section className="xl:col-span-5 space-y-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-[2.5rem] border border-black/5 p-10 lg:p-14 shadow-premium space-y-12 relative overflow-hidden group"
+                  className="bg-white rounded-[2rem] border border-black/5 p-6 lg:p-8 shadow-premium space-y-6 relative overflow-hidden group"
                 >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-alloro-orange/[0.03] rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
 
@@ -427,7 +414,7 @@ export const Settings: React.FC = () => {
                       System Active
                     </div>
                   </div>
-                  <div className="space-y-10 relative z-10">
+                  <div className="space-y-5 relative z-10">
                     <InfoRow
                       icon={<MapPin size={24} />}
                       label="Operational Jurisdiction"
@@ -464,24 +451,24 @@ export const Settings: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-alloro-navy rounded-[2.5rem] p-10 lg:p-14 text-white relative overflow-hidden shadow-2xl group text-left"
+                  className="bg-alloro-navy rounded-[2rem] p-6 lg:p-8 text-white relative overflow-hidden shadow-2xl group text-left"
                 >
                   <div className="absolute top-0 right-0 p-64 bg-alloro-orange/5 rounded-full -mr-32 -mt-32 blur-[100px] pointer-events-none group-hover:bg-alloro-orange/10 transition-all duration-700"></div>
-                  <div className="relative z-10 space-y-10">
-                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 group-hover:scale-110 transition-transform duration-500">
-                      <Shield size={32} className="text-white/60" />
+                  <div className="relative z-10 space-y-5">
+                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shadow-2xl border border-white/10 group-hover:scale-110 transition-transform duration-500">
+                      <Shield size={24} className="text-white/60" />
                     </div>
-                    <div className="space-y-4">
-                      <h4 className="text-2xl font-black font-heading tracking-tight text-white leading-none">
+                    <div className="space-y-3">
+                      <h4 className="text-xl font-black font-heading tracking-tight text-white leading-none">
                         Clinical Security Shield
                       </h4>
-                      <p className="text-blue-100/40 text-lg font-bold leading-relaxed tracking-tight">
+                      <p className="text-blue-100/40 text-base font-bold leading-relaxed tracking-tight">
                         All PMS & Patient data is fortified via AES-256
                         end-to-end encryption protocols. Full HIPAA integrity
                         verified daily.
                       </p>
                     </div>
-                    <div className="flex items-center gap-10 pt-4">
+                    <div className="flex items-center gap-6 pt-2">
                       <div className="flex items-center gap-3 text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
                         <Lock size={16} /> SOC2 SECURE
                       </div>
@@ -494,10 +481,10 @@ export const Settings: React.FC = () => {
               </section>
 
               {/* Right Column - Integrations */}
-              <section className="xl:col-span-7 space-y-12 lg:space-y-16">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-4">
-                  <div className="text-left space-y-2">
-                    <h2 className="text-2xl lg:text-3xl font-black text-alloro-navy font-heading tracking-tight leading-none">
+              <section className="xl:col-span-7 space-y-6 lg:space-y-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2">
+                  <div className="text-left space-y-1">
+                    <h2 className="text-xl lg:text-2xl font-black text-alloro-navy font-heading tracking-tight leading-none">
                       Intelligence Ecosystem
                     </h2>
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
@@ -519,17 +506,17 @@ export const Settings: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {integrations.map((app, index) => (
                     <motion.div
                       key={app.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="bg-white rounded-[2rem] border border-black/5 p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1 text-left"
+                      className="bg-white rounded-[1.5rem] border border-black/5 p-5 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1 text-left"
                     >
-                      <div className="flex items-center justify-between mb-10">
-                        <div className="w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-4 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-alloro-bg flex items-center justify-center p-2.5 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500">
                           <img
                             src={app.icon}
                             alt={app.name}
@@ -547,10 +534,10 @@ export const Settings: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="font-black text-alloro-navy text-xl font-heading tracking-tight mb-2 truncate leading-tight group-hover:text-alloro-orange transition-colors">
+                      <h3 className="font-black text-alloro-navy text-base font-heading tracking-tight mb-1 truncate leading-tight group-hover:text-alloro-orange transition-colors">
                         {app.name}
                       </h3>
-                      <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-10 leading-none">
+                      <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4 leading-none">
                         {app.connected
                           ? `Last Heartbeat: ${app.lastSync}`
                           : "Not connected"}
@@ -599,21 +586,21 @@ export const Settings: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="p-16 lg:p-24 bg-white/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
-                  <div className="w-20 h-20 rounded-[1.5rem] bg-white shadow-premium flex items-center justify-center mb-10 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
-                    <LayoutGrid size={36} />
+                <div className="p-8 lg:p-12 bg-white/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
+                  <div className="w-14 h-14 rounded-xl bg-white shadow-premium flex items-center justify-center mb-6 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
+                    <LayoutGrid size={28} />
                   </div>
-                  <h4 className="font-black text-alloro-navy text-3xl font-heading tracking-tight mb-4">
+                  <h4 className="font-black text-alloro-navy text-2xl font-heading tracking-tight mb-2">
                     Initialize New Connector
                   </h4>
-                  <p className="text-slate-400 text-lg font-bold max-w-sm leading-relaxed mb-12 tracking-tight opacity-70">
+                  <p className="text-slate-400 text-base font-bold max-w-sm leading-relaxed mb-6 tracking-tight opacity-70">
                     Expand your intelligence matrix by connecting new{" "}
                     <span className="text-alloro-navy">
                       CRM, PMS, or Marketing
                     </span>{" "}
                     assets.
                   </p>
-                  <button className="px-12 py-6 bg-white border border-black/5 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-alloro-navy hover:border-alloro-orange/20 hover:text-alloro-orange transition-all shadow-premium active:scale-95">
+                  <button className="px-8 py-4 bg-white border border-black/5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-alloro-navy hover:border-alloro-orange/20 hover:text-alloro-orange transition-all shadow-premium active:scale-95">
                     Launch Hub Discovery
                   </button>
                 </div>
@@ -622,9 +609,11 @@ export const Settings: React.FC = () => {
           )}
 
           <footer className="pt-24 pb-12 flex flex-col items-center gap-10 text-center">
-            <div className="w-16 h-16 bg-alloro-orange text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl">
-              A
-            </div>
+            <img
+              src="/logo.png"
+              alt="Alloro"
+              className="w-16 h-16 rounded-2xl shadow-2xl"
+            />
             <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
               Alloro Profile Management • v2.6.0
             </p>

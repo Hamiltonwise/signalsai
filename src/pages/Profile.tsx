@@ -42,10 +42,10 @@ const Profile = () => {
             </div>
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Account Profile
+                Intelligence Ecosystem
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Personal Settings & Security
+                Your practice at a glance
               </span>
             </div>
           </div>

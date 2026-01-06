@@ -479,10 +479,10 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
             </div>
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Market Intelligence
+                Local Rankings
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Competitive Performance Hub
+                How you compare to others
               </span>
             </div>
           </div>
@@ -507,15 +507,21 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
         {/* HERO SECTION */}
         <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
+              Local SEO Tracking On
+            </div>
+          </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            Market Authority.
+            Local Reputation.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Benchmarking{" "}
+            See how your{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
-              Local Visibility & Reputation
+              Rank and Reviews
             </span>{" "}
-            against top-tier competitors to dominate your catchment area.
+            compare to the practices nearby.
           </p>
         </section>
 
@@ -686,21 +692,21 @@ function PerformanceDashboard({
       {/* 2. MARKET VITALS - KPIS */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard
-          label="Local Ranking"
+          label="Local Rank"
           value={`#${result.rankPosition}`}
           sub={`of ${result.totalCompetitors} Competitors`}
           trend={rankTrend?.value}
           dir={rankTrend?.dir}
         />
         <KPICard
-          label="Sentiment Score"
+          label="Happy Patients"
           value={Number(clientRating).toFixed(1)}
           rating
           sub={`Market Avg: ${marketAvgRating.toFixed(1)}`}
           tooltip="Measures overall patient satisfaction based on review ratings and feedback sentiment analysis."
         />
         <KPICard
-          label="Review Volume"
+          label="Total Reviews"
           value={clientReviews.toString()}
           warning={reviewGap > 0}
           sub={
@@ -709,7 +715,7 @@ function PerformanceDashboard({
           tooltip="Total number of reviews across all platforms. Higher volume improves local search visibility."
         />
         <KPICard
-          label="Authority Impact"
+          label="Market Reach"
           value={Number(result.rankScore).toFixed(0)}
           suffix="/100"
           sub={
@@ -730,30 +736,25 @@ function PerformanceDashboard({
         <div className="px-10 py-8 border-b border-black/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="text-left">
             <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
-              Competitive Matrix
+              Nearby Practices
             </h2>
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-              Benchmarked against market leaders
+              How you compare to the neighbors
             </p>
           </div>
-          <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-black/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            Last updated:{" "}
-            {new Date(result.observedAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+          <div className="bg-slate-50 px-6 py-3 rounded-2xl border border-black/5 text-[10px] font-black text-alloro-orange uppercase tracking-widest">
+            Last checked today
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="bg-slate-50/50 text-[10px] font-black text-alloro-textDark/40 uppercase tracking-[0.25em] border-b border-black/5">
               <tr>
-                <th className="px-10 py-5 w-[40%]">Practice Entity</th>
+                <th className="px-10 py-5 w-[40%]">Practice Name</th>
                 <th className="px-4 py-5 text-center w-[15%]">Rank</th>
-                <th className="px-4 py-5 text-center w-[20%]">Total Reviews</th>
+                <th className="px-4 py-5 text-center w-[20%]">Reviews</th>
                 <th className="px-10 py-5 text-right w-[25%]">
-                  Mthly Velocity
+                  Monthly Growth
                 </th>
               </tr>
             </thead>
@@ -829,11 +830,11 @@ function PerformanceDashboard({
                         </span>
                         {comp.isClient ? (
                           <span className="text-[9px] font-black bg-alloro-orange text-white px-2 py-0.5 rounded uppercase tracking-widest w-fit mt-1.5 leading-none">
-                            Your Identity
+                            You
                           </span>
                         ) : (
                           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest w-fit mt-1.5 leading-none">
-                            Local Competitor
+                            Competitor
                           </span>
                         )}
                       </div>
@@ -881,10 +882,10 @@ function VisibilityProtocol({ tasks }: { tasks: RankingTask[] }) {
       <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
         <div className="space-y-1">
           <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-            Visibility Protocol
+            Rank Improvement Plan
           </h3>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Tactical rank acceleration steps
+            Steps to reach #1
           </p>
         </div>
         <div className="w-12 h-12 bg-alloro-orange/10 text-alloro-orange rounded-xl flex items-center justify-center shadow-inner">

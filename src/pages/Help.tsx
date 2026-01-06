@@ -138,10 +138,10 @@ const Help = () => {
             </div>
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Support Intelligence
+                Help Center
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Concierge Strategy Access
+                Get support from our team
               </span>
             </div>
           </div>
@@ -161,18 +161,18 @@ const Help = () => {
           <div className="flex items-center gap-4 mb-3">
             <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
-              Human Support Online
+              We are here to help
             </div>
           </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            How can we serve you?
+            How can we help?
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Connect with your dedicated{" "}
+            Talk to your{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
               Alloro Strategist
             </span>{" "}
-            for technical, operational, or marketing guidance.
+            for help with your practice growth.
           </p>
         </section>
 
@@ -180,20 +180,20 @@ const Help = () => {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <SupportCard
             icon={<Zap size={28} />}
-            title="Technical Support"
-            description="Issues with data sync, PMS integration, or platform navigation? Our engineering team is here to help."
+            title="Tech Support"
+            description="Help with data, software links, or using the dashboard."
             delay="duration-300"
           />
           <SupportCard
             icon={<Sparkles size={28} />}
-            title="Marketing Strategy"
-            description="Need guidance on keyword shifts, local SEO, or review velocity tactics? Book a session with a lead strategist."
+            title="Growth Strategy"
+            description="Talk about how to get more patients and reviews."
             delay="duration-500"
           />
           <SupportCard
             icon={<MessageSquare size={28} />}
-            title="Practice Ops"
-            description="Questions about the Treatment Coordinator hub or peer-to-peer outreach protocols? Let's optimize your flow."
+            title="Practice Operations"
+            description="Improve your front desk and daily office tasks."
             delay="duration-700"
           />
         </section>
@@ -389,32 +389,18 @@ const Help = () => {
                 </div>
               </div>
             </div>
-
-            <div className="bg-alloro-orange rounded-[2.5rem] p-10 lg:p-14 text-white shadow-premium text-left relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-white/20 transition-all duration-700"></div>
-              <div className="relative z-10 space-y-6">
-                <h4 className="text-2xl font-black font-heading tracking-tight leading-tight">
-                  Need a Strategy Deep Dive?
-                </h4>
-                <p className="text-white/80 font-bold text-base leading-relaxed tracking-tight">
-                  Schedule a 30-minute growth audit with your lead analyst to
-                  review your market data.
-                </p>
-                <button className="px-8 py-4 bg-white text-alloro-orange rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg hover:shadow-xl active:scale-95 transition-all">
-                  Book Growth Audit
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
         {/* Footer */}
         <footer className="pt-10 pb-12 flex flex-col items-center gap-10 text-center">
-          <div className="w-16 h-16 bg-alloro-orange text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl">
-            A
-          </div>
+          <img
+            src="/logo.png"
+            alt="Alloro"
+            className="w-16 h-16 rounded-2xl shadow-2xl"
+          />
           <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
-            Alloro Intelligence Support • v2.6.0
+            Alloro Support
           </p>
         </footer>
       </main>

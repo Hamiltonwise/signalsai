@@ -460,7 +460,7 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
                 <td className="px-6 py-5">
                   <div className="space-y-1">
                     <p
-                      className={`text-[11px] text-slate-500 font-medium leading-tight tracking-tight ${
+                      className={`text-sm text-slate-500 font-medium leading-tight tracking-tight ${
                         expandedNotes.has(row.id) ? "" : "line-clamp-2"
                       }`}
                     >

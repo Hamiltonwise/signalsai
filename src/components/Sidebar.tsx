@@ -206,19 +206,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Main navigation items
   const mainNavItems = [
     {
-      label: "Practice Hub",
+      label: "Practise Hub",
       icon: <LayoutDashboard size={18} />,
       path: "/dashboard",
       showDuringOnboarding: true,
     },
     {
-      label: "Revenue Insights",
+      label: "Revenue",
       icon: <Activity size={18} />,
       path: "/pmsStatistics",
       showDuringOnboarding: false,
     },
     {
-      label: "Market Performance",
+      label: "Local Rankings",
       icon: <Trophy size={18} />,
       path: "/rankings",
       showDuringOnboarding: false,
@@ -229,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const executionNavItems = useMemo(
     () => [
       {
-        label: "Strategic Tasks",
+        label: "To-Do List",
         icon: <CheckSquare size={18} />,
         path: "/tasks",
         showDuringOnboarding: false,

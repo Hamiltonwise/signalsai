@@ -661,14 +661,20 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <IntelligencePulse />
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Practice Intelligence
+                Practise Hub
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Operational Integrity Hub
+                Overview of your Practice
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                Live Updates On
+              </span>
+            </div>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -690,12 +696,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           <div className="flex items-center gap-4 mb-3">
             <div className="px-3 py-1.5 bg-[#FDECEA] rounded-lg text-[#D66853] text-[10px] font-black uppercase tracking-widest border border-[#D66853]/10 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D66853]"></span>
-              Real-time Analysis • {format(new Date(), "MMM d")}
+              Latest Update • {format(new Date(), "MMM d")}
             </div>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
               <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">
-                Healthy Growth Signals
+                Growth looks good
               </span>
             </div>
           </div>
@@ -746,14 +752,14 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
-                      Intelligence Briefing
+                      Important Updates
                     </h3>
                     <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
                       You have{" "}
                       <span className="text-white font-black underline decoration-white/40 underline-offset-4">
-                        {criticalActionsCount} critical actions
+                        {criticalActionsCount} tasks to do
                       </span>{" "}
-                      to secure $50k+ in recovery.
+                      that could save $50k+ in revenue.
                     </p>
                   </div>
                 </div>
@@ -761,7 +767,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   onClick={() => navigate("/tasks")}
                   className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
                 >
-                  REVIEW ACTIONS <ArrowRight size={16} />
+                  SEE TASKS <ArrowRight size={16} />
                 </button>
               </div>
             </div>
@@ -813,7 +819,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <div className="flex-1 text-left space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
-                    URGENT INTERVENTION
+                    ACTION NEEDED
                   </span>
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
@@ -901,7 +907,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <div className="flex-1 space-y-6">
                   <div className="flex items-center gap-3">
                     <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg shadow-sm">
-                      RANKING STRATEGY
+                      RANKINGS
                     </div>
                     <div className="h-px w-20 bg-slate-100"></div>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -920,8 +926,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                             #{currentLocationData.rank} of{" "}
                             {currentLocationData.totalCompetitors}
                           </span>{" "}
-                          locally — <br className="hidden md:block" />
-                          growth is accelerating.
+                          locally. Your practice is growing.
                         </h2>
                         <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
                           Your authority score has increased by 12 points since
@@ -941,7 +946,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <div className="flex flex-wrap items-center gap-10 shrink-0">
                   <div className="flex flex-col items-center group/stat">
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
-                      Authority Score
+                      Visibility Score
                     </span>
                     <div className="relative">
                       {currentLocationData ? (
@@ -959,7 +964,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   <div className="w-px h-16 bg-slate-100 hidden sm:block"></div>
                   <div className="flex flex-col items-center group/stat">
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
-                      Patient Sentiment
+                      Patient Mood
                     </span>
                     <div className="flex items-center gap-3">
                       <span
@@ -997,13 +1002,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           <section className="space-y-8 pt-4">
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-                Clinical Performance Vitals
+                Monthly Practice Totals
               </h3>
               <div className="h-px w-full bg-black/10"></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
               <MetricCard
-                label="Monthly Starts"
+                label="New Starts"
                 value={pmsMetrics.selfReferrals}
                 trend={
                   pmsMetrics.selfReferralChange !== 0
@@ -1015,7 +1020,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 isHighlighted
               />
               <MetricCard
-                label="Source Referrals"
+                label="Referrals"
                 value={pmsMetrics.totalReferrals}
                 trend={
                   pmsMetrics.referralChange !== 0
@@ -1055,7 +1060,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <div className="pt-8 space-y-8">
                 <div className="flex items-center gap-4 px-1">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-                    Growth Signals & Operational Risks
+                    What's working vs What's not
                   </h3>
                   <div className="h-px w-full bg-black/10"></div>
                 </div>
@@ -1067,7 +1072,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
                           <TrendingUp size={16} />
                         </div>
-                        Wins
+                        Good News
                       </div>
                       <div className="space-y-3">
                         {wins.map((win: string, idx: number) => (
@@ -1094,7 +1099,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
                           <AlertTriangle size={16} />
                         </div>
-                        Risks
+                        Risks to Fix
                       </div>
                       <div className="space-y-3">
                         {risks.map((risk: string, idx: number) => (
@@ -1129,16 +1134,16 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                   <div className="h-px w-24 bg-alloro-navy/10"></div>
                 </div>
                 <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
-                  Top 3 Fixes to Add{" "}
+                  3 Fixes to Add{" "}
                   <span className="text-alloro-orange inline-flex items-baseline gap-1">
                     {formatCurrency(estimatedRevenue)}+
                   </span>{" "}
                   <br className="hidden md:block" />
-                  to your Annual Revenue.
+                  to your Yearly Revenue.
                 </h2>
                 <p className="text-slate-400 font-bold text-lg tracking-tight max-w-3xl leading-relaxed">
-                  Precision refinements identified by Alloro to capture leaking
-                  production and accelerate your practice growth.
+                  Simple changes that will help you stop losing patients and
+                  grow your practice faster.
                 </p>
               </div>
             </div>
@@ -1157,14 +1162,14 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
                   <div className="relative z-10 mb-6">
                     <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                      <DollarSign size={14} /> Revenue Asset
+                      <DollarSign size={14} /> Revenue Tip
                     </div>
                   </div>
 
                   <div className="mt-auto space-y-6 relative z-10">
                     <div className="space-y-3">
                       <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
-                        Fix #{idx + 1}
+                        Fix {idx + 1}
                       </h4>
                       <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-3">
                         {fix}
@@ -1201,10 +1206,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                      <DollarSign size={14} /> Revenue Asset
+                      <DollarSign size={14} /> Revenue Tip
                     </div>
                     <h3 className="text-2xl lg:text-3xl font-black font-heading text-alloro-navy tracking-tight">
-                      Fix #{selectedFix.index}
+                      Fix {selectedFix.index}
                     </h3>
                   </div>
                   <button
@@ -1295,9 +1300,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               onClick={() => setShowDataHub(!showDataHub)}
               className="w-full sm:w-auto inline-flex items-center justify-center px-12 py-7 bg-white border border-alloro-orange/20 text-alloro-orange text-[12px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-alloro-orange hover:text-white transition-all shadow-premium active:scale-95 group"
             >
-              {showDataHub
-                ? "Hide Detailed Intelligence"
-                : "Enter Practice Intelligence Hub"}
+              {showDataHub ? "Hide Detail Data" : "See Detailed Practice Data"}
               <div
                 className={`ml-4 transition-transform duration-500 ${
                   showDataHub ? "rotate-180" : "group-hover:translate-y-1"

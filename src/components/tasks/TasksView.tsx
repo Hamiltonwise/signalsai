@@ -14,8 +14,6 @@ import {
   Layout,
   Users,
   Plus,
-  HelpCircle,
-  Send,
 } from "lucide-react";
 import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
@@ -67,21 +65,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   descriptionRef,
   isPulsing,
 }) => {
-  const [showHelp, setShowHelp] = useState(false);
-  const [comment, setComment] = useState("");
-  const [sent, setSent] = useState(false);
   const isDone = task.status === "complete";
-
-  const handleHelpSubmit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!comment.trim()) return;
-    setSent(true);
-    setTimeout(() => {
-      setShowHelp(false);
-      setComment("");
-      setSent(false);
-    }, 1500);
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -171,106 +155,60 @@ const TaskCard: React.FC<TaskCardProps> = ({
               </h3>
               {isHighPriority && !isDone && (
                 <span className="px-3 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
-                  Priority Alpha
+                  High Priority
                 </span>
               )}
             </div>
-            {!isDone && !isReadOnly && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowHelp(!showHelp);
-                }}
-                className={`p-2 rounded-xl transition-all duration-300 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${
-                  showHelp
-                    ? "bg-alloro-orange text-white"
-                    : "bg-alloro-bg text-slate-400 hover:text-alloro-orange hover:bg-alloro-orange/5"
-                }`}
-              >
-                <HelpCircle size={14} /> {showHelp ? "Close" : "Ask Question"}
-              </button>
-            )}
           </div>
 
-          {showHelp ? (
-            <div
-              className="animate-in fade-in slide-in-from-top-2 duration-300 py-4 space-y-4 border-t border-black/5 mt-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="relative">
-                <textarea
-                  autoFocus
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="e.g. Where should I place the QR code?"
-                  className="w-full h-24 bg-alloro-bg border border-black/5 rounded-2xl px-5 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all resize-none"
-                />
-                <button
-                  onClick={handleHelpSubmit}
-                  disabled={!comment.trim() || sent}
-                  className="absolute bottom-4 right-4 p-2.5 bg-alloro-navy text-white rounded-xl shadow-lg hover:bg-black transition-all active:scale-95 disabled:opacity-30"
-                >
-                  {sent ? <CheckCircle2 size={16} /> : <Send size={16} />}
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">
-                Your strategist will receive this inquiry immediately.
+          {task.description && (
+            <div>
+              <p
+                ref={descriptionRef}
+                className={`text-[16px] leading-relaxed font-bold tracking-tight transition-all ${
+                  isDone ? "opacity-30" : "text-slate-500"
+                } ${!isExpanded ? "line-clamp-2" : ""} ${
+                  isClamped ? "cursor-pointer hover:opacity-80" : ""
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isClamped && onExpand) onExpand();
+                }}
+              >
+                {parseHighlightTags(task.description, "underline")}
               </p>
-            </div>
-          ) : (
-            <>
-              {task.description && (
-                <div>
-                  <p
-                    ref={descriptionRef}
-                    className={`text-[16px] leading-relaxed font-bold tracking-tight transition-all ${
-                      isDone ? "opacity-30" : "text-slate-500"
-                    } ${!isExpanded ? "line-clamp-2" : ""} ${
-                      isClamped ? "cursor-pointer hover:opacity-80" : ""
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isClamped && onExpand) onExpand();
-                    }}
-                  >
-                    {parseHighlightTags(task.description, "underline")}
-                  </p>
-                  {isClamped && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onExpand) onExpand();
-                      }}
-                      className="text-xs text-alloro-orange hover:text-blue-700 font-bold mt-2 uppercase tracking-widest"
-                    >
-                      {isExpanded ? "Show less" : "Read more"}
-                    </button>
-                  )}
-                </div>
+              {isClamped && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onExpand) onExpand();
+                  }}
+                  className="text-xs text-alloro-orange hover:text-blue-700 font-bold mt-2 uppercase tracking-widest"
+                >
+                  {isExpanded ? "Show less" : "Read more"}
+                </button>
               )}
-
-              <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-6 border-t border-black/5 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
-                <span className="flex items-center gap-2.5">
-                  <Clock size={16} className="text-alloro-orange/40" />{" "}
-                  {isDone && task.completed_at
-                    ? `Verified: ${formatDate(task.completed_at)}`
-                    : task.due_date
-                    ? `Due: ${formatDate(task.due_date)}`
-                    : `Created: ${formatDate(task.created_at)}`}
-                </span>
-                <span className="flex items-center gap-2.5">
-                  <Users size={16} className="text-alloro-orange/40" />{" "}
-                  {task.agent_type || "User"}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Layout size={14} className="opacity-40" />
-                  <span className="text-slate-500">
-                    {task.category} Coordinator Hub
-                  </span>
-                </div>
-              </div>
-            </>
+            </div>
           )}
+
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-6 border-t border-black/5 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
+            <span className="flex items-center gap-2.5">
+              <Clock size={16} className="text-alloro-orange/40" />{" "}
+              {isDone && task.completed_at
+                ? `Done: ${formatDate(task.completed_at)}`
+                : task.due_date
+                ? `Due: ${formatDate(task.due_date)}`
+                : `Due: ${formatDate(task.created_at)}`}
+            </span>
+            <span className="flex items-center gap-2.5">
+              <Users size={16} className="text-alloro-orange/40" />{" "}
+              {task.agent_type || "User"}
+            </span>
+            <div className="flex items-center gap-2">
+              <Layout size={14} className="opacity-40" />
+              <span className="text-slate-500">{task.category}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -484,10 +422,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
             </div>
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Execution Plan
+                To-Do List
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Tactical Sprint Protocol
+                Your team's action items
               </span>
             </div>
           </div>
@@ -501,7 +439,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               className={isRefreshing ? "animate-spin" : ""}
             />
             <span className="hidden sm:inline">
-              {isRefreshing ? "Refreshing..." : "Refresh"}
+              {isRefreshing ? "Refreshing..." : "Update To-Do List"}
             </span>
           </button>
         </div>
@@ -510,15 +448,21 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
       <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
         {/* HERO SECTION */}
         <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
+              Next Steps
+            </div>
+          </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            Operational Flow.
+            Getting things done.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Alloro partners with your team to pinpoint the{" "}
+            Check off these{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
-              most important actions
+              Next Steps
             </span>{" "}
-            to drive growth.
+            to help your practice grow.
           </p>
         </section>
 
@@ -584,21 +528,21 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
             </div>
             <div className="flex-1 space-y-4 text-center md:text-left">
               <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tighter leading-none">
-                Task Tracker
+                Task Completion
               </h2>
               <p className="text-lg lg:text-xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg">
-                There are{" "}
+                You have finished{" "}
                 <span className="text-alloro-orange font-black">
-                  {userTasks.filter((t) => t.status !== "complete").length}{" "}
-                  tasks
+                  {userTasks.filter((t) => t.status === "complete").length} of{" "}
+                  {userTasks.length} tasks
                 </span>{" "}
-                awaiting your action.
+                for this month.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
               <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
-                  System
+                  Alloro
                 </p>
                 <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
                   {alloroTasks.length}
@@ -606,7 +550,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               </div>
               <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
-                  Manual
+                  Team
                 </p>
                 <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
                   {userTasks.length}
@@ -626,14 +570,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               </div>
               <div className="text-left">
                 <h2 className="text-2xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                  Alloro Directives
+                  Alloro Tasks
                 </h2>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-                  Algorithmic Operations
-                </p>
-                <p className="text-[11px] text-slate-400 font-medium mt-2 max-w-xs leading-relaxed">
-                  These are automated tasks handled by Alloro's AI systems on
-                  your behalf.
+                  Done automatically
                 </p>
               </div>
             </div>
@@ -679,14 +619,10 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               </div>
               <div className="text-left">
                 <h2 className="text-2xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                  Manual Protocol
+                  Team Tasks
                 </h2>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-                  Staff Execution Steps
-                </p>
-                <p className="text-[11px] text-slate-400 font-medium mt-2 max-w-xs leading-relaxed">
-                  If you see a recurring task that's already done, please mark
-                  it complete so Alloro can learn from your actions.
+                  Things your staff needs to do
                 </p>
               </div>
             </div>
@@ -729,7 +665,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                 <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
                   <Plus size={28} />
                 </div>
-                Initialize Manual Task
+                Add a Task
               </button>
             </div>
           </div>

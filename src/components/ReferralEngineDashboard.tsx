@@ -575,10 +575,10 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
               </div>
               <div className="flex flex-col text-left">
                 <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                  Revenue Attribution
+                  Revenue Sources
                 </h1>
                 <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                  PMS Sync Verified Protocol
+                  Where your revenue comes from
                 </span>
               </div>
             </div>
@@ -601,30 +601,30 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
           {/* Hero Section - matches newdesign */}
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
             <div className="flex items-center gap-4 mb-3">
-              <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
-                Ledger Pulse Active
+              <div className="px-3 py-1.5 bg-green-50 rounded-lg text-green-600 text-[10px] font-black uppercase tracking-widest border border-green-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                Revenue Tracking On
               </div>
             </div>
             <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-              Revenue Intelligence.
+              Revenue Details.
             </h1>
             <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-              Analyzing production attribution across{" "}
+              See which{" "}
               <span className="text-alloro-orange underline underline-offset-8 font-black">
-                All Marketing & Doctor Referral
+                Marketing or Doctors
               </span>{" "}
-              channels for maximum practice yield.
+              are sending you the most work.
             </p>
           </section>
 
-          {/* Production Vitals - matches newdesign */}
+          {/* Monthly Totals - matches newdesign */}
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/20 whitespace-nowrap">
-                Production Vitals
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+                Monthly Totals
               </h3>
-              <div className="h-px w-full bg-black/5"></div>
+              <div className="h-px w-full bg-black/10"></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <MetricCard
@@ -798,7 +798,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
                           ${source.production.toLocaleString()}
                         </td>
                         <td className="px-10 py-7 text-left">
-                          <p className="text-[13px] text-slate-500 font-medium leading-relaxed tracking-tight line-clamp-2">
+                          <p className="text-base text-slate-500 font-medium leading-relaxed tracking-tight line-clamp-2">
                             {source.notes}
                           </p>
                         </td>

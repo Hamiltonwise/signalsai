@@ -48,14 +48,14 @@ interface InfoRowProps {
 
 const InfoRow = ({ icon, label, value }: InfoRowProps) => (
   <div className="flex items-start gap-4 group">
-    <div className="p-3 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
+    <div className="p-2.5 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
       {icon}
     </div>
     <div className="min-w-0 text-left">
-      <div className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.3em] mb-1 leading-none">
+      <div className="text-[8px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] mb-0.5 leading-none">
         {label}
       </div>
-      <div className="text-lg font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
+      <div className="text-base font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
         {value}
       </div>
     </div>
@@ -104,11 +104,11 @@ const EditableInfoRow = ({
 
   return (
     <div className="flex items-start gap-4 group">
-      <div className="p-3 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
+      <div className="p-2.5 bg-alloro-bg text-alloro-navy/40 rounded-xl shrink-0 group-hover:text-alloro-orange group-hover:bg-alloro-orange/5 transition-all duration-500 border border-black/5 shadow-inner-soft group-hover:shadow-premium">
         {icon}
       </div>
       <div className="min-w-0 text-left flex-1">
-        <div className="text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.3em] mb-1 leading-none">
+        <div className="text-[8px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em] mb-0.5 leading-none">
           {label}
         </div>
         {isEditing ? (
@@ -118,7 +118,7 @@ const EditableInfoRow = ({
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-lg font-black text-alloro-navy tracking-tight bg-white border border-alloro-orange/30 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-alloro-orange/50 w-full"
+              className="text-base font-black text-alloro-navy tracking-tight bg-white border border-alloro-orange/30 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-alloro-orange/50 w-full"
               autoFocus
               disabled={isSaving}
             />
@@ -139,7 +139,7 @@ const EditableInfoRow = ({
           </div>
         ) : value ? (
           <div className="flex items-center gap-2">
-            <div className="text-lg font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
+            <div className="text-base font-black text-alloro-navy tracking-tight truncate group-hover:translate-x-1 transition-transform">
               {value}
             </div>
             <button
@@ -545,29 +545,29 @@ export const Settings: React.FC = () => {
                 >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-alloro-orange/[0.03] rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
 
-                  <div className="flex items-center justify-between relative z-10">
-                    <h3 className="text-[11px] font-black text-alloro-textDark/20 uppercase tracking-[0.4em] leading-none">
-                      Practice Identity
-                    </h3>
-                    <div className="px-4 py-1.5 bg-green-50 text-green-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-100 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
-                      System Active
+                  <div className="flex items-center justify-between mb-8 relative z-10">
+                    <div className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100 flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-green-500"></div>{" "}
+                      Active Account
                     </div>
+                    <button className="text-[9px] font-black uppercase tracking-[0.2em] text-alloro-orange/40 hover:text-alloro-orange transition-colors">
+                      Edit Details
+                    </button>
                   </div>
-                  <div className="space-y-5 relative z-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-x-8 gap-y-5 relative z-10">
                     <EditableInfoRow
-                      icon={<MapPin size={24} />}
-                      label="Primary Location"
+                      icon={<MapPin size={18} />}
+                      label="Location"
                       value={profileData.operational_jurisdiction}
-                      placeholder="Enter your Primary Location"
+                      placeholder="Enter your location"
                       onSave={(value) =>
                         handleUpdateProfile("operational_jurisdiction", value)
                       }
                       isSaving={isProfileSaving}
                     />
                     <InfoRow
-                      icon={<Globe size={24} />}
-                      label="Digital Authority"
+                      icon={<Globe size={18} />}
+                      label="Website"
                       value={
                         selectedDomain?.domain ||
                         userProfile?.domainName ||
@@ -575,15 +575,15 @@ export const Settings: React.FC = () => {
                       }
                     />
                     <InfoRow
-                      icon={<Mail size={24} />}
-                      label="Command Outreach"
+                      icon={<Mail size={18} />}
+                      label="Email"
                       value={userProfile?.email || "Not configured"}
                     />
                     <EditableInfoRow
-                      icon={<Phone size={24} />}
-                      label="Clinical Contact"
+                      icon={<Phone size={18} />}
+                      label="Phone"
                       value={profileData.phone}
-                      placeholder="Enter your Phone"
+                      placeholder="Enter your phone"
                       onSave={(value) => handleUpdateProfile("phone", value)}
                       isSaving={isProfileSaving}
                     />
@@ -594,29 +594,28 @@ export const Settings: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-alloro-navy rounded-[2rem] p-6 lg:p-8 text-white relative overflow-hidden shadow-2xl group text-left"
+                  className="bg-alloro-navy rounded-3xl p-6 lg:p-8 text-white relative overflow-hidden shadow-2xl group text-left"
                 >
-                  <div className="absolute top-0 right-0 p-64 bg-alloro-orange/5 rounded-full -mr-32 -mt-32 blur-[100px] pointer-events-none group-hover:bg-alloro-orange/10 transition-all duration-700"></div>
-                  <div className="relative z-10 space-y-5">
-                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shadow-2xl border border-white/10 group-hover:scale-110 transition-transform duration-500">
-                      <Shield size={24} className="text-white/60" />
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-alloro-orange/5 rounded-full -mr-24 -mt-24 blur-[60px] pointer-events-none group-hover:bg-alloro-orange/10 transition-all duration-700"></div>
+                  <div className="relative z-10 flex items-center gap-6">
+                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
+                      <Shield size={22} className="text-white/60" />
                     </div>
-                    <div className="space-y-3">
-                      <h4 className="text-xl font-black font-heading tracking-tight text-white leading-none">
-                        Clinical Security Shield
-                      </h4>
-                      <p className="text-blue-100/40 text-base font-bold leading-relaxed tracking-tight">
-                        All PMS & Patient data is fortified via AES-256
-                        end-to-end encryption protocols. Full HIPAA integrity
-                        verified daily.
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold leading-snug tracking-tight text-white/90">
+                        <span className="text-alloro-orange font-black">
+                          Encrypted & Secure.
+                        </span>{" "}
+                        All patient and practice data is protected by high-level
+                        encryption protocols.
                       </p>
-                    </div>
-                    <div className="flex items-center gap-6 pt-2">
-                      <div className="flex items-center gap-3 text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
-                        <Lock size={16} /> SOC2 SECURE
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
-                        <Activity size={16} /> LIVE AUDIT
+                      <div className="flex items-center gap-4 pt-1">
+                        <span className="flex items-center gap-1.5 text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">
+                          <Lock size={10} /> HIPAA Compliant
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">
+                          <Activity size={10} /> Monitored 24/7
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -624,141 +623,132 @@ export const Settings: React.FC = () => {
               </section>
 
               {/* Right Column - Integrations */}
-              <section className="xl:col-span-7 space-y-6 lg:space-y-8">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2">
-                  <div className="text-left space-y-1">
-                    <h2 className="text-xl lg:text-2xl font-black text-alloro-navy font-heading tracking-tight leading-none">
-                      Intelligence Ecosystem
-                    </h2>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                      Connected Practice Hubs
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleFullSync}
-                    disabled={isSyncing}
-                    className="flex items-center gap-3 text-[11px] font-black text-alloro-orange uppercase tracking-[0.25em] hover:gap-5 transition-all group disabled:opacity-50"
-                  >
-                    <RefreshCw
-                      size={16}
-                      className={`group-hover:rotate-180 transition-transform duration-700 ${
-                        isSyncing ? "animate-spin" : ""
-                      }`}
-                    />
-                    Full System Refresh
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {integrations.map((app, index) => (
-                    <motion.div
-                      key={app.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="bg-white rounded-[1.5rem] border border-black/5 p-5 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1 text-left"
+              <section className="xl:col-span-7 space-y-10">
+                <div className="space-y-8">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-4">
+                    <button
+                      onClick={handleFullSync}
+                      disabled={isSyncing}
+                      className="flex items-center gap-3 text-[11px] font-black text-alloro-orange uppercase tracking-[0.25em] hover:gap-5 transition-all group disabled:opacity-50 ml-auto"
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 rounded-xl bg-alloro-bg flex items-center justify-center p-2.5 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500">
-                          <img
-                            src={app.icon}
-                            alt={app.name}
-                            className="w-full h-full object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
-                          />
-                        </div>
-                        {app.connected ? (
-                          <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
-                            Synced
-                          </span>
-                        ) : (
-                          <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 shadow-sm">
-                            Disconnected
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-black text-alloro-navy text-base font-heading tracking-tight mb-1 truncate leading-tight group-hover:text-alloro-orange transition-colors">
-                        {app.name}
-                      </h3>
-                      <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4 leading-none">
-                        {app.connected
-                          ? `Last Heartbeat: ${app.lastSync}`
-                          : "Not connected"}
-                      </p>
+                      <RefreshCw
+                        size={16}
+                        className={`group-hover:rotate-180 transition-transform duration-700 ${
+                          isSyncing ? "animate-spin" : ""
+                        }`}
+                      />
+                      Sync All Connections
+                    </button>
+                  </div>
 
-                      {canManageConnections && app.id !== "clarity" ? (
-                        <div className="flex flex-col gap-3">
-                          <button
-                            onClick={() =>
-                              handleConnect(app.id as "ga4" | "gsc" | "gbp")
-                            }
-                            className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
-                          >
-                            {app.connected
-                              ? "Configure Node"
-                              : "Initialize Node"}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {integrations.map((app, index) => (
+                      <motion.div
+                        key={app.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="bg-white rounded-[2rem] border border-black/5 p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1 text-left"
+                      >
+                        <div className="flex items-center justify-between mb-10">
+                          <div className="w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden">
+                            <img
+                              src={app.icon}
+                              alt={app.name}
+                              className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
+                            />
+                          </div>
+                          {app.connected ? (
+                            <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
+                              Connected
+                            </span>
+                          ) : (
+                            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 shadow-sm">
+                              Disconnected
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-black text-alloro-navy text-xl font-heading tracking-tight mb-2 truncate leading-tight group-hover:text-alloro-orange transition-colors">
+                          {app.name}
+                        </h3>
+                        <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-10 leading-none">
+                          {app.connected
+                            ? `Updated: ${app.lastSync}`
+                            : "Not connected"}
+                        </p>
+
+                        {canManageConnections && app.id !== "clarity" ? (
+                          <div className="flex flex-col gap-3">
+                            <button
+                              onClick={() =>
+                                handleConnect(app.id as "ga4" | "gsc" | "gbp")
+                              }
+                              className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
+                            >
+                              View API Settings
+                              <ChevronRight
+                                size={16}
+                                className="group-hover/btn:translate-x-1 transition-transform"
+                              />
+                            </button>
+
+                            {app.connected && (
+                              <button
+                                onClick={() =>
+                                  initiateDisconnect(
+                                    app.id as "ga4" | "gsc" | "gbp"
+                                  )
+                                }
+                                className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
+                              >
+                                Disconnect
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <button className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn">
+                            View API Settings{" "}
                             <ChevronRight
                               size={16}
                               className="group-hover/btn:translate-x-1 transition-transform"
                             />
                           </button>
-
-                          {app.connected && (
-                            <button
-                              onClick={() =>
-                                initiateDisconnect(
-                                  app.id as "ga4" | "gsc" | "gbp"
-                                )
-                              }
-                              className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
-                            >
-                              Disconnect
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn">
-                          View Node{" "}
-                          <ChevronRight
-                            size={16}
-                            className="group-hover/btn:translate-x-1 transition-transform"
-                          />
-                        </button>
-                      )}
-                    </motion.div>
-                  ))}
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="p-8 lg:p-12 bg-white/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
-                  <div className="w-14 h-14 rounded-xl bg-white shadow-premium flex items-center justify-center mb-6 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
-                    <LayoutGrid size={28} />
+                <div className="space-y-8">
+                  <div className="p-12 lg:p-16 bg-white/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
+                    <div className="w-20 h-20 rounded-[1.5rem] bg-white shadow-premium flex items-center justify-center mb-8 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
+                      <LayoutGrid size={36} />
+                    </div>
+                    <p className="text-slate-400 text-base font-bold max-w-sm leading-relaxed mb-10 tracking-tight opacity-70">
+                      Integrate your{" "}
+                      <span className="text-alloro-navy">
+                        CRM, Patient Management, or Marketing
+                      </span>{" "}
+                      platforms to ingest more clinical and financial data.
+                    </p>
+                    <button className="px-12 py-5 bg-white border border-black/5 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-alloro-navy hover:border-alloro-orange/20 hover:text-alloro-orange transition-all shadow-premium active:scale-95">
+                      Connect New Link
+                    </button>
                   </div>
-                  <h4 className="font-black text-alloro-navy text-2xl font-heading tracking-tight mb-2">
-                    Initialize New Connector
-                  </h4>
-                  <p className="text-slate-400 text-base font-bold max-w-sm leading-relaxed mb-6 tracking-tight opacity-70">
-                    Expand your intelligence matrix by connecting new{" "}
-                    <span className="text-alloro-navy">
-                      CRM, PMS, or Marketing
-                    </span>{" "}
-                    assets.
-                  </p>
-                  <button className="px-8 py-4 bg-white border border-black/5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-alloro-navy hover:border-alloro-orange/20 hover:text-alloro-orange transition-all shadow-premium active:scale-95">
-                    Launch Hub Discovery
-                  </button>
                 </div>
               </section>
             </div>
           )}
 
-          <footer className="pt-24 pb-12 flex flex-col items-center gap-10 text-center">
+          <footer className="pt-16 pb-12 flex flex-col items-center gap-10 text-center">
             <img
               src="/logo.png"
               alt="Alloro"
               className="w-16 h-16 rounded-2xl shadow-2xl"
             />
             <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
-              Alloro Profile Management • v2.6.0
+              Alloro Settings • v2.6.0
             </p>
           </footer>
         </main>

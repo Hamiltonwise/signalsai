@@ -41,7 +41,7 @@ export const Notifications: React.FC = () => {
     document.title = "Notifications | Alloro";
   }, []);
 
-  // Fetch notifications and auto-mark all as read on page load
+  // Fetch notifications on page load, mark as read only on close/unmount
   useEffect(() => {
     if (!googleAccountId) {
       setLoading(false);
@@ -59,27 +59,27 @@ export const Notifications: React.FC = () => {
       }
     };
 
-    // Auto-mark all notifications as read when page opens
-    const autoMarkAllRead = async () => {
+    // Mark all notifications as read when leaving the page
+    const markAllReadOnLeave = async () => {
       try {
         await markAllNotificationsRead(googleAccountId);
-        // Update local state to show all as read
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
         // Dispatch event to update sidebar notification badge
         window.dispatchEvent(new CustomEvent("notifications:updated"));
       } catch (error) {
-        console.error("Error auto-marking notifications as read:", error);
+        console.error("Error marking notifications as read on leave:", error);
       }
     };
 
-    loadNotifications().then(() => {
-      // Mark all as read after notifications are loaded
-      autoMarkAllRead();
-    });
+    loadNotifications();
 
-    // Poll every 10 seconds (but don't auto-mark on poll)
+    // Poll every 10 seconds
     const interval = setInterval(loadNotifications, 10000);
-    return () => clearInterval(interval);
+
+    // Mark all as read when component unmounts (user leaves page or changes tab)
+    return () => {
+      clearInterval(interval);
+      markAllReadOnLeave();
+    };
   }, [googleAccountId]);
 
   // Get navigation path based on notification type
@@ -270,11 +270,11 @@ export const Notifications: React.FC = () => {
             Practice Updates.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Live stream of{" "}
+            A live feed of{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
-              Clinical & Operational Events
+              Important Events
             </span>{" "}
-            that require your leadership attention.
+            that need your attention.
           </p>
         </section>
 
@@ -458,9 +458,11 @@ export const Notifications: React.FC = () => {
 
         {/* Footer */}
         <footer className="pt-10 pb-12 flex flex-col items-center gap-10 text-center">
-          <div className="w-16 h-16 bg-alloro-orange text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-2xl">
-            A
-          </div>
+          <img
+            src="/logo.png"
+            alt="Alloro"
+            className="w-16 h-16 rounded-2xl shadow-2xl"
+          />
           <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
             Alloro Notifications • v2.6.0
           </p>

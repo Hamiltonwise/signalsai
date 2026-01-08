@@ -440,7 +440,7 @@ export const Settings: React.FC = () => {
               </div>
               <div className="text-left">
                 <h1 className="text-3xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-none mb-4">
-                  {userProfile?.practiceName || "Artful Orthodontics"}
+                  {userProfile?.practiceName || "Your Practice"}
                 </h1>
               </div>
             </div>

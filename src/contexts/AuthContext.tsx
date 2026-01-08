@@ -12,17 +12,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Domain mappings array - single source of truth for domain selection
-const domainMappings: DomainMapping[] = [
-  {
-    domain: "artfulorthodontics.com",
-    displayName: "Artful Orthodontics",
-    gbp_accountId: "114810842911950437772",
-    gbp_locationId: "10282052848626216313",
-    gsc_domainkey: "sc-domain:artfulorthodontics.com",
-    ga4_propertyId: "381278947",
-  },
-];
+// Removed hardcoded domain mappings - data should come from user's onboarding/profile
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [selectedDomain, setSelectedDomain] = useState<DomainMapping | null>(
@@ -91,11 +81,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           domainName: prev?.domainName || null,
           googleAccountId: googleAccountIdFromStorage,
         }));
-        // Fallback to hardcoded mappings
-        setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
+        // No fallback to hardcoded data - let the domain remain null
+        setSelectedDomain(null);
       } else {
-        // Fallback to hardcoded mappings if onboarding not completed
-        setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
+        // No fallback to hardcoded data if onboarding not completed
+        setSelectedDomain(null);
       }
     } catch (error) {
       console.error("Failed to load user properties:", error);
@@ -110,8 +100,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           googleAccountId: parseInt(storedGoogleAccountId, 10),
         }));
       }
-      // Fallback to hardcoded mappings on error
-      setSelectedDomain(domainMappings.length > 0 ? domainMappings[0] : null);
+      // No fallback to hardcoded data on error
+      setSelectedDomain(null);
     } finally {
       setIsLoadingUserProperties(false);
     }
@@ -122,16 +112,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadUserProperties();
   }, []);
 
-  const handleDomainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const domainValue = event.target.value;
-    const mapping = domainMappings.find(
-      (mapping) => mapping.domain === domainValue
+  const handleDomainChange = () => {
+    // Domain change is no longer used since we removed hardcoded mappings
+    // This function is kept for interface compatibility but does nothing
+    console.warn(
+      "[AuthContext] handleDomainChange called but no domain mappings exist"
     );
-    setSelectedDomain(mapping || null);
   };
 
   const contextValue: AuthContextType = {
-    domains: domainMappings,
+    domains: [], // No hardcoded domain mappings
     selectedDomain,
     handleDomainChange,
     setSelectedDomain,

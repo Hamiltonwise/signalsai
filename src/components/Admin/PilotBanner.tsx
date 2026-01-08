@@ -1,5 +1,3 @@
-import React from "react";
-
 export function PilotBanner() {
   const isPilotMode =
     typeof window !== "undefined" &&

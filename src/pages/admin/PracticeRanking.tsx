@@ -17,6 +17,7 @@ import {
   Trash2,
   Users,
   Layers,
+  Info,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -737,7 +738,7 @@ interface RankingResult {
       averageRating?: number;
       primaryCategory?: string;
       reviewsLast30d?: number;
-      postsLast90d?: number;
+      postsLast30d?: number;
       photosCount?: number;
       hasWebsite?: boolean;
       hasPhone?: boolean;
@@ -2219,7 +2220,19 @@ function RankingResultsView({
           {factors &&
             Object.entries(factors).map(([key, value]) => (
               <div key={key} className="flex items-center gap-3">
-                <div className="w-40 text-sm text-gray-600 capitalize">
+                <div className="w-44 text-sm text-gray-600 capitalize flex items-center gap-1.5">
+                  {value?.details && (
+                    <div className="relative group">
+                      <Info className="h-3.5 w-3.5 text-gray-400 cursor-help hover:text-blue-500 transition-colors" />
+                      <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="font-medium mb-1 capitalize">
+                          {key.replace(/_/g, " ")}
+                        </div>
+                        <div className="text-gray-300">{value.details}</div>
+                        <div className="absolute top-full left-3 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  )}
                   {key.replace(/_/g, " ")}
                 </div>
                 <div className="flex-1">
@@ -2440,7 +2453,7 @@ function RankingResultsView({
       )}
 
       {/* Data Source Info */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-2">
             Data Collection
@@ -2474,29 +2487,9 @@ function RankingResultsView({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Posts (90d):</span>
+              <span>Latest Posts (30d):</span>
               <span className="font-medium">
-                {result.rawData?.client_gbp?.postsLast90d ?? 0}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-2">GSC Data</h4>
-          <div className="space-y-1 text-sm text-gray-600">
-            <div className="flex justify-between">
-              <span>Queries:</span>
-              <span className="font-medium">
-                {result.rawData?.client_gsc?.topQueries?.length ||
-                  result.rawData?.client_gsc?.rows?.length ||
-                  0}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Impressions:</span>
-              <span className="font-medium">
-                {result.rawData?.client_gsc?.totals?.impressions?.toLocaleString() ||
-                  0}
+                {result.rawData?.client_gbp?.postsLast30d ?? 0}
               </span>
             </div>
           </div>

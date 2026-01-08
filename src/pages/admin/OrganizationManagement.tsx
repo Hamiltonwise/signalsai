@@ -9,6 +9,7 @@ import {
   Building,
   Edit2,
   X,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -53,7 +54,9 @@ export function OrganizationManagement() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrgId, setExpandedOrgId] = useState<number | null>(null);
-  const [orgDetails, setOrgDetails] = useState<Record<number, OrganizationDetails>>({});
+  const [orgDetails, setOrgDetails] = useState<
+    Record<number, OrganizationDetails>
+  >({});
   const [loadingDetails, setLoadingDetails] = useState<number | null>(null);
   const [editingOrgId, setEditingOrgId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -142,17 +145,14 @@ export function OrganizationManagement() {
 
     try {
       const token = localStorage.getItem("admin_token");
-      const response = await fetch(
-        `/api/admin/organizations/${editingOrgId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name: editName }),
-        }
-      );
+      const response = await fetch(`/api/admin/organizations/${editingOrgId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: editName }),
+      });
 
       if (!response.ok) throw new Error("Failed to update organization");
 
@@ -165,6 +165,60 @@ export function OrganizationManagement() {
       setEditingOrgId(null);
     } catch (error) {
       toast.error("Failed to update organization");
+    }
+  };
+
+  const startPilotSession = async (
+    userId: number,
+    userName: string,
+    userRole: string
+  ) => {
+    try {
+      toast.loading(`Starting pilot session for ${userName}...`);
+      const token = localStorage.getItem("admin_token");
+
+      const response = await fetch(`/api/admin/pilot/${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to initialize pilot session");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.dismiss();
+        toast.success("Pilot session started!");
+
+        let pilotUrl = `/?pilot_token=${data.token}`;
+        if (data.googleAccountId) {
+          pilotUrl += `&google_account_id=${data.googleAccountId}`;
+        }
+        // Pass the user's role for proper permission handling in pilot mode
+        pilotUrl += `&user_role=${userRole}`;
+
+        // Calculate centered window position
+        const width = 1280;
+        const height = 800;
+        const left = (window.screen.width - width) / 2;
+        const top = (window.screen.height - height) / 2;
+
+        window.open(
+          pilotUrl,
+          "Pilot",
+          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+        );
+      }
+    } catch (error) {
+      toast.dismiss();
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Pilot failed: ${message}`);
+      console.error("Pilot session error:", error);
     }
   };
 
@@ -193,7 +247,10 @@ export function OrganizationManagement() {
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="divide-y divide-gray-200">
           {organizations.map((org) => (
-            <div key={org.id} className="group transition-colors hover:bg-gray-50">
+            <div
+              key={org.id}
+              className="group transition-colors hover:bg-gray-50"
+            >
               {/* Header Row */}
               <div
                 className="flex cursor-pointer items-center gap-4 p-4"
@@ -206,7 +263,10 @@ export function OrganizationManagement() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     {editingOrgId === org.id ? (
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <input
                           type="text"
                           value={editName}
@@ -229,7 +289,9 @@ export function OrganizationManagement() {
                       </div>
                     ) : (
                       <div className="group/name flex items-center gap-2">
-                        <h3 className="font-medium text-gray-900">{org.name}</h3>
+                        <h3 className="font-medium text-gray-900">
+                          {org.name}
+                        </h3>
                         <button
                           onClick={(e) => startEditing(e, org)}
                           className="opacity-0 transition-opacity group-hover/name:opacity-100 p-1 text-gray-400 hover:text-blue-600"
@@ -318,6 +380,19 @@ export function OrganizationManagement() {
                               >
                                 {user.role}
                               </div>
+                              <button
+                                onClick={() =>
+                                  startPilotSession(
+                                    user.id,
+                                    user.name,
+                                    user.role
+                                  )
+                                }
+                                className="ml-2 rounded-full p-1 text-gray-400 hover:bg-amber-100 hover:text-amber-600 transition-colors"
+                                title="Pilot as this user"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </button>
                             </div>
                           ))}
                         </div>

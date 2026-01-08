@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus, Shield, Clock, X, Users as UsersIcon } from "lucide-react";
+import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 interface User {
   id: number;
@@ -36,14 +37,14 @@ export const UsersTab: React.FC = () => {
 
   useEffect(() => {
     // Get current user's role
-    const role = localStorage.getItem("user_role") as UserRole | null;
+    const role = getPriorityItem("user_role") as UserRole | null;
     setCurrentUserRole(role);
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       const response = await axios.get("/api/settings/users", {
@@ -64,7 +65,7 @@ export const UsersTab: React.FC = () => {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       await axios.post(
@@ -87,7 +88,7 @@ export const UsersTab: React.FC = () => {
   const handleRemoveUser = async (userId: number) => {
     if (!confirm("Are you sure you want to remove this user?")) return;
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       await axios.delete(`/api/settings/users/${userId}`, {
@@ -104,7 +105,7 @@ export const UsersTab: React.FC = () => {
 
   const handleChangeRole = async (userId: number, role: string) => {
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       await axios.put(

@@ -6,6 +6,7 @@ import {
   type UserProfile,
 } from "./authContext";
 import onboarding from "../api/onboarding";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -34,8 +35,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadUserProperties = async () => {
     setIsLoadingUserProperties(true);
     try {
-      // Always try to get googleAccountId from localStorage as the most reliable source
-      const storedGoogleAccountId = localStorage.getItem("google_account_id");
+      // Always try to get googleAccountId from priority storage as the most reliable source
+      // This supports both normal (localStorage) and pilot (sessionStorage) modes
+      const storedGoogleAccountId = getPriorityItem("google_account_id");
       const googleAccountIdFromStorage = storedGoogleAccountId
         ? parseInt(storedGoogleAccountId, 10)
         : null;
@@ -97,8 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to load user properties:", error);
-      // Even on error, try to use localStorage googleAccountId
-      const storedGoogleAccountId = localStorage.getItem("google_account_id");
+      // Even on error, try to use priority storage googleAccountId
+      const storedGoogleAccountId = getPriorityItem("google_account_id");
       if (storedGoogleAccountId) {
         setUserProfile((prev) => ({
           firstName: prev?.firstName || null,

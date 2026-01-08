@@ -16,6 +16,8 @@ import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
+import { PilotHandler } from "./components/PilotHandler";
+import { PilotBanner } from "./components/Admin/PilotBanner";
 
 function AuthOnlyProviders({ children }: { children: ReactNode }) {
   return <GoogleAuthProvider>{children}</GoogleAuthProvider>;
@@ -38,6 +40,7 @@ function AppProviders({ children }: { children: ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
+      <PilotHandler />
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
@@ -157,6 +160,7 @@ function App() {
             }
           />
         </Routes>
+        <PilotBanner />
       </AuthProvider>
     </BrowserRouter>
   );

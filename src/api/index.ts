@@ -1,5 +1,5 @@
 import axios, { type ResponseType } from "axios";
-import { getItem } from "../hooks/useLocalStorage";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 // Prefer environment-configured API base; default to relative "/api" so Vite dev proxy handles CORS in development.
 // Define VITE_API_URL in .env for deployments that need an absolute URL.
@@ -12,13 +12,15 @@ const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
 const getCommonHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {};
 
-  const token = getItem("token");
+  // Use priority item for pilot support
+  const token = getPriorityItem("token");
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
   // Add Google Account ID for multi-tenant OAuth token refresh
-  const googleAccountId = localStorage.getItem("google_account_id");
+  // Use priority item for pilot support
+  const googleAccountId = getPriorityItem("google_account_id");
   if (googleAccountId) {
     headers["x-google-account-id"] = googleAccountId;
   }

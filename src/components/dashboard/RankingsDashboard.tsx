@@ -16,6 +16,7 @@ import {
   HelpCircle,
   ExternalLink,
 } from "lucide-react";
+import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 // Type for client GBP data
 interface ClientGbpData {
@@ -290,7 +291,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   const fetchLatestRankings = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = getPriorityItem("token");
 
       // Fetch the latest rankings for all locations of this google account
       const response = await fetch(
@@ -340,7 +341,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
   // Fetch approved tasks for a specific ranking
   const fetchRankingTasks = async (practiceRankingId: number) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getPriorityItem("token");
       const response = await fetch(
         `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
         {

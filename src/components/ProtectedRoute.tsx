@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,9 +11,13 @@ interface ProtectedRouteProps {
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Authenticate based on presence of google_account_id OR auth_token (OTP)
-  const googleAccountId = localStorage.getItem("google_account_id");
-  const authToken = localStorage.getItem("auth_token");
-  const isAuthenticated = !!googleAccountId || !!authToken;
+  // Use priority item to support pilot mode (sessionStorage)
+  const googleAccountId = getPriorityItem("google_account_id");
+  const authToken = getPriorityItem("auth_token");
+  // Also check for 'token' key which is used by pilot handler and some auth flows
+  const token = getPriorityItem("token");
+
+  const isAuthenticated = !!googleAccountId || !!authToken || !!token;
 
   if (!isAuthenticated) {
     console.log(

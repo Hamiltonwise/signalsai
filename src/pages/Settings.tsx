@@ -17,12 +17,13 @@ import {
   Check,
   X,
 } from "lucide-react";
-import axios from "axios";
 import { useAuth } from "../hooks/useAuth";
 import { PropertySelectionModal } from "../components/settings/PropertySelectionModal";
 import { ConfirmModal } from "../components/settings/ConfirmModal";
 import { UsersTab } from "../components/settings/UsersTab";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
+import { getPriorityItem } from "../hooks/useLocalStorage";
+import { apiGet, apiPost } from "../api";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -199,7 +200,7 @@ export const Settings: React.FC = () => {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
-    const role = localStorage.getItem("user_role") as UserRole | null;
+    const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
     fetchProperties();
     fetchProfile();
@@ -237,15 +238,13 @@ export const Settings: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
-      const response = await axios.get("/api/settings/properties", {
-        headers: { "x-google-account-id": googleAccountId },
-      });
+      const response = await apiGet({ path: "/settings/properties" });
 
-      if (response.data.success) {
-        setProperties(response.data.properties);
+      if (response.success) {
+        setProperties(response.properties);
       }
     } catch (err) {
       console.error("Failed to fetch properties:", err);
@@ -278,16 +277,15 @@ export const Settings: React.FC = () => {
     setInitialSelections(selections);
 
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
-      const response = await axios.get(
-        `/api/settings/properties/available/${type}`,
-        { headers: { "x-google-account-id": googleAccountId } }
-      );
+      const response = await apiGet({
+        path: `/settings/properties/available/${type}`,
+      });
 
-      if (response.data.success) {
-        const available = response.data.properties;
+      if (response.success) {
+        const available = response.properties;
         setAvailableProperties(available);
 
         if (type === "gbp" && properties.gbp.length > 0) {
@@ -312,7 +310,7 @@ export const Settings: React.FC = () => {
   const handleSelectProperty = async (item: any) => {
     setIsSaving(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -323,11 +321,10 @@ export const Settings: React.FC = () => {
         data = { siteUrl: item.id, displayName: item.name };
       }
 
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" },
-        { headers: { "x-google-account-id": googleAccountId } }
-      );
+      await apiPost({
+        path: "/settings/properties/update",
+        passedData: { type: modalType, data, action: "connect" },
+      });
 
       setModalOpen(false);
       fetchProperties();
@@ -342,7 +339,7 @@ export const Settings: React.FC = () => {
   const handleMultiSelectProperty = async (items: any[]) => {
     setIsSaving(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       const data = items.map((item) => ({
@@ -351,11 +348,10 @@ export const Settings: React.FC = () => {
         displayName: item.name,
       }));
 
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" },
-        { headers: { "x-google-account-id": googleAccountId } }
-      );
+      await apiPost({
+        path: "/settings/properties/update",
+        passedData: { type: modalType, data, action: "connect" },
+      });
 
       setModalOpen(false);
       fetchProperties();
@@ -376,14 +372,13 @@ export const Settings: React.FC = () => {
 
     setIsDisconnecting(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: disconnectType, action: "disconnect" },
-        { headers: { "x-google-account-id": googleAccountId } }
-      );
+      await apiPost({
+        path: "/settings/properties/update",
+        passedData: { type: disconnectType, action: "disconnect" },
+      });
 
       fetchProperties();
       setConfirmOpen(false);

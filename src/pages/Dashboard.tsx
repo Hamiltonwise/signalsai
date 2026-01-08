@@ -25,6 +25,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 // Onboarding Components
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
 import onboarding from "../api/onboarding";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 export default function Dashboard() {
   // Domain selection and auth hooks
@@ -81,12 +82,12 @@ export default function Dashboard() {
     setActiveTab(tabFromPath(location.pathname));
   }, [location.pathname]);
 
-  // Ensure userProfile.googleAccountId is loaded from localStorage if not already set
+  // Ensure userProfile.googleAccountId is loaded from storage if not already set
   // This handles the case where login just completed and userProfile needs refresh
   useEffect(() => {
-    const storedGoogleAccountId = localStorage.getItem("google_account_id");
+    const storedGoogleAccountId = getPriorityItem("google_account_id");
 
-    // If localStorage has googleAccountId but userProfile doesn't, refresh
+    // If storage has googleAccountId but userProfile doesn't, refresh
     if (storedGoogleAccountId && !userProfile?.googleAccountId) {
       console.log(
         "[Dashboard] googleAccountId in localStorage but not in userProfile, refreshing..."

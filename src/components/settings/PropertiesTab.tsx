@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { BarChart3, Search, MapPin, CheckCircle2, XCircle } from "lucide-react";
 import { PropertySelectionModal } from "./PropertySelectionModal";
 import { ConfirmModal } from "./ConfirmModal";
+import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -47,7 +48,7 @@ export const PropertiesTab: React.FC = () => {
 
   useEffect(() => {
     // Get user role
-    const role = localStorage.getItem("user_role") as UserRole | null;
+    const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
     fetchProperties();
   }, []);
@@ -56,7 +57,7 @@ export const PropertiesTab: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       const response = await axios.get("/api/settings/properties", {
@@ -100,7 +101,7 @@ export const PropertiesTab: React.FC = () => {
     setInitialSelections(selections);
 
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       const response = await axios.get(
@@ -135,7 +136,7 @@ export const PropertiesTab: React.FC = () => {
     // Single select handler (GA4, GSC)
     setIsSaving(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       let data: any = {};
@@ -170,7 +171,7 @@ export const PropertiesTab: React.FC = () => {
     // Multi select handler (GBP)
     setIsSaving(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       // Map items to the storage format
@@ -205,7 +206,7 @@ export const PropertiesTab: React.FC = () => {
 
     setIsDisconnecting(true);
     try {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
 
       await axios.post(

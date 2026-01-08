@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 interface PublicRouteProps {
   children: React.ReactNode;
@@ -18,7 +19,7 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   useEffect(() => {
     // Small delay to allow OAuth flow to complete if in progress
     const timer = setTimeout(() => {
-      const googleAccountId = localStorage.getItem("google_account_id");
+      const googleAccountId = getPriorityItem("google_account_id");
       const isAuthenticated = !!googleAccountId;
 
       if (isAuthenticated) {

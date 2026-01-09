@@ -268,11 +268,11 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
     setUploadMessage("");
 
     try {
-      // Get clientId from the domain or googleAccountId
-      const clientId = props.googleAccountId?.toString() || "default-client";
+      // Get domain from the domain or googleAccountId
+      const domain = props.googleAccountId?.toString() || "default-domain";
 
       const result = await uploadPMSData({
-        clientId,
+        domain,
         file,
         pmsType: "auto-detect",
       });
@@ -292,7 +292,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
         // Dispatch event for other components
         if (typeof window !== "undefined") {
           const event = new CustomEvent("pms:job-uploaded", {
-            detail: { clientId },
+            detail: { clientId: domain },
           });
           window.dispatchEvent(event);
         }

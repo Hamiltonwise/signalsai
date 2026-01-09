@@ -168,7 +168,7 @@ export interface PMSRecord {
 }
 
 export interface PMSUploadRequest {
-  clientId: string;
+  domain: string;
   file: File;
   pmsType?: string;
 }
@@ -178,9 +178,36 @@ export interface PMSUploadResponse {
   data?: {
     recordsProcessed: number;
     recordsStored: number;
+    entryType?: "csv" | "manual";
+    jobId?: number;
   };
   error?: string;
   message?: string;
+}
+
+// =====================================================================
+// MANUAL ENTRY TYPES
+// =====================================================================
+
+export interface ManualSourceEntry {
+  name: string;
+  referrals: number;
+  production: number;
+  inferred_referral_type?: "self" | "doctor";
+}
+
+export interface ManualMonthEntry {
+  month: string;
+  self_referrals: number;
+  doctor_referrals: number;
+  total_referrals: number;
+  production_total: number;
+  sources: ManualSourceEntry[];
+}
+
+export interface PMSManualEntryRequest {
+  domain: string;
+  monthlyData: ManualMonthEntry[];
 }
 
 export interface PmsKeyDataMonth {
@@ -268,7 +295,7 @@ export async function uploadPMSData(
     // Create FormData to send the file
     const formData = new FormData();
     formData.append("csvFile", request.file);
-    formData.append("clientId", request.clientId);
+    formData.append("domain", request.domain);
     if (request.pmsType) {
       formData.append("pmsType", request.pmsType);
     }
@@ -288,6 +315,39 @@ export async function uploadPMSData(
     return {
       success: false,
       error: "Failed to upload PMS data. Please try again.",
+    };
+  }
+}
+
+/**
+ * Submit manually entered PMS data (no file upload)
+ * Data goes directly to monthly agents, skipping admin/client approval
+ * @param request - Contains domain and structured monthly data
+ * @returns Promise with submission result
+ */
+export async function submitManualPMSData(
+  request: PMSManualEntryRequest
+): Promise<PMSUploadResponse> {
+  try {
+    const result = await apiPost({
+      path: "/pms/upload",
+      passedData: {
+        domain: request.domain,
+        manualData: request.monthlyData,
+        entryType: "manual",
+      },
+      additionalHeaders: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+
+    return result;
+  } catch (error) {
+    console.error("PMS manual entry API error:", error);
+    return {
+      success: false,
+      error: "Failed to submit PMS data. Please try again.",
     };
   }
 }
@@ -396,6 +456,76 @@ export async function fetchActiveAutomationJobs(
   return apiGet({
     path: `/pms/automation/active${query}`,
   }) as Promise<ActiveAutomationJobsResponse>;
+}
+
+// =====================================================================
+// RETRY TYPES AND API FUNCTIONS
+// =====================================================================
+
+export type RetryableStep = "pms_parser" | "monthly_agents";
+
+export interface RetryStepResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    jobId: number;
+    stepRetried: RetryableStep;
+    domain?: string;
+  };
+  error?: string;
+}
+
+/**
+ * Retry a failed automation step
+ * @param jobId - The PMS job ID
+ * @param stepToRetry - Either 'pms_parser' or 'monthly_agents'
+ */
+export async function retryPmsStep(
+  jobId: number,
+  stepToRetry: RetryableStep
+): Promise<RetryStepResponse> {
+  try {
+    const result = await apiPost({
+      path: `/pms/jobs/${jobId}/retry`,
+      passedData: { stepToRetry },
+    });
+    return result as RetryStepResponse;
+  } catch (error) {
+    console.error("PMS retry API error:", error);
+    return {
+      success: false,
+      error: "Failed to retry step. Please try again.",
+    };
+  }
+}
+
+/**
+ * Get the retryable step for a failed automation
+ * Returns the step that can be retried based on current failure state
+ */
+export function getRetryableStep(
+  automationStatus: AutomationStatusDetail | null
+): RetryableStep | null {
+  if (!automationStatus || automationStatus.status !== "failed") {
+    return null;
+  }
+
+  const { currentStep, steps } = automationStatus;
+
+  // Check if pms_parser failed
+  if (currentStep === "pms_parser" || steps.pms_parser?.status === "failed") {
+    return "pms_parser";
+  }
+
+  // Check if monthly_agents failed
+  if (
+    currentStep === "monthly_agents" ||
+    steps.monthly_agents?.status === "failed"
+  ) {
+    return "monthly_agents";
+  }
+
+  return null;
 }
 
 // =====================================================================

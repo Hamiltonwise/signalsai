@@ -4,7 +4,6 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
-  X,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -17,6 +16,7 @@ import {
   type AutomationStatusDetail,
 } from "../../api/pms";
 import { PMSAutomationProgressDropdown } from "./PMSAutomationProgressDropdown";
+import { PMSDataViewer } from "../PMS/PMSDataViewer";
 
 type StatusFilter =
   | "all"
@@ -158,9 +158,7 @@ export function PMSAutomationCards() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingJobId, setApprovingJobId] = useState<number | null>(null);
-  const [savingResponseJobId, setSavingResponseJobId] = useState<number | null>(
-    null
-  );
+  const [, setSavingResponseJobId] = useState<number | null>(null);
   const [activeModalJobId, setActiveModalJobId] = useState<number | null>(null);
   const [editorStates, setEditorStates] = useState<
     Record<number, JobEditorState>
@@ -361,45 +359,50 @@ export function PMSAutomationCards() {
     }
   };
 
-  const handleDraftChange = (jobId: number, value: string) => {
-    setEditorStates((prev) => {
-      const errorMessage = validateJson(value);
-      return {
-        ...prev,
-        [jobId]: {
-          draft: value,
-          isDirty: true,
-          error: errorMessage,
-        },
-      };
-    });
-  };
+  const handleSaveResponse = async (jobId: number, updatedData?: unknown) => {
+    // Use the updated data from PMSDataViewer if provided, otherwise fall back to editor state
+    let payloadToSave: unknown;
 
-  const handleSaveResponse = async (jobId: number) => {
-    const editorState = editorStates[jobId];
-    if (!editorState) {
-      return;
-    }
+    if (updatedData !== undefined) {
+      // Data from PMSDataViewer - already transformed to backend format
+      payloadToSave = updatedData;
+    } else {
+      // Fall back to editor state for backward compatibility
+      const editorState = editorStates[jobId];
+      if (!editorState) {
+        return;
+      }
 
-    const validationError = validateJson(editorState.draft);
-    if (validationError) {
-      setEditorStates((prev) => ({
-        ...prev,
-        [jobId]: {
-          ...editorState,
-          error: validationError,
-        },
-      }));
-      return;
+      const validationError = validateJson(editorState.draft);
+      if (validationError) {
+        setEditorStates((prev) => ({
+          ...prev,
+          [jobId]: {
+            ...editorState,
+            error: validationError,
+          },
+        }));
+        return;
+      }
+
+      payloadToSave = editorState.draft.trim().length
+        ? editorState.draft
+        : null;
     }
 
     setSavingResponseJobId(jobId);
 
     try {
-      const payload = editorState.draft.trim().length
-        ? editorState.draft
-        : null;
-      const response = (await updatePmsJobResponse(jobId, payload)) as any;
+      // Convert payload to JSON string if it's an object
+      const payload =
+        typeof payloadToSave === "string"
+          ? payloadToSave
+          : JSON.stringify(payloadToSave);
+
+      const response = (await updatePmsJobResponse(
+        jobId,
+        payload.trim().length ? payload : null
+      )) as any;
 
       if (response?.success && response.data?.job) {
         const updatedJob: PmsJob = response.data.job;
@@ -821,86 +824,22 @@ export function PMSAutomationCards() {
       )}
 
       {activeModalJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <div className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Response Log — Job #{activeModalJob.id}
-                </h2>
-                <p className="text-xs uppercase tracking-wide text-gray-400">
-                  {
-                    APPROVAL_TEXT[
-                      activeModalJob.is_approved ? "locked" : "pending"
-                    ]
-                  }
-                </p>
-                {activeModalJob.domain ? (
-                  <p className="text-xs text-gray-500">
-                    Domain: {activeModalJob.domain}
-                  </p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveModalJobId(null)}
-                className="rounded-full border border-gray-200 p-2 text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex flex-1 flex-col gap-3 px-5 py-4">
-              <textarea
-                value={editorStates[activeModalJob.id]?.draft ?? ""}
-                onChange={(event) =>
-                  handleDraftChange(activeModalJob.id, event.target.value)
-                }
-                spellCheck={false}
-                className="h-full min-h-[55vh] w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-800 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
-              {editorStates[activeModalJob.id]?.error ? (
-                <span className="text-sm text-red-600">
-                  Invalid JSON: {editorStates[activeModalJob.id]?.error}
-                </span>
-              ) : editorStates[activeModalJob.id]?.isDirty ? (
-                <span className="text-sm text-gray-500">
-                  Unsaved changes will be lost if you close
-                </span>
-              ) : (
-                <span className="text-sm text-gray-400">&nbsp;</span>
-              )}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveModalJobId(null)}
-                  className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800"
-                >
-                  Close
-                </button>
-                {(editorStates[activeModalJob.id]?.isDirty ||
-                  savingResponseJobId === activeModalJob.id) && (
-                  <button
-                    type="button"
-                    onClick={() => handleSaveResponse(activeModalJob.id)}
-                    disabled={
-                      !!editorStates[activeModalJob.id]?.error ||
-                      savingResponseJobId === activeModalJob.id
-                    }
-                    className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:border-blue-100 disabled:text-blue-300"
-                  >
-                    {savingResponseJobId === activeModalJob.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    Save Changes
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <PMSDataViewer
+          isOpen={true}
+          jobId={activeModalJob.id}
+          title="Review PMS Response Data"
+          subtitle={`${activeModalJob.domain || "Unknown Domain"} • ${
+            APPROVAL_TEXT[activeModalJob.is_approved ? "locked" : "pending"]
+          }`}
+          initialData={activeModalJob.response_log}
+          onClose={() => setActiveModalJobId(null)}
+          onSave={async (transformedData) => {
+            await handleSaveResponse(activeModalJob.id, transformedData);
+            // Reload jobs after save to reflect database changes
+            await loadJobs({ silent: true });
+          }}
+          readOnly={false}
+        />
       )}
     </div>
   );

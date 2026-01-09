@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 import { showSparkleToast, showUploadToast } from "../../lib/toast";
 import {
   AlertCircle,
-  ArrowDownCircle,
   ArrowUpRight,
   BarChart3,
   Calendar,
@@ -18,6 +17,8 @@ import {
   Loader2,
   Lock,
   Pencil,
+  PenLine,
+  Plus,
   ShieldCheck,
   // Target, // Temporarily unused - Practice Diagnosis hidden
   TrendingDown,
@@ -31,6 +32,7 @@ import {
   type PmsKeyDataResponse,
 } from "../../api/pms";
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
+import { PMSManualEntryModal } from "./PMSManualEntryModal";
 import { ReferralMatrices, type ReferralEngineData } from "./ReferralMatrices";
 
 interface PMSVisualPillarsProps {
@@ -142,6 +144,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
+  const [isIngestionHighlighted, setIsIngestionHighlighted] = useState(false);
 
   // Referral Engine data state
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
@@ -407,10 +411,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     latestJobIsClientApproved !== true &&
     latestJobId !== null;
 
-  // Show upload prompt banner when no PMS data exists yet
-  const showUploadPromptBanner =
-    !isLoading && !error && (!keyData || monthlyData.length === 0);
-
   // Only show processing notice if:
   // 1. Not loading
   // 2. Not showing client approval banner
@@ -494,7 +494,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setInlineStatus("idle");
     try {
       const json = await uploadPMSData({
-        clientId: domain,
+        domain: domain,
         file: fileToUpload,
       });
       if (json?.success) {
@@ -546,18 +546,24 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     );
   }, [monthlyData]);
 
+  // Scroll to Data Ingestion Hub section with highlight animation
+  const scrollToIngestionHub = () => {
+    const ingestionSection = document.getElementById("data-ingestion-hub");
+    if (ingestionSection) {
+      ingestionSection.scrollIntoView({ behavior: "smooth" });
+      // Trigger highlight animation after short delay
+      setTimeout(() => {
+        setIsIngestionHighlighted(true);
+        // Remove highlight after 700ms
+        setTimeout(() => {
+          setIsIngestionHighlighted(false);
+        }, 700);
+      }, 200);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">
-      {/* Upload Prompt Banner - Show when no PMS data exists */}
-      {showUploadPromptBanner && canUploadPMS && (
-        <div className="bg-alloro-orange text-white text-[10px] font-black uppercase tracking-widest py-3 px-4 text-center border-b border-white/10 flex items-center justify-center gap-2 shadow-sm relative z-[60]">
-          <ArrowDownCircle size={14} className="text-white animate-bounce" />
-          <span>
-            Scroll down to the bottom of this page to upload your first PMS data
-          </span>
-        </div>
-      )}
-
       {/* Professional Header - Matching newdesign */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 lg:sticky lg:top-0 z-40">
         <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
@@ -585,6 +591,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               </div>
             </div>
           </div>
+
+          {/* CTA Button - Always visible */}
+          <button
+            onClick={scrollToIngestionHub}
+            className="flex items-center gap-2.5 px-5 py-3 bg-alloro-orange hover:brightness-110 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-alloro-orange/20 active:scale-[0.98]"
+          >
+            <Plus size={16} />
+            Enter Referral Data
+          </button>
         </div>
       </header>
 
@@ -859,7 +874,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
             {/* 4. INGESTION HUB - Matching newdesign full-width style */}
             {canUploadPMS ? (
-              <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-12">
+              <section
+                id="data-ingestion-hub"
+                className={`bg-white rounded-2xl shadow-premium p-6 sm:p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-12 transition-all duration-300 ${
+                  isIngestionHighlighted
+                    ? "border-2 border-alloro-orange ring-8 ring-alloro-orange/30 scale-[1.01]"
+                    : "border border-slate-100"
+                }`}
+              >
                 <div className="space-y-6 flex-1 text-center md:text-left">
                   <div className="flex items-center justify-center md:justify-start gap-3">
                     <div className="w-10 h-10 bg-alloro-orange/10 text-alloro-orange rounded-xl flex items-center justify-center">
@@ -894,59 +916,80 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   </div>
                 </div>
 
-                <label
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setInlineIsDragOver(true);
-                  }}
-                  onDragLeave={() => setInlineIsDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setInlineIsDragOver(false);
-                    const f = e.dataTransfer?.files?.[0];
-                    if (f) handleInlineFile(f);
-                  }}
-                  className={`w-full md:w-80 h-48 sm:h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group shrink-0 ${
-                    inlineIsDragOver
-                      ? "border-alloro-orange bg-alloro-orange/5"
-                      : "border-slate-200 bg-slate-50 hover:border-alloro-orange hover:bg-white"
-                  }`}
-                >
-                  <div
-                    className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mb-4 transition-transform ${
-                      inlineIsDragOver ? "scale-110" : "group-hover:scale-110"
+                <div className="flex-col">
+                  <label
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setInlineIsDragOver(true);
+                    }}
+                    onDragLeave={() => setInlineIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setInlineIsDragOver(false);
+                      const f = e.dataTransfer?.files?.[0];
+                      if (f) handleInlineFile(f);
+                    }}
+                    className={`w-full md:w-80 h-48 sm:h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group shrink-0 ${
+                      inlineIsDragOver
+                        ? "border-alloro-orange bg-alloro-orange/5"
+                        : "border-slate-200 bg-slate-50 hover:border-alloro-orange hover:bg-white"
                     }`}
                   >
-                    {inlineIsUploading ? (
-                      <Loader2
-                        size={24}
-                        className="text-alloro-orange animate-spin"
-                      />
-                    ) : (
-                      <Upload size={24} className="text-alloro-orange" />
-                    )}
+                    <div
+                      className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mb-4 transition-transform ${
+                        inlineIsDragOver ? "scale-110" : "group-hover:scale-110"
+                      }`}
+                    >
+                      {inlineIsUploading ? (
+                        <Loader2
+                          size={24}
+                          className="text-alloro-orange animate-spin"
+                        />
+                      ) : (
+                        <Upload size={24} className="text-alloro-orange" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-alloro-navy">
+                      {inlineIsDragOver
+                        ? "Drop to upload"
+                        : inlineFile
+                        ? inlineFile.name
+                        : "Drop CSV Export"}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                      {inlineIsUploading ? "Uploading..." : "Max 50MB"}
+                    </span>
+                    <input
+                      ref={inlineInputRef}
+                      type="file"
+                      accept=".csv,.txt,.xlsx,.xls"
+                      onChange={(e) =>
+                        handleInlineFile(e.target.files?.[0] || null)
+                      }
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* OR Separator and Manual Entry Button */}
+                  <div className="w-full md:w-80 shrink-0 space-y-4">
+                    <div className="flex items-center gap-4 my-5">
+                      <div className="flex-1 h-px bg-slate-200"></div>
+                      <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+                        OR
+                      </span>
+                      <div className="flex-1 h-px bg-slate-200"></div>
+                    </div>
+
+                    <button
+                      onClick={() => setIsManualEntryOpen(true)}
+                      className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-alloro-orange hover:brightness-110 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-alloro-orange/20 active:scale-[0.98]"
+                    >
+                      <PenLine size={18} />
+                      Manually Enter Referral Data
+                    </button>
                   </div>
-                  <span className="text-sm font-bold text-alloro-navy">
-                    {inlineIsDragOver
-                      ? "Drop to upload"
-                      : inlineFile
-                      ? inlineFile.name
-                      : "Drop CSV Export"}
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                    {inlineIsUploading ? "Uploading..." : "Max 50MB"}
-                  </span>
-                  <input
-                    ref={inlineInputRef}
-                    type="file"
-                    accept=".csv,.txt,.xlsx,.xls"
-                    onChange={(e) =>
-                      handleInlineFile(e.target.files?.[0] || null)
-                    }
-                    className="hidden"
-                  />
-                </label>
+                </div>
               </section>
             ) : (
               <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14">
@@ -1025,6 +1068,20 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           onConfirmApproval={handleConfirmApproval}
         />
       )}
+
+      {/* Manual Entry Modal */}
+      <PMSManualEntryModal
+        isOpen={isManualEntryOpen}
+        onClose={() => setIsManualEntryOpen(false)}
+        clientId={domain}
+        onSuccess={() => {
+          setIsManualEntryOpen(false);
+          // Set pending state to show processing indicator for referral matrices
+          setReferralPending(true);
+          setReferralData(null);
+          loadKeyData();
+        }}
+      />
     </div>
   );
 };

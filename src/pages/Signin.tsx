@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleConnectButton } from "../components/GoogleConnectButton";
+import { AccountSelectionHelperModal } from "../components/AccountSelectionHelperModal";
 import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Shield, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, Shield, Loader2, CheckCircle2, HelpCircle } from "lucide-react";
 
 type LoginMode = "owner" | "collaborator";
 type OTPStep = "email" | "code" | "verifying";
@@ -20,6 +21,7 @@ export default function SignIn() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isTestAccount, setIsTestAccount] = useState(false);
+  const [showAccountHelp, setShowAccountHelp] = useState(false);
 
   // Auto-redirect to dashboard if authenticated
   useEffect(() => {
@@ -201,14 +203,21 @@ export default function SignIn() {
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
-                <div className="text-center space-y-6">
-                  <p className="text-sm text-slate-600">
-                    Sign in with your Google account to access full analytics
-                    and management features
-                  </p>
+                <div className="text-center space-y-5">
                   <div className="flex justify-center">
                     <GoogleConnectButton variant="outline" size="lg" />
                   </div>
+
+                  {/* Multiple Accounts Helper Link */}
+                  <button
+                    onClick={() => setShowAccountHelp(true)}
+                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-alloro-orange transition-colors group"
+                  >
+                    <HelpCircle className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <span className="underline decoration-dashed underline-offset-4 decoration-slate-300 group-hover:decoration-alloro-orange">
+                      Seeing multiple accounts? Not sure which to use?
+                    </span>
+                  </button>
                 </div>
               </motion.div>
             ) : (
@@ -425,6 +434,12 @@ export default function SignIn() {
           </p>
         </div>
       </div>
+
+      {/* Account Selection Helper Modal */}
+      <AccountSelectionHelperModal
+        isOpen={showAccountHelp}
+        onClose={() => setShowAccountHelp(false)}
+      />
     </div>
   );
 }

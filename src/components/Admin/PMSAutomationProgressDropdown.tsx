@@ -10,9 +10,12 @@ import {
   Bot,
   CheckCircle2,
   ListChecks,
+  RefreshCw,
 } from "lucide-react";
 import {
   fetchAutomationStatus,
+  retryPmsStep,
+  getRetryableStep,
   type AutomationStatusDetail,
   type StepKey,
   type StepDetail,
@@ -24,6 +27,7 @@ interface PMSAutomationProgressDropdownProps {
   jobId: number;
   initialStatus?: AutomationStatusDetail | null;
   onStatusChange?: (status: AutomationStatusDetail | null) => void;
+  onRetryInitiated?: () => void;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -163,11 +167,14 @@ export function PMSAutomationProgressDropdown({
   jobId,
   initialStatus,
   onStatusChange,
+  onRetryInitiated,
 }: PMSAutomationProgressDropdownProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [automationStatus, setAutomationStatus] =
     useState<AutomationStatusDetail | null>(initialStatus ?? null);
   const [isPolling, setIsPolling] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -210,6 +217,35 @@ export function PMSAutomationProgressDropdown({
     };
   }, [isExpanded, automationStatus?.status, fetchStatus]);
 
+  // Handle retry
+  const handleRetry = useCallback(async () => {
+    const retryableStep = getRetryableStep(automationStatus);
+    if (!retryableStep) {
+      setRetryError("No retryable step found");
+      return;
+    }
+
+    setIsRetrying(true);
+    setRetryError(null);
+
+    try {
+      const response = await retryPmsStep(jobId, retryableStep);
+
+      if (response.success) {
+        // Refresh status after successful retry initiation
+        await fetchStatus();
+        onRetryInitiated?.();
+      } else {
+        setRetryError(response.error || "Retry failed");
+      }
+    } catch (error) {
+      console.error("Retry error:", error);
+      setRetryError("Failed to initiate retry");
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [jobId, automationStatus, fetchStatus, onRetryInitiated]);
+
   // Handle case where there's no automation status
   if (!automationStatus) {
     return (
@@ -219,6 +255,12 @@ export function PMSAutomationProgressDropdown({
 
   const { status, currentStep, message, progress, steps, summary } =
     automationStatus;
+
+  // Determine if retry is available and which step
+  const retryableStep = getRetryableStep(automationStatus);
+  const retryStepLabel = retryableStep
+    ? STEP_CONFIG[retryableStep]?.label
+    : null;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
@@ -407,13 +449,41 @@ export function PMSAutomationProgressDropdown({
             </div>
           )}
 
-          {/* Error Display */}
-          {status === "failed" && automationStatus.error && (
+          {/* Error Display with Retry Button */}
+          {status === "failed" && (
             <div className="bg-red-50 rounded border border-red-200 p-3">
-              <div className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
-                Error
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                    Error
+                  </div>
+                  {automationStatus.error && (
+                    <p className="text-sm text-red-600">
+                      {automationStatus.error}
+                    </p>
+                  )}
+                  {retryError && (
+                    <p className="text-sm text-red-600 mt-1">
+                      Retry error: {retryError}
+                    </p>
+                  )}
+                </div>
+                {retryableStep && (
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    {isRetrying ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    {isRetrying ? "Retrying..." : `Re-run ${retryStepLabel}`}
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-red-600">{automationStatus.error}</p>
             </div>
           )}
 

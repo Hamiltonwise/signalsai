@@ -43,10 +43,10 @@ interface OrganizationDetails {
     accountId: number;
     email: string;
     properties: {
-      ga4?: any;
-      gsc?: any;
-      gbp?: any[];
-    };
+      ga4?: { name: string } | null;
+      gsc?: { name: string } | null;
+      gbp?: Array<Record<string, unknown>> | null;
+    } | null;
   }>;
 }
 
@@ -83,8 +83,12 @@ export function OrganizationManagement() {
 
       const data = await response.json();
       setOrganizations(data.organizations);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch organizations";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -119,7 +123,7 @@ export function OrganizationManagement() {
             connections: data.connections,
           },
         }));
-      } catch (error) {
+      } catch {
         toast.error("Failed to load organization details");
       } finally {
         setLoadingDetails(null);
@@ -163,7 +167,7 @@ export function OrganizationManagement() {
       );
       toast.success("Organization updated");
       setEditingOrgId(null);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update organization");
     }
   };
@@ -414,7 +418,7 @@ export function OrganizationManagement() {
                                 <span>Connected via {conn.email}</span>
                               </div>
                               <div className="flex gap-2">
-                                {conn.properties.ga4 ? (
+                                {conn.properties && conn.properties.ga4 ? (
                                   <div className="rounded bg-green-50 px-2 py-1 text-xs text-green-700 border border-green-100">
                                     GA4: {conn.properties.ga4.name}
                                   </div>
@@ -423,7 +427,7 @@ export function OrganizationManagement() {
                                     No GA4
                                   </div>
                                 )}
-                                {conn.properties.gsc ? (
+                                {conn.properties && conn.properties.gsc ? (
                                   <div className="rounded bg-green-50 px-2 py-1 text-xs text-green-700 border border-green-100">
                                     GSC: {conn.properties.gsc.name}
                                   </div>
@@ -432,7 +436,8 @@ export function OrganizationManagement() {
                                     No GSC
                                   </div>
                                 )}
-                                {conn.properties.gbp &&
+                                {conn.properties &&
+                                conn.properties.gbp &&
                                 conn.properties.gbp.length > 0 ? (
                                   <div className="rounded bg-green-50 px-2 py-1 text-xs text-green-700 border border-green-100">
                                     GBP: {conn.properties.gbp.length} locations

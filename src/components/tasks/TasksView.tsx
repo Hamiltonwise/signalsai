@@ -14,6 +14,9 @@ import {
   Layout,
   Users,
   Plus,
+  ChevronDown,
+  HelpCircle,
+  Send,
 } from "lucide-react";
 import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
@@ -65,6 +68,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
   descriptionRef,
   isPulsing,
 }) => {
+  const [showHelp, setShowHelp] = useState(false);
+  const [comment, setComment] = useState("");
+  const [sent, setSent] = useState(false);
   const isDone = task.status === "complete";
 
   const formatDate = (dateString: string) => {
@@ -99,11 +105,22 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
+  const handleHelpSubmit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!comment.trim()) return;
+    setSent(true);
+    setTimeout(() => {
+      setShowHelp(false);
+      setComment("");
+      setSent(false);
+    }, 1500);
+  };
+
   return (
     <div
       id={`task-${task.id}`}
       className={`
-        group relative bg-white rounded-3xl p-8 border transition-all duration-500 select-none text-left
+        group relative bg-white rounded-3xl p-8 border transition-all duration-500 select-none text-left h-full
         ${
           isDone
             ? "border-green-100 bg-green-50/20 opacity-60 shadow-none"
@@ -159,56 +176,100 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </span>
               )}
             </div>
-          </div>
-
-          {task.description && (
-            <div>
-              <p
-                ref={descriptionRef}
-                className={`text-[16px] leading-relaxed font-bold tracking-tight transition-all ${
-                  isDone ? "opacity-30" : "text-slate-500"
-                } ${!isExpanded ? "line-clamp-2" : ""} ${
-                  isClamped ? "cursor-pointer hover:opacity-80" : ""
-                }`}
+            {!isDone && !isReadOnly && (
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isClamped && onExpand) onExpand();
+                  setShowHelp(!showHelp);
                 }}
+                className={`p-2 rounded-xl transition-all duration-300 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${
+                  showHelp
+                    ? "bg-alloro-orange text-white"
+                    : "bg-alloro-bg text-slate-400 hover:text-alloro-orange hover:bg-alloro-orange/5"
+                }`}
               >
-                {parseHighlightTags(task.description, "underline")}
-              </p>
-              {isClamped && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onExpand) onExpand();
-                  }}
-                  className="text-xs text-alloro-orange hover:text-blue-700 font-bold mt-2 uppercase tracking-widest"
-                >
-                  {isExpanded ? "Show less" : "Read more"}
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-6 border-t border-black/5 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
-            <span className="flex items-center gap-2.5">
-              <Clock size={16} className="text-alloro-orange/40" />{" "}
-              {isDone && task.completed_at
-                ? `Done: ${formatDate(task.completed_at)}`
-                : task.due_date
-                ? `Due: ${formatDate(task.due_date)}`
-                : `Due: ${formatDate(task.created_at)}`}
-            </span>
-            <span className="flex items-center gap-2.5">
-              <Users size={16} className="text-alloro-orange/40" />{" "}
-              {task.agent_type || "User"}
-            </span>
-            <div className="flex items-center gap-2">
-              <Layout size={14} className="opacity-40" />
-              <span className="text-slate-500">{task.category}</span>
-            </div>
+                <HelpCircle size={14} /> {showHelp ? "Close" : "Ask Question"}
+              </button>
+            )}
           </div>
+
+          {showHelp ? (
+            <div
+              className="animate-in fade-in slide-in-from-top-2 duration-300 py-4 space-y-4 border-t border-black/5 mt-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <textarea
+                  autoFocus
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Ask your strategist a question..."
+                  className="w-full h-24 bg-alloro-bg border border-black/5 rounded-2xl px-5 py-4 text-alloro-navy font-bold text-sm focus:outline-none focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/5 transition-all resize-none"
+                />
+                <button
+                  onClick={handleHelpSubmit}
+                  disabled={!comment.trim() || sent}
+                  className="absolute bottom-4 right-4 p-2.5 bg-alloro-navy text-white rounded-xl shadow-lg hover:bg-black transition-all active:scale-95 disabled:opacity-30"
+                >
+                  {sent ? <CheckCircle2 size={16} /> : <Send size={16} />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">
+                We'll get back to you shortly.
+              </p>
+            </div>
+          ) : (
+            <>
+              {task.description && (
+                <div>
+                  <p
+                    ref={descriptionRef}
+                    className={`text-[16px] leading-relaxed font-bold tracking-tight transition-all ${
+                      isDone ? "opacity-30" : "text-slate-500"
+                    } ${!isExpanded ? "line-clamp-2" : ""} ${
+                      isClamped ? "cursor-pointer hover:opacity-80" : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isClamped && onExpand) onExpand();
+                    }}
+                  >
+                    {parseHighlightTags(task.description, "underline")}
+                  </p>
+                  {isClamped && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onExpand) onExpand();
+                      }}
+                      className="text-xs text-alloro-orange hover:text-blue-700 font-bold mt-2 uppercase tracking-widest"
+                    >
+                      {isExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-6 border-t border-black/5 text-[10px] font-black text-alloro-textDark/30 uppercase tracking-[0.2em]">
+                <span className="flex items-center gap-2.5">
+                  <Clock size={16} className="text-alloro-orange/40" />{" "}
+                  {isDone && task.completed_at
+                    ? `Done: ${formatDate(task.completed_at)}`
+                    : task.due_date
+                    ? `Due: ${formatDate(task.due_date)}`
+                    : `Due: ${formatDate(task.created_at)}`}
+                </span>
+                <span className="flex items-center gap-2.5">
+                  <Users size={16} className="text-alloro-orange/40" />{" "}
+                  {task.agent_type || "User"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Layout size={14} className="opacity-40" />
+                  <span className="text-slate-500">{task.category}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -226,6 +287,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [completionPct, setCompletionPct] = useState(0);
   const [pulsingTaskId, setPulsingTaskId] = useState<number | null>(null);
+  const [showAlloroTasks, setShowAlloroTasks] = useState(false);
   const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
   const hasScrolledToTask = useRef(false);
 
@@ -425,7 +487,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                 To-Do List
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
-                Your team's action items
+                Tasks for your team
               </span>
             </div>
           </div>
@@ -445,175 +507,31 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
         </div>
       </header>
 
-      <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-20">
+      <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-10 lg:py-16 space-y-12 lg:space-y-16">
         {/* HERO SECTION */}
         <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left pt-2">
           <div className="flex items-center gap-4 mb-3">
             <div className="px-3 py-1.5 bg-alloro-orange/5 rounded-lg text-alloro-orange text-[10px] font-black uppercase tracking-widest border border-alloro-orange/10 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-alloro-orange"></span>
-              Next Steps
+              Actionable Growth
             </div>
           </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            Getting things done.
+            Practice Roadmap.
           </h1>
           <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-            Check off these{" "}
+            Complete these{" "}
             <span className="text-alloro-orange underline underline-offset-8 font-black">
-              Next Steps
+              Team Tasks
             </span>{" "}
-            to help your practice grow.
+            to capture high-value revenue leakage.
           </p>
         </section>
 
-        {/* SPRINT INTEGRITY MONITOR */}
-        <section className="bg-white rounded-[2.5rem] border border-black/5 p-10 lg:p-16 shadow-premium relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-alloro-orange/[0.03] rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
-
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 lg:gap-20">
-            <div
-              className={`w-40 h-40 rounded-full border-[12px] flex items-center justify-center text-2xl font-black font-heading text-alloro-navy relative shrink-0 shadow-inner group-hover:scale-105 transition-all duration-700 ${
-                completionPct === 100
-                  ? "border-green-100 shadow-[0_0_30px_rgba(34,197,94,0.3)]"
-                  : "border-slate-50"
-              }`}
-            >
-              <svg
-                className="absolute inset-0 w-full h-full -rotate-90"
-                viewBox="0 0 160 160"
-              >
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="67"
-                  stroke="currentColor"
-                  strokeWidth="12"
-                  fill="transparent"
-                  className={
-                    completionPct === 100 ? "text-green-50" : "text-slate-100"
-                  }
-                />
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="67"
-                  stroke="currentColor"
-                  strokeWidth="12"
-                  fill="transparent"
-                  strokeDasharray={2 * Math.PI * 67}
-                  strokeDashoffset={
-                    2 * Math.PI * 67 - (2 * Math.PI * 67 * completionPct) / 100
-                  }
-                  strokeLinecap="round"
-                  className={`transition-all duration-1000 ease-out ${
-                    completionPct === 100
-                      ? "text-green-500"
-                      : "text-alloro-orange"
-                  }`}
-                  style={{
-                    filter:
-                      completionPct === 100
-                        ? "drop-shadow(0 0 12px rgba(34,197,94,0.5))"
-                        : "drop-shadow(0 0 8px rgba(214,104,83,0.4))",
-                  }}
-                />
-              </svg>
-              <span
-                className={`font-sans tabular-nums ${
-                  completionPct === 100 ? "text-green-600" : ""
-                }`}
-              >
-                {completionPct}%
-              </span>
-            </div>
-            <div className="flex-1 space-y-4 text-center md:text-left">
-              <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tighter leading-none">
-                Task Completion
-              </h2>
-              <p className="text-lg lg:text-xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg">
-                You have finished{" "}
-                <span className="text-alloro-orange font-black">
-                  {userTasks.filter((t) => t.status === "complete").length} of{" "}
-                  {userTasks.length} tasks
-                </span>{" "}
-                for this month.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
-              <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
-                  Alloro
-                </p>
-                <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
-                  {alloroTasks.length}
-                </p>
-              </div>
-              <div className="bg-slate-50/80 rounded-3xl p-8 border border-black/5 text-center min-w-[120px] group-hover:bg-white transition-colors duration-500">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 leading-none">
-                  Team
-                </p>
-                <p className="text-3xl font-black font-heading text-alloro-navy leading-none font-sans">
-                  {userTasks.length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* TASK SEGMENTATION */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-          {/* Alloro Tasks */}
-          <div className="space-y-10">
-            <div className="flex items-center gap-5 px-2">
-              <div className="w-12 h-12 bg-alloro-navy text-white rounded-2xl flex items-center justify-center shadow-xl">
-                <Zap size={24} />
-              </div>
-              <div className="text-left">
-                <h2 className="text-2xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                  Alloro Tasks
-                </h2>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-                  Done automatically
-                </p>
-              </div>
-            </div>
-            <div className="space-y-6">
-              {alloroTasks.length === 0 ? (
-                <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium">
-                  <div className="p-4 bg-slate-100 rounded-2xl w-fit mx-auto mb-4">
-                    <CheckSquare className="w-10 h-10 text-slate-400" />
-                  </div>
-                  <p className="text-slate-500 font-medium">
-                    No system directives at the moment
-                  </p>
-                </div>
-              ) : (
-                alloroTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isReadOnly={true}
-                    canEdit={false}
-                    isExpanded={expandedTaskId === task.id}
-                    isClamped={clampedTasks.has(task.id)}
-                    isPulsing={pulsingTaskId === task.id}
-                    onExpand={() =>
-                      setExpandedTaskId(
-                        expandedTaskId === task.id ? null : task.id
-                      )
-                    }
-                    descriptionRef={(el) => {
-                      if (el) descriptionRefs.current.set(task.id, el);
-                    }}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* User Tasks */}
-          <div className="space-y-10">
-            <div className="flex items-center gap-5 px-2">
+        {/* TEAM TASKS - MAIN VIEW */}
+        <section className="space-y-10">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-5">
               <div className="w-12 h-12 bg-alloro-orange text-white rounded-2xl flex items-center justify-center shadow-xl">
                 <Layout size={24} />
               </div>
@@ -622,54 +540,206 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                   Team Tasks
                 </h2>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
-                  Things your staff needs to do
+                  Action items for practice staff
                 </p>
               </div>
             </div>
-            <div className="space-y-6">
-              {userTasks.length === 0 ? (
-                <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium">
-                  <div className="p-4 bg-green-50 rounded-2xl w-fit mx-auto mb-4">
-                    <CheckCircle2 className="w-10 h-10 text-green-500" />
-                  </div>
-                  <p className="text-slate-500 font-medium">
-                    All caught up! No tasks pending.
-                  </p>
-                </div>
-              ) : (
-                userTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isReadOnly={false}
-                    isCompleting={completingTaskId === task.id}
-                    canEdit={canEditTasks}
-                    onToggle={() => handleToggleTask(task.id, task.status)}
-                    isExpanded={expandedTaskId === task.id}
-                    isClamped={clampedTasks.has(task.id)}
-                    isPulsing={pulsingTaskId === task.id}
-                    onExpand={() =>
-                      setExpandedTaskId(
-                        expandedTaskId === task.id ? null : task.id
-                      )
-                    }
-                    descriptionRef={(el) => {
-                      if (el) descriptionRefs.current.set(task.id, el);
-                    }}
-                  />
-                ))
-              )}
-
-              {/* Add Manual Task Button */}
-              <button className="w-full py-16 sm:py-20 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-6 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] hover:border-alloro-orange hover:text-alloro-orange hover:bg-white transition-all group shadow-inner-soft active:scale-[0.99]">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
-                  <Plus size={28} />
-                </div>
-                Add a Task
-              </button>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex flex-col items-end mr-4">
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">
+                  Total Completion
+                </span>
+                <span
+                  className={`text-base font-black font-sans leading-none ${
+                    completionPct === 100
+                      ? "text-green-600"
+                      : "text-alloro-navy"
+                  }`}
+                >
+                  {completionPct}%
+                </span>
+              </div>
+              <div
+                className={`w-12 h-12 rounded-xl border flex items-center justify-center shadow-inner-soft relative transition-all duration-500 ${
+                  completionPct === 100
+                    ? "bg-green-500 border-green-500"
+                    : "bg-white border-black/5"
+                }`}
+              >
+                {completionPct === 100 ? (
+                  <CheckCircle2 className="w-6 h-6 text-white" />
+                ) : (
+                  <svg className="absolute inset-0 w-full h-full -rotate-90">
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="40%"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="transparent"
+                      className="text-slate-50"
+                    />
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="40%"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="transparent"
+                      strokeDasharray="100"
+                      strokeDashoffset={100 - completionPct}
+                      strokeLinecap="round"
+                      className="text-alloro-orange transition-all duration-700"
+                    />
+                  </svg>
+                )}
+              </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {userTasks.length === 0 ? (
+              <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium col-span-2">
+                <div className="p-4 bg-green-50 rounded-2xl w-fit mx-auto mb-4">
+                  <CheckCircle2 className="w-10 h-10 text-green-500" />
+                </div>
+                <p className="text-slate-500 font-medium">
+                  All caught up! No tasks pending.
+                </p>
+              </div>
+            ) : (
+              userTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isReadOnly={false}
+                  isCompleting={completingTaskId === task.id}
+                  canEdit={canEditTasks}
+                  onToggle={() => handleToggleTask(task.id, task.status)}
+                  isExpanded={expandedTaskId === task.id}
+                  isClamped={clampedTasks.has(task.id)}
+                  isPulsing={pulsingTaskId === task.id}
+                  onExpand={() =>
+                    setExpandedTaskId(
+                      expandedTaskId === task.id ? null : task.id
+                    )
+                  }
+                  descriptionRef={(el) => {
+                    if (el) descriptionRefs.current.set(task.id, el);
+                  }}
+                />
+              ))
+            )}
+            <button className="h-full min-h-[280px] border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 text-slate-400 font-black uppercase tracking-[0.4em] text-[9px] hover:border-alloro-orange hover:text-alloro-orange hover:bg-white transition-all group shadow-inner-soft active:scale-[0.99]">
+              <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
+                <Plus size={24} />
+              </div>
+              Add Task
+            </button>
+          </div>
         </section>
+
+        {/* ALLORO TASKS - COLLAPSIBLE */}
+        <section className="pt-8">
+          <div className="w-full">
+            <button
+              onClick={() => setShowAlloroTasks(!showAlloroTasks)}
+              className={`w-full flex items-center justify-between p-8 rounded-[2rem] border transition-all duration-500 group shadow-premium ${
+                showAlloroTasks
+                  ? "bg-alloro-navy border-alloro-navy text-white"
+                  : "bg-white border-black/5 text-alloro-navy hover:border-alloro-orange/20 hover:shadow-2xl"
+              }`}
+            >
+              <div className="flex items-center gap-6">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-inner ${
+                    showAlloroTasks
+                      ? "bg-white/10 text-alloro-orange border border-white/10"
+                      : "bg-alloro-navy/5 text-alloro-navy"
+                  }`}
+                >
+                  <Zap
+                    size={22}
+                    className={showAlloroTasks ? "animate-pulse" : ""}
+                  />
+                </div>
+                <div className="text-left">
+                  <h3
+                    className={`text-xl font-black font-heading tracking-tight leading-none ${
+                      showAlloroTasks ? "text-white" : "text-alloro-navy"
+                    }`}
+                  >
+                    Alloro System Intelligence
+                  </h3>
+                  <p
+                    className={`text-[9px] font-black uppercase tracking-widest mt-1.5 ${
+                      showAlloroTasks ? "text-white/40" : "text-slate-300"
+                    }`}
+                  >
+                    {alloroTasks.length} background tasks running
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`transition-transform duration-700 ${
+                  showAlloroTasks
+                    ? "rotate-180 text-alloro-orange"
+                    : "text-slate-300 group-hover:translate-y-1"
+                }`}
+              >
+                <ChevronDown size={24} />
+              </div>
+            </button>
+
+            {showAlloroTasks && (
+              <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {alloroTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      isReadOnly={true}
+                      canEdit={false}
+                      isExpanded={expandedTaskId === task.id}
+                      isClamped={clampedTasks.has(task.id)}
+                      isPulsing={pulsingTaskId === task.id}
+                      onExpand={() =>
+                        setExpandedTaskId(
+                          expandedTaskId === task.id ? null : task.id
+                        )
+                      }
+                      descriptionRef={(el) => {
+                        if (el) descriptionRefs.current.set(task.id, el);
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="p-8 bg-alloro-navy rounded-3xl text-center border border-white/5 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-alloro-orange/5 rounded-full blur-3xl -mr-24 -mt-24"></div>
+                  <p className="text-blue-100/40 text-sm font-bold tracking-tight relative z-10">
+                    Alloro is automatically managing{" "}
+                    <span className="text-white">
+                      Reputation Monitoring, Rank Tracking, and Lead Flow
+                      Integrity
+                    </span>{" "}
+                    in the background. No team interaction required.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="pt-16 pb-12 flex flex-col items-center gap-10 text-center">
+          <img
+            src="/logo.png"
+            alt="Alloro"
+            className="w-16 h-16 rounded-2xl shadow-2xl"
+          />
+          <p className="text-[11px] text-alloro-textDark/20 font-black tracking-[0.4em] uppercase">
+            Alloro Roadmap • v2.6.0
+          </p>
+        </footer>
       </main>
     </div>
   );

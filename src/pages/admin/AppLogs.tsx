@@ -5,6 +5,7 @@ interface LogsData {
   logs: string[];
   total_lines: number;
   timestamp: string;
+  log_type: string;
 }
 
 interface LogsResponse {
@@ -13,25 +14,45 @@ interface LogsResponse {
   message?: string;
 }
 
+// Log type configuration
+const LOG_TABS = [
+  {
+    id: "agent-run",
+    label: "Agent Run",
+    description: "AI agent execution logs",
+  },
+  { id: "email", label: "Email", description: "Email service logs" },
+  {
+    id: "scraping-tool",
+    label: "Scraping Tool",
+    description: "Web scraping logs",
+  },
+] as const;
+
+type LogType = (typeof LOG_TABS)[number]["id"];
+
 /**
  * App Logs Page
  * Displays real-time application logs with auto-refresh
  * Fetches latest 500 lines every 2 seconds
  */
 export default function AppLogs() {
+  const [activeTab, setActiveTab] = useState<LogType>("agent-run");
   const [logs, setLogs] = useState<string[]>([]);
   const [totalLines, setTotalLines] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch logs
+  // Fetch logs for the active tab
   const fetchLogs = async () => {
     try {
-      const response = await fetch("/api/admin/app-logs?lines=500");
+      const response = await fetch(
+        `/api/admin/app-logs?type=${activeTab}&lines=500`
+      );
       const data: LogsResponse = await response.json();
 
       if (data.success) {
@@ -49,15 +70,19 @@ export default function AppLogs() {
     }
   };
 
-  // Clear logs
+  // Clear logs for the active tab
   const handleClearLogs = async () => {
-    if (!window.confirm("Are you sure you want to clear all logs?")) {
+    const tabLabel =
+      LOG_TABS.find((t) => t.id === activeTab)?.label || activeTab;
+    if (
+      !window.confirm(`Are you sure you want to clear all ${tabLabel} logs?`)
+    ) {
       return;
     }
 
     setClearing(true);
     try {
-      const response = await fetch("/api/admin/app-logs", {
+      const response = await fetch(`/api/admin/app-logs?type=${activeTab}`, {
         method: "DELETE",
       });
       const data = await response.json();
@@ -82,10 +107,12 @@ export default function AppLogs() {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Initial fetch
+  // Fetch logs when tab changes
   useEffect(() => {
+    setLoading(true);
+    setLogs([]);
     fetchLogs();
-  }, []);
+  }, [activeTab]);
 
   // Auto-refresh every 2 seconds
   useEffect(() => {
@@ -96,7 +123,7 @@ export default function AppLogs() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, activeTab]);
 
   // Auto-scroll when logs update
   useEffect(() => {
@@ -104,6 +131,8 @@ export default function AppLogs() {
       scrollToBottom();
     }
   }, [logs]);
+
+  const activeTabInfo = LOG_TABS.find((t) => t.id === activeTab);
 
   if (loading) {
     return (
@@ -115,10 +144,31 @@ export default function AppLogs() {
 
   return (
     <div className="space-y-4">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {LOG_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">{activeTabInfo?.description}</span>
+            {" • "}
             Showing latest 500 lines • Total: {totalLines} lines
             {autoRefresh && " • Auto-refreshing every 2s"}
           </p>
@@ -180,7 +230,7 @@ export default function AppLogs() {
         >
           {logs.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400">
-              No logs available
+              No logs available for {activeTabInfo?.label}
             </div>
           ) : (
             <div className="space-y-0.5">

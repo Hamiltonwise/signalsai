@@ -357,7 +357,7 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
       <div className="px-6 py-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
         <div>
           <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
-            Attribution Matrix (YTD)
+            See What Referrals Are Giving You the Most Value
           </h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
             Combined Doctor & Marketing Sources

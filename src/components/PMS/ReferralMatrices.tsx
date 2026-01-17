@@ -1,11 +1,7 @@
 import React, { useState, useMemo } from "react";
-import {
-  BarChart3,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { ClientProgressTimeline } from "./ClientProgressTimeline";
+import type { AutomationStatusDetail } from "../../api/pms";
 
 // Types for Referral Engine Data
 export interface DoctorReferral {
@@ -120,18 +116,22 @@ const formatCurrency = (value: number | null | undefined): string => {
   })}`;
 };
 
-// Empty State Component
+// Empty State Component - Shows "not started" timeline with all steps greyed out
 const MatricesEmptyState = () => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium p-12 text-center">
-    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-      <BarChart3 size={32} className="text-slate-300 opacity-50" />
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium p-8 sm:p-12">
+    <div className="text-center mb-8">
+      <h3 className="text-lg font-bold text-alloro-navy mb-2">
+        No source data available
+      </h3>
+      <p className="text-sm text-slate-500 font-medium">
+        Upload PMS data to see attribution
+      </p>
     </div>
-    <h3 className="text-sm font-semibold text-slate-600 mb-1">
-      No source data available
-    </h3>
-    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-      Upload PMS data to see attribution
-    </p>
+
+    {/* Progress Timeline - Not Started State (all greyed out) */}
+    <div className="border-t border-slate-100 pt-8">
+      <ClientProgressTimeline automationStatus={null} showNotStarted={true} />
+    </div>
   </div>
 );
 
@@ -225,36 +225,61 @@ const MatricesLoadingSkeleton = () => (
 );
 
 // Processing State Component - Shows when monthly agents are generating new insights
-const MatricesProcessingState = () => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-premium p-12 text-center">
-    <div className="w-16 h-16 bg-alloro-orange/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-      <div className="relative">
-        <Loader2 size={32} className="text-alloro-orange animate-spin" />
-        <Sparkles
-          size={14}
-          className="text-alloro-orange absolute -top-1 -right-1"
+interface MatricesProcessingStateProps {
+  automationStatus?: AutomationStatusDetail | null;
+  onConfirmationClick?: () => void;
+}
+
+const MatricesProcessingState: React.FC<MatricesProcessingStateProps> = ({
+  automationStatus,
+  onConfirmationClick,
+}) => {
+  // Determine if we're waiting for client approval
+  const isAwaitingClientApproval =
+    automationStatus?.status === "awaiting_approval" &&
+    automationStatus?.currentStep === "client_approval";
+
+  // Dynamic title and subtitle based on state
+  const title = isAwaitingClientApproval
+    ? "Your PMS Data is Ready for Review"
+    : "Generating Your Attribution Matrix";
+
+  const subtitle = isAwaitingClientApproval
+    ? "Please review your data and confirm using the banner above"
+    : "Full transparency • Keep track of your progress below";
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-premium p-8 sm:p-12">
+      <div className="text-center mb-8">
+        <h3 className="text-lg font-bold text-alloro-navy mb-2">{title}</h3>
+        <p className="text-sm text-slate-500 font-medium">{subtitle}</p>
+      </div>
+
+      {/* Progress Timeline */}
+      <div className="border-t border-slate-100 pt-8">
+        <ClientProgressTimeline
+          automationStatus={automationStatus ?? null}
+          onConfirmationClick={onConfirmationClick}
         />
       </div>
     </div>
-    <h3 className="text-lg font-bold text-alloro-navy mb-2">
-      Generating Your Attribution Matrix
-    </h3>
-    <p className="text-sm text-slate-500 font-medium">
-      We'll notify you when ready • Usually 2-3 minutes
-    </p>
-  </div>
-);
+  );
+};
 
 interface ReferralMatricesProps {
   referralData: ReferralEngineData | null;
   isLoading?: boolean;
   isPending?: boolean;
+  automationStatus?: AutomationStatusDetail | null;
+  onConfirmationClick?: () => void;
 }
 
 export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
   referralData,
   isLoading = false,
   isPending = false,
+  automationStatus = null,
+  onConfirmationClick,
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -342,11 +367,26 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
     return <MatricesLoadingSkeleton />;
   }
 
-  // Show processing state when monthly agents are running
-  if (isPending) {
-    return <MatricesProcessingState />;
+  // Show processing state when automation is active (but NOT completed) OR monthly agents are running
+  // Don't show processing state if automation has completed - let the matrix display
+  const isAutomationActive = automationStatus && automationStatus.status !== "completed";
+
+  // If isPending is true but we have no automationStatus, show loading skeleton
+  // This happens when we're waiting for referral data after automation completed
+  if (isPending && !automationStatus) {
+    return <MatricesLoadingSkeleton />;
   }
 
+  if (isPending || isAutomationActive) {
+    return (
+      <MatricesProcessingState
+        automationStatus={automationStatus}
+        onConfirmationClick={onConfirmationClick}
+      />
+    );
+  }
+
+  // Only show empty state if there's no data AND no active automation
   if (!referralData || unifiedRows.length === 0) {
     return <MatricesEmptyState />;
   }

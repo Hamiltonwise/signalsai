@@ -206,13 +206,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Main navigation items
   const mainNavItems = [
     {
-      label: "Practise Hub",
+      label: "Practice Hub",
       icon: <LayoutDashboard size={18} />,
       path: "/dashboard",
       showDuringOnboarding: true,
     },
     {
-      label: "Revenue",
+      label: "Referrals Hub",
       icon: <Activity size={18} />,
       path: "/pmsStatistics",
       showDuringOnboarding: false,

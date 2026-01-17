@@ -27,9 +27,12 @@ import {
 
 import {
   fetchPmsKeyData,
+  fetchActiveAutomationJobs,
+  fetchAutomationStatus,
   updatePmsJobClientApproval,
   uploadPMSData,
   type PmsKeyDataResponse,
+  type AutomationStatusDetail,
 } from "../../api/pms";
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
 import { PMSManualEntryModal } from "./PMSManualEntryModal";
@@ -146,6 +149,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isIngestionHighlighted, setIsIngestionHighlighted] = useState(false);
+  const [isApprovalBannerHighlighted, setIsApprovalBannerHighlighted] =
+    useState(false);
 
   // Referral Engine data state
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
@@ -153,6 +158,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   );
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralPending, setReferralPending] = useState(false);
+  const [automationStatus, setAutomationStatus] =
+    useState<AutomationStatusDetail | null>(null);
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
@@ -345,6 +352,284 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     loadReferralData();
   }, [loadReferralData]);
 
+  // Check for active automation on mount (handles page refresh during automation)
+  // Also handles the case where client approval banner should show the timeline
+  useEffect(() => {
+    const checkForActiveAutomation = async () => {
+      if (!domain) return;
+
+      console.log("🔍 Initial check for active automation on mount");
+
+      try {
+        const response = await fetchActiveAutomationJobs(domain);
+
+        if (response.success && response.data?.jobs?.length) {
+          const activeJob = response.data.jobs[0];
+          console.log("🔍 Found active job on mount:", {
+            jobId: activeJob.jobId,
+            status: activeJob.automationStatus?.status,
+            currentStep: activeJob.automationStatus?.currentStep,
+          });
+
+          if (activeJob?.automationStatus) {
+            // Set automation status
+            setAutomationStatus(activeJob.automationStatus);
+
+            // If automation is still in progress (not completed), set pending state
+            // This includes 'awaiting_approval' status for client confirmation step
+            const activeStatuses = [
+              "pending",
+              "processing",
+              "awaiting_approval",
+            ];
+            if (activeStatuses.includes(activeJob.automationStatus.status)) {
+              console.log(
+                "🔍 Setting referralPending = true for active automation"
+              );
+              setReferralPending(true);
+              setReferralData(null);
+            }
+          }
+        } else {
+          console.log("🔍 No active automation found on mount");
+        }
+      } catch (err) {
+        console.error("❌ Error checking for active automation:", err);
+      }
+    };
+
+    checkForActiveAutomation();
+  }, [domain]); // Run once on mount when domain is available
+
+  // Fetch automation status when processing is pending
+  const loadAutomationStatus = useCallback(async () => {
+    if (!domain) {
+      console.log("🔍 loadAutomationStatus: no domain");
+      setAutomationStatus(null);
+      return;
+    }
+
+    console.log("🔍 loadAutomationStatus: fetching for domain", domain);
+
+    try {
+      const response = await fetchActiveAutomationJobs(domain);
+
+      console.log("🔍 fetchActiveAutomationJobs response:", {
+        success: response.success,
+        jobCount: response.data?.jobs?.length,
+        jobs: response.data?.jobs,
+      });
+
+      if (response.success && response.data?.jobs?.length) {
+        // Get the most recent active job for this domain
+        const activeJob = response.data.jobs[0];
+        console.log("🔍 Active job found:", {
+          jobId: activeJob.jobId,
+          status: activeJob.automationStatus?.status,
+          currentStep: activeJob.automationStatus?.currentStep,
+        });
+
+        if (activeJob?.automationStatus) {
+          setAutomationStatus(activeJob.automationStatus);
+
+          // If automation is complete, refresh referral data
+          if (activeJob.automationStatus.status === "completed") {
+            console.log("🔍 Automation completed, refreshing referral data");
+            setReferralPending(false);
+            loadReferralData();
+          }
+
+          // If automation reached client_approval, refresh key data so banner shows
+          if (
+            activeJob.automationStatus.status === "awaiting_approval" &&
+            activeJob.automationStatus.currentStep === "client_approval"
+          ) {
+            console.log(
+              "🔍 Automation reached client_approval, refreshing key data for banner"
+            );
+            loadKeyData({ silent: true });
+          }
+        }
+      } else {
+        // No active jobs found - automation might have completed
+        console.log("🔍 No active jobs found, automation may have completed");
+
+        // If we previously had an active automation, it means it completed
+        // Clear the automation status and refresh the referral data
+        if (automationStatus || referralPending) {
+          console.log(
+            "🔍 Clearing automation state and refreshing data after completion"
+          );
+          setAutomationStatus(null);
+          setReferralPending(false);
+          // Set loading state while we fetch the actual matrix data
+          setReferralLoading(true);
+          // Refresh referral data to show the actual matrix
+          loadReferralData();
+        } else {
+          setAutomationStatus(null);
+        }
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch automation status:", err);
+      setAutomationStatus(null);
+    }
+  }, [domain, loadReferralData, loadKeyData]);
+
+  // Poll for automation status when referralPending is true OR when there's an active automation
+  // This ensures real-time updates regardless of how the user got to this page
+  // Uses sequential polling: wait for response, then wait 1 second before next request
+  useEffect(() => {
+    if (!domain) return;
+
+    // Define statuses that should trigger polling
+    const activeStatuses = ["pending", "processing", "awaiting_approval"];
+    const shouldPoll =
+      referralPending ||
+      (automationStatus && activeStatuses.includes(automationStatus.status));
+
+    if (!shouldPoll) {
+      return;
+    }
+
+    let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const pollSequentially = async () => {
+      if (isCancelled) return;
+
+      try {
+        await loadAutomationStatus();
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+
+      if (!isCancelled) {
+        // Wait 1 second after response before next poll
+        timeoutId = setTimeout(pollSequentially, 1000);
+      }
+    };
+
+    // Start polling immediately
+    pollSequentially();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [domain, referralPending, automationStatus?.status, loadAutomationStatus]);
+
+  // Background polling: Check for new automation jobs periodically
+  // This catches cases where automation starts from admin panel while user is viewing page
+  // Uses sequential polling: wait for response, then wait 10 seconds before next request
+  useEffect(() => {
+    if (!domain) return;
+
+    let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const checkForNewAutomation = async () => {
+      if (isCancelled) return;
+
+      try {
+        const response = await fetchActiveAutomationJobs(domain);
+
+        if (response.success && response.data?.jobs?.length) {
+          const activeJob = response.data.jobs[0];
+
+          if (activeJob?.automationStatus) {
+            const status = activeJob.automationStatus.status;
+            const activeStatuses = [
+              "pending",
+              "processing",
+              "awaiting_approval",
+            ];
+
+            // If we found an active automation that we weren't tracking, start tracking it
+            if (activeStatuses.includes(status)) {
+              console.log("🔍 Background poll: Found active automation", {
+                status,
+                currentStep: activeJob.automationStatus.currentStep,
+              });
+
+              setAutomationStatus(activeJob.automationStatus);
+
+              // Set referralPending to trigger the faster polling
+              if (!referralPending) {
+                setReferralPending(true);
+                setReferralData(null);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Background automation check failed:", err);
+      }
+
+      if (!isCancelled) {
+        // Wait 10 seconds after response before next background check
+        timeoutId = setTimeout(checkForNewAutomation, 10000);
+      }
+    };
+
+    // Start background polling after initial 10 second delay
+    timeoutId = setTimeout(checkForNewAutomation, 10000);
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [domain, referralPending]);
+
+  // Fallback: Fetch automation status for specific job when client approval banner shows
+  // but we don't have automation status from the active jobs endpoint
+  useEffect(() => {
+    const fetchJobAutomationStatus = async () => {
+      // Only run if:
+      // 1. Client approval banner should be shown
+      // 2. We don't already have automation status
+      // 3. We have a valid latestJobId
+      const shouldShowClientApproval =
+        !isLoading &&
+        latestJobIsApproved === true &&
+        latestJobIsClientApproved !== true &&
+        latestJobId !== null;
+
+      if (!shouldShowClientApproval || automationStatus || !latestJobId) {
+        return;
+      }
+
+      console.log("🔍 Fetching automation status for job", latestJobId);
+
+      try {
+        const response = await fetchAutomationStatus(latestJobId);
+
+        if (response.success && response.data?.automationStatus) {
+          console.log("🔍 Got automation status for job:", {
+            jobId: latestJobId,
+            status: response.data.automationStatus.status,
+            currentStep: response.data.automationStatus.currentStep,
+          });
+          setAutomationStatus(response.data.automationStatus);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch job automation status:", err);
+      }
+    };
+
+    fetchJobAutomationStatus();
+  }, [
+    isLoading,
+    latestJobIsApproved,
+    latestJobIsClientApproved,
+    latestJobId,
+    automationStatus,
+  ]);
+
   const monthlyData = useMemo(() => {
     if (!keyData?.months?.length) {
       return [];
@@ -524,7 +809,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         } catch {
           // Ignore localStorage errors
         }
+
+        // Set pending state to show processing timeline
+        setReferralPending(true);
+        setReferralData(null);
+
         await loadKeyData({ silent: true });
+
+        // Fetch automation status to show timeline progress
+        await loadAutomationStatus();
       } else {
         setInlineStatus("error");
         setInlineMessage(json?.error || "Upload failed");
@@ -560,6 +853,31 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }, 700);
       }, 200);
     }
+  };
+
+  // Scroll to Client Approval Banner with highlight animation
+  const scrollToApprovalBanner = () => {
+    const tryScroll = (attempts = 0) => {
+      const approvalBanner = document.getElementById("client-approval-banner");
+      if (approvalBanner) {
+        approvalBanner.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Trigger highlight animation after short delay
+        setTimeout(() => {
+          setIsApprovalBannerHighlighted(true);
+          // Remove highlight after 700ms
+          setTimeout(() => {
+            setIsApprovalBannerHighlighted(false);
+          }, 700);
+        }, 200);
+      } else if (attempts < 3) {
+        // Banner might not be rendered yet, retry after short delay
+        setTimeout(() => tryScroll(attempts + 1), 100);
+      } else {
+        // Fallback: scroll to top where banner should appear
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    tryScroll();
   };
 
   return (
@@ -630,9 +948,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         {/* Client Approval Banner */}
         {showClientApprovalBanner && (
           <motion.div
+            id="client-approval-banner"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 rounded-2xl border border-alloro-orange/20 bg-alloro-orange/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-premium"
+            className={`flex flex-col gap-4 rounded-2xl border bg-alloro-orange/5 p-6 sm:flex-row sm:items-center sm:justify-between shadow-premium transition-all duration-300 ${
+              isApprovalBannerHighlighted
+                ? "border-2 border-alloro-orange ring-8 ring-alloro-orange/30 scale-[1.01]"
+                : "border-alloro-orange/20"
+            }`}
           >
             <div className="flex-1 space-y-1">
               <div className="font-bold text-alloro-navy text-base">
@@ -855,22 +1178,33 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               </div>
             </section>
 
-            {/* 3. INTELLIGENCE HUB MATRICES - Only show when not in client approval state */}
-            {!showClientApprovalBanner && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-4 px-2">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
-                    Intelligence Hub Matrices
-                  </h3>
-                  <div className="h-px flex-1 bg-slate-100"></div>
-                </div>
+            {/* 3. INTELLIGENCE HUB MATRICES - Always show, including during client approval */}
+            {/* When client approval banner is shown, show the progress timeline at "Your confirmation" step */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-4 px-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
+                  Intelligence Hub Matrices
+                </h3>
+                <div className="h-px flex-1 bg-slate-100"></div>
+              </div>
+              <>
+                {console.log("🎯 Rendering ReferralMatrices with:", {
+                  hasReferralData: !!referralData,
+                  isLoading: referralLoading,
+                  isPending: referralPending,
+                  hasAutomationStatus: !!automationStatus,
+                  automationStep: automationStatus?.currentStep,
+                  showClientApprovalBanner,
+                })}
                 <ReferralMatrices
                   referralData={referralData}
                   isLoading={referralLoading}
-                  isPending={referralPending}
+                  isPending={referralPending || showClientApprovalBanner}
+                  automationStatus={automationStatus}
+                  onConfirmationClick={scrollToApprovalBanner}
                 />
-              </section>
-            )}
+              </>
+            </section>
 
             {/* 4. INGESTION HUB - Matching newdesign full-width style */}
             {canUploadPMS ? (
@@ -1074,12 +1408,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         isOpen={isManualEntryOpen}
         onClose={() => setIsManualEntryOpen(false)}
         clientId={domain}
-        onSuccess={() => {
+        onSuccess={async () => {
           setIsManualEntryOpen(false);
           // Set pending state to show processing indicator for referral matrices
           setReferralPending(true);
           setReferralData(null);
-          loadKeyData();
+          await loadKeyData();
+          // Fetch automation status to show timeline progress
+          await loadAutomationStatus();
         }}
       />
     </div>

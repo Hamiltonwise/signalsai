@@ -661,7 +661,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <IntelligencePulse />
             <div className="flex flex-col text-left">
               <h1 className="text-[11px] font-black font-heading text-alloro-textDark uppercase tracking-[0.25em] leading-none">
-                Practise Hub
+                Practice Hub
               </h1>
               <span className="text-[9px] font-bold text-alloro-textDark/40 uppercase tracking-widest mt-1.5 hidden sm:inline">
                 Overview of your Practice
@@ -733,125 +733,67 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           )}
         </section>
 
-        {/* SECTION 1: INTELLIGENCE BRIEFING BANNER - Show skeleton while loading, hide if no data after load */}
-        {tasksLoading ? (
-          <section className="animate-pulse">
-            <div className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl h-32 skeleton-shimmer"></div>
-          </section>
-        ) : criticalActionsCount > 0 ? (
-          <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
-            <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
-              <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
-              <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
-                <div className="flex items-start sm:items-center gap-6">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shadow-inner shrink-0 group">
-                    <Zap
-                      size={24}
-                      className="text-white group-hover:scale-110 transition-transform"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
-                      Important Updates
-                    </h3>
-                    <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
-                      You have{" "}
-                      <span className="text-white font-black underline decoration-white/40 underline-offset-4">
-                        {criticalActionsCount} tasks to do
-                      </span>{" "}
-                      that could save $50k+ in revenue.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate("/tasks")}
-                  className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
-                >
-                  SEE TASKS <ArrowRight size={16} />
-                </button>
-              </div>
+        {/* SECTION 2: MONTHLY PRACTICE TOTALS - matches newdesign */}
+        {pmsMetrics && (
+          <section className="space-y-8 pt-4">
+            <div className="flex items-center gap-4 px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
+                Monthly Practice Totals
+              </h3>
+              <div className="h-px w-full bg-black/10"></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+              <MetricCard
+                label="New Starts"
+                value={pmsMetrics.selfReferrals}
+                trend={
+                  pmsMetrics.selfReferralChange !== 0
+                    ? `${
+                        pmsMetrics.selfReferralChange >= 0 ? "+" : ""
+                      }${pmsMetrics.selfReferralChange.toFixed(0)}%`
+                    : undefined
+                }
+                isHighlighted
+              />
+              <MetricCard
+                label="Referrals"
+                value={pmsMetrics.totalReferrals}
+                trend={
+                  pmsMetrics.referralChange !== 0
+                    ? `${
+                        pmsMetrics.referralChange >= 0 ? "+" : ""
+                      }${pmsMetrics.referralChange.toFixed(0)}%`
+                    : undefined
+                }
+              />
+              <MetricCard
+                label="Production"
+                value={`$${(pmsMetrics.production / 1000).toFixed(0)}K`}
+                trend={
+                  pmsMetrics.productionChange !== 0
+                    ? `${
+                        pmsMetrics.productionChange >= 0 ? "+" : ""
+                      }${pmsMetrics.productionChange.toFixed(0)}%`
+                    : undefined
+                }
+              />
+              <MetricCard
+                label="Market Coverage"
+                value={
+                  currentLocationData
+                    ? `${Math.round(
+                        ((currentLocationData.totalCompetitors -
+                          currentLocationData.rank) /
+                          currentLocationData.totalCompetitors) *
+                          100
+                      )}%`
+                    : "--%"
+                }
+                trend={currentLocationData ? "+1%" : undefined}
+              />
             </div>
           </section>
-        ) : null}
-
-        {/* SECTION 2: CRITICAL PRIORITY / URGENT INTERVENTION - Show skeleton while loading, hide if no data after load */}
-        {(() => {
-          // Show skeleton while loading
-          if (tasksLoading) {
-            return (
-              <section className="animate-pulse">
-                <div className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex-1 space-y-4 w-full">
-                      <div className="h-6 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
-                      <div className="h-10 w-3/4 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
-                      <div className="h-6 w-full max-w-xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
-                    </div>
-                    <div className="h-14 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl skeleton-shimmer shrink-0"></div>
-                  </div>
-                </div>
-              </section>
-            );
-          }
-
-          const immediateTask = tasks.find((task) => {
-            try {
-              const metadata =
-                typeof task.metadata === "string"
-                  ? JSON.parse(task.metadata)
-                  : task.metadata;
-              return (
-                metadata?.urgency === "Immediate" ||
-                metadata?.urgency === "IMMEDIATE"
-              );
-            } catch {
-              return false;
-            }
-          });
-
-          // Hide section if no immediate task found after loading
-          if (!immediateTask) {
-            return null;
-          }
-
-          return (
-            <section className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium relative flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="flex-1 text-left space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
-                    ACTION NEEDED
-                  </span>
-                </div>
-                <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
-                  {parseHighlightTags(
-                    (immediateTask.title || "").replace(/<[^>]*>/g, ""),
-                    "highlight-red"
-                  )}
-                </h2>
-                <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
-                  {parseHighlightTags(
-                    (immediateTask.description || "").replace(/<[^>]*>/g, ""),
-                    "highlight-red"
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  // Navigate to tasks with the task ID for scrolling
-                  const taskId = immediateTask.id;
-                  navigate("/tasks", { state: { scrollToTaskId: taskId } });
-                }}
-                className="w-full sm:w-auto px-8 py-4 bg-[#11151C] text-white rounded-[1rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 shrink-0 active:scale-95 group"
-              >
-                See in Tasks{" "}
-                <ChevronRight
-                  size={16}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
-              </button>
-            </section>
-          );
-        })()}
+        )}
 
         {/* SECTION 3: RANKING STRATEGY - PREMIUM DESIGN - matches newdesign */}
         {rankingData && rankingData.length > 0 && (
@@ -997,128 +939,188 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           </section>
         )}
 
-        {/* SECTION 4: VITALS & QUICK WINS & RISKS - matches newdesign */}
-        {pmsMetrics && (
+        {/* SECTION 4: INTELLIGENCE BRIEFING BANNER - Show skeleton while loading, hide if no data after load */}
+        {tasksLoading ? (
+          <section className="animate-pulse">
+            <div className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl h-32 skeleton-shimmer"></div>
+          </section>
+        ) : criticalActionsCount > 0 ? (
+          <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
+            <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
+              <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
+                <div className="flex items-start sm:items-center gap-6">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shadow-inner shrink-0 group">
+                    <Zap
+                      size={24}
+                      className="text-white group-hover:scale-110 transition-transform"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl sm:text-2xl font-black font-heading tracking-tight leading-none">
+                      Important Updates
+                    </h3>
+                    <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
+                      You have{" "}
+                      <span className="text-white font-black underline decoration-white/40 underline-offset-4">
+                        {criticalActionsCount} tasks to do
+                      </span>{" "}
+                      that could save $50k+ in revenue.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate("/tasks")}
+                  className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
+                >
+                  SEE TASKS <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* SECTION 5: CRITICAL PRIORITY / URGENT INTERVENTION - Show skeleton while loading, hide if no data after load */}
+        {(() => {
+          // Show skeleton while loading
+          if (tasksLoading) {
+            return (
+              <section className="animate-pulse">
+                <div className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1 space-y-4 w-full">
+                      <div className="h-6 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                      <div className="h-10 w-3/4 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                      <div className="h-6 w-full max-w-xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded skeleton-shimmer"></div>
+                    </div>
+                    <div className="h-14 w-40 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl skeleton-shimmer shrink-0"></div>
+                  </div>
+                </div>
+              </section>
+            );
+          }
+
+          const immediateTask = tasks.find((task) => {
+            try {
+              const metadata =
+                typeof task.metadata === "string"
+                  ? JSON.parse(task.metadata)
+                  : task.metadata;
+              return (
+                metadata?.urgency === "Immediate" ||
+                metadata?.urgency === "IMMEDIATE"
+              );
+            } catch {
+              return false;
+            }
+          });
+
+          // Hide section if no immediate task found after loading
+          if (!immediateTask) {
+            return null;
+          }
+
+          return (
+            <section className="bg-white border border-slate-100 rounded-2xl p-6 lg:px-10 lg:py-8 shadow-premium relative flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="flex-1 text-left space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="px-2.5 py-1 bg-red-50 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-red-100 leading-none">
+                    ACTION NEEDED
+                  </span>
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                  {parseHighlightTags(
+                    (immediateTask.title || "").replace(/<[^>]*>/g, ""),
+                    "highlight-red"
+                  )}
+                </h2>
+                <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
+                  {parseHighlightTags(
+                    (immediateTask.description || "").replace(/<[^>]*>/g, ""),
+                    "highlight-red"
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  // Navigate to tasks with the task ID for scrolling
+                  const taskId = immediateTask.id;
+                  navigate("/tasks", { state: { scrollToTaskId: taskId } });
+                }}
+                className="w-full sm:w-auto px-8 py-4 bg-[#11151C] text-white rounded-[1rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 shrink-0 active:scale-95 group"
+              >
+                See in Tasks{" "}
+                <ChevronRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </button>
+            </section>
+          );
+        })()}
+
+        {/* SECTION 6: WHAT'S WORKING VS WHAT'S NOT */}
+        {(wins || risks) && (
           <section className="space-y-8 pt-4">
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-                Monthly Practice Totals
+                What's working vs What's not
               </h3>
               <div className="h-px w-full bg-black/10"></div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-              <MetricCard
-                label="New Starts"
-                value={pmsMetrics.selfReferrals}
-                trend={
-                  pmsMetrics.selfReferralChange !== 0
-                    ? `${
-                        pmsMetrics.selfReferralChange >= 0 ? "+" : ""
-                      }${pmsMetrics.selfReferralChange.toFixed(0)}%`
-                    : undefined
-                }
-                isHighlighted
-              />
-              <MetricCard
-                label="Referrals"
-                value={pmsMetrics.totalReferrals}
-                trend={
-                  pmsMetrics.referralChange !== 0
-                    ? `${
-                        pmsMetrics.referralChange >= 0 ? "+" : ""
-                      }${pmsMetrics.referralChange.toFixed(0)}%`
-                    : undefined
-                }
-              />
-              <MetricCard
-                label="Production"
-                value={`$${(pmsMetrics.production / 1000).toFixed(0)}K`}
-                trend={
-                  pmsMetrics.productionChange !== 0
-                    ? `${
-                        pmsMetrics.productionChange >= 0 ? "+" : ""
-                      }${pmsMetrics.productionChange.toFixed(0)}%`
-                    : undefined
-                }
-              />
-              <MetricCard
-                label="Market Coverage"
-                value={
-                  currentLocationData
-                    ? `${Math.round(
-                        ((currentLocationData.totalCompetitors -
-                          currentLocationData.rank) /
-                          currentLocationData.totalCompetitors) *
-                          100
-                      )}%`
-                    : "--%"
-                }
-                trend={currentLocationData ? "+1%" : undefined}
-              />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+              {wins && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                    <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
+                      <TrendingUp size={16} />
+                    </div>
+                    Good News
+                  </div>
+                  <div className="space-y-3">
+                    {wins.map((win: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                      >
+                        <CheckCircle2
+                          className="text-green-500 shrink-0 mt-0.5"
+                          size={20}
+                        />
+                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                          {win}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {risks && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
+                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
+                      <AlertTriangle size={16} />
+                    </div>
+                    Risks to Fix
+                  </div>
+                  <div className="space-y-3">
+                    {risks.map((risk: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
+                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                          {risk}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {(wins || risks) && (
-              <div className="pt-8 space-y-8">
-                <div className="flex items-center gap-4 px-1">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
-                    What's working vs What's not
-                  </h3>
-                  <div className="h-px w-full bg-black/10"></div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-                  {wins && (
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
-                        <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
-                          <TrendingUp size={16} />
-                        </div>
-                        Good News
-                      </div>
-                      <div className="space-y-3">
-                        {wins.map((win: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
-                          >
-                            <CheckCircle2
-                              className="text-green-500 shrink-0 mt-0.5"
-                              size={20}
-                            />
-                            <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
-                              {win}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {risks && (
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
-                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
-                          <AlertTriangle size={16} />
-                        </div>
-                        Risks to Fix
-                      </div>
-                      <div className="space-y-3">
-                        {risks.map((risk: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
-                          >
-                            <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
-                            <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
-                              {risk}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </section>
         )}
 

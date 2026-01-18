@@ -330,10 +330,26 @@ export default function Dashboard() {
                         </div>
                       }
                     >
-                      <PMSVisualPillars
-                        domain={selectedDomain?.domain}
-                        googleAccountId={userProfile?.googleAccountId ?? null}
-                      />
+                      {/* Only render PMSVisualPillars when domain is available to prevent wrong domain request */}
+                      {selectedDomain?.domain ? (
+                        <PMSVisualPillars
+                          domain={selectedDomain.domain}
+                          googleAccountId={userProfile?.googleAccountId ?? null}
+                        />
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {[...Array(4)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="bg-white rounded-[32px] p-6 h-48 animate-pulse shadow-sm border border-slate-100"
+                            >
+                              <div className="h-4 bg-slate-100 rounded-full w-2/3 mb-4"></div>
+                              <div className="h-8 bg-slate-100 rounded-full w-1/2 mb-2"></div>
+                              <div className="h-32 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl"></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </React.Suspense>
                   )}
 

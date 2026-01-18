@@ -43,7 +43,8 @@ interface PMSVisualPillarsProps {
   googleAccountId?: number | null;
 }
 
-const DEFAULT_DOMAIN = "artfulorthodontics.com";
+// Removed DEFAULT_DOMAIN - domain should always be provided by parent component
+// to prevent race condition where wrong domain is used on initial render
 
 const formatMonthLabel = (value: string): string => {
   if (!value) {
@@ -127,7 +128,7 @@ const MetricCard = ({
 // );
 
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
-  domain = DEFAULT_DOMAIN,
+  domain,
   googleAccountId,
 }) => {
   const [inlineFile, setInlineFile] = useState<File | null>(null);
@@ -166,7 +167,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const canUploadPMS = userRole === "admin" || userRole === "manager";
 
   const storageKey = useMemo(
-    () => `pmsProcessing:${domain || DEFAULT_DOMAIN}`,
+    () => `pmsProcessing:${domain || "unknown"}`,
     [domain]
   );
 
@@ -174,6 +175,12 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   const loadKeyData = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
+      // Guard: Skip loading if domain is not available
+      if (!domain) {
+        setIsLoading(false);
+        return;
+      }
+
       if (!silent) {
         setIsLoading(true);
         setError(null);
@@ -187,6 +194,17 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }
 
         if (response?.success && response.data) {
+          // Only log if not silent mode (to reduce console noise during polling)
+          if (!silent) {
+            console.log("📊 loadKeyData response:", {
+              domain,
+              monthsCount: response.data.months?.length,
+              sourcesCount: response.data.sources?.length,
+              stats: response.data.stats,
+              months: response.data.months,
+              sources: response.data.sources,
+            });
+          }
           setKeyData(response.data);
         } else {
           setKeyData(null);
@@ -218,6 +236,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   useEffect(() => {
     isMountedRef.current = true;
+    console.log("🎯 Initial component mount - loading key data for first time");
     loadKeyData();
     return () => {
       isMountedRef.current = false;
@@ -484,13 +503,39 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
     // Define statuses that should trigger polling
     const activeStatuses = ["pending", "processing", "awaiting_approval"];
+
+    // Steps where polling should NOT happen (nothing changes until user/admin acts)
+    const noPollingSteps = ["client_approval"]; // Only skip polling for client_approval
+    const noPollingStatuses = ["completed"]; // Don't poll when complete
+
+    const isOnNonPollingStep =
+      (automationStatus &&
+        automationStatus.status === "awaiting_approval" &&
+        noPollingSteps.includes(automationStatus.currentStep)) ||
+      (automationStatus &&
+        noPollingStatuses.includes(automationStatus.status));
+
     const shouldPoll =
-      referralPending ||
-      (automationStatus && activeStatuses.includes(automationStatus.status));
+      !isOnNonPollingStep &&
+      (referralPending ||
+        (automationStatus && activeStatuses.includes(automationStatus.status)));
 
     if (!shouldPoll) {
+      if (isOnNonPollingStep) {
+        if (automationStatus?.status === "completed") {
+          console.log(`⏸️ Polling DISABLED - automation completed`);
+        } else {
+          console.log(
+            `⏸️ Polling DISABLED - on ${automationStatus?.currentStep} (approval step)`
+          );
+        }
+      }
       return;
     }
+
+    console.log(
+      `▶️ Polling ENABLED - referralPending: ${referralPending}, status: ${automationStatus?.status}, step: ${automationStatus?.currentStep}`
+    );
 
     let isCancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -549,10 +594,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
             // If we found an active automation that we weren't tracking, start tracking it
             if (activeStatuses.includes(status)) {
-              console.log("🔍 Background poll: Found active automation", {
-                status,
-                currentStep: activeJob.automationStatus.currentStep,
-              });
 
               setAutomationStatus(activeJob.automationStatus);
 
@@ -690,6 +731,27 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       ? Math.round((doctorReferralCount / totalReferrals) * 100)
       : 0;
 
+  // Debug: Log calculated data only on change (not on every render)
+  useMemo(() => {
+    console.log("📈 Calculated data:", {
+      monthlyData: monthlyData,
+      topSources: topSources,
+      totalProduction: totalProduction,
+      totalReferrals: totalReferrals,
+      doctorReferralCount: doctorReferralCount,
+      doctorPercentage: doctorPercentage,
+      mktProduction: totalProduction,
+      docProduction: (totalProduction * doctorPercentage) / 100,
+    });
+    console.log("🔍 Data source breakdown:", {
+      "referralVelocity.selfReferrals": monthlyData.map(m => ({ month: m.month, selfReferrals: m.selfReferrals })),
+      "referralVelocity.doctorReferrals": monthlyData.map(m => ({ month: m.month, doctorReferrals: m.doctorReferrals })),
+      "productionCards.topSources": topSources.map(s => ({ name: s.name, production: s.production })),
+      "productionCards.totalProduction": totalProduction,
+      "productionCards.doctorPercentage": doctorPercentage,
+    });
+  }, [monthlyData, topSources, totalProduction, totalReferrals, doctorReferralCount, doctorPercentage]);
+
   const showClientApprovalBanner =
     !isLoading &&
     latestJobIsApproved === true &&
@@ -721,6 +783,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       return;
     }
 
+    console.log("✅ handleConfirmApproval called with latestJobId:", latestJobId);
+    console.log("📊 Current state BEFORE confirmation:", {
+      keyData_months: keyData?.months,
+      keyData_sources: keyData?.sources,
+      monthlyData: monthlyData,
+      totalProduction: totalProduction,
+      doctorPercentage: doctorPercentage,
+      totalReferrals: totalReferrals,
+    });
+
     setIsConfirming(true);
     setBannerError(null);
 
@@ -740,7 +812,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(storageKey);
       }
-      await loadKeyData();
+
+      console.log("🔄 Calling loadKeyData AFTER confirmation (with silent: false to see fresh data)");
+      await loadKeyData({ silent: false });
 
       // Don't refetch referral data immediately - it will return pending anyway
       // The user will see the "Generating" state until they refresh
@@ -779,7 +853,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setInlineStatus("idle");
     try {
       const json = await uploadPMSData({
-        domain: domain,
+        domain: domain || "",
         file: fileToUpload,
       });
       if (json?.success) {
@@ -975,25 +1049,12 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
               <button
                 type="button"
-                onClick={handleConfirmApproval}
-                disabled={isConfirming || latestJobId == null}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-alloro-navy transition hover:border-alloro-orange hover:text-alloro-orange disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
-              >
-                {isConfirming ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
-                Confirm and get insights
-              </button>
-              <button
-                type="button"
                 onClick={() => setIsEditorOpen(true)}
                 disabled={latestJobId == null || !hasLatestJobRaw}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-alloro-orange px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-alloro-orange bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-alloro-orange transition hover:bg-alloro-orange/5 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
               >
-                <Pencil className="h-4 w-4" />
-                Make changes
+                <CheckCircle2 className="h-4 w-4" />
+                Confirm and get insights
               </button>
             </div>
           </motion.div>
@@ -1188,14 +1249,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 <div className="h-px flex-1 bg-slate-100"></div>
               </div>
               <>
-                {console.log("🎯 Rendering ReferralMatrices with:", {
-                  hasReferralData: !!referralData,
-                  isLoading: referralLoading,
-                  isPending: referralPending,
-                  hasAutomationStatus: !!automationStatus,
-                  automationStep: automationStatus?.currentStep,
-                  showClientApprovalBanner,
-                })}
                 <ReferralMatrices
                   referralData={referralData}
                   isLoading={referralLoading}
@@ -1407,7 +1460,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       <PMSManualEntryModal
         isOpen={isManualEntryOpen}
         onClose={() => setIsManualEntryOpen(false)}
-        clientId={domain}
+        clientId={domain || ""}
         onSuccess={async () => {
           setIsManualEntryOpen(false);
           // Set pending state to show processing indicator for referral matrices

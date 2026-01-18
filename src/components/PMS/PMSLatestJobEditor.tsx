@@ -171,6 +171,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
   const [activeMonthId, setActiveMonthId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorMonthId, setErrorMonthId] = useState<number | null>(null);
 
   // Month picker modal state
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -185,19 +186,41 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
     number | null
   >(null);
 
+  // Track if we've already initialized for the current open session
+  const hasInitializedRef = React.useRef(false);
+
   // ==================== INITIALIZATION ====================
+  // Only initialize when modal first opens, not on every initialData change
+  // This prevents polling from resetting user's edits
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasInitializedRef.current) {
       const normalized = normaliseMonthEntries(initialData);
+      console.log("🔍 Modal loaded - normalized data from backend:", {
+        monthsCount: normalized.length,
+        secondMonthSources: normalized[1]?.sources,
+      });
       const uiMonths = transformBackendToUI(normalized);
+      console.log("🎯 Transformed to UI format:", {
+        monthsCount: uiMonths.length,
+        secondMonthRows: uiMonths[1]?.rows,
+      });
       setMonths(uiMonths);
       setActiveMonthId(uiMonths[0]?.id ?? null);
       setError(null);
+      setErrorMonthId(null);
       setShowMonthPicker(false);
       setConfirmDeleteRowId(null);
       setConfirmDeleteMonthId(null);
+      hasInitializedRef.current = true;
     }
   }, [initialData, isOpen]);
+
+  // Reset the initialization flag when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      hasInitializedRef.current = false;
+    }
+  }, [isOpen]);
 
   // ==================== DERIVED STATE (MEMOIZED) ====================
   const sortedMonths = useMemo(
@@ -372,14 +395,20 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
       for (const row of month.rows) {
         if (!row.source?.trim()) {
           setError("All source names are required");
+          setErrorMonthId(month.id);
+          setActiveMonthId(month.id);
           return;
         }
         if (!row.referrals || Number(row.referrals) === 0) {
           setError("All referral counts must be greater than 0");
+          setErrorMonthId(month.id);
+          setActiveMonthId(month.id);
           return;
         }
         if (!row.production || Number(row.production) === 0) {
           setError("All production values must be greater than 0");
+          setErrorMonthId(month.id);
+          setActiveMonthId(month.id);
           return;
         }
       }
@@ -387,10 +416,17 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
 
     setIsSaving(true);
     setError(null);
+    setErrorMonthId(null);
 
     try {
       const backendData = transformUIToBackend(months);
       const payload = JSON.stringify(backendData, null, 2);
+
+      console.log("💾 Saving modal changes - transformed data being sent:", {
+        backendData,
+        monthsSent: backendData.length,
+        secondMonthSources: backendData[1]?.sources,
+      });
 
       const response = await updatePmsJobResponse(jobId, payload);
 
@@ -467,6 +503,7 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                   <div className="flex items-center gap-2 mb-6 flex-wrap">
                     {sortedMonths.map((m) => {
                       const isActive = m.id === activeMonthId;
+                      const hasError = m.id === errorMonthId;
                       return (
                         <div key={m.id} className="relative">
                           <motion.button
@@ -477,7 +514,14 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
                                 ? ALORO_ORANGE
                                 : "transparent",
                               color: isActive ? "white" : undefined,
-                              borderColor: isActive ? ALORO_ORANGE : undefined,
+                              borderColor: hasError
+                                ? "#ef4444"
+                                : isActive
+                                  ? ALORO_ORANGE
+                                  : undefined,
+                              boxShadow: hasError
+                                ? "0 0 0 2px rgba(239, 68, 68, 0.1), inset 0 0 0 1px rgba(239, 68, 68, 0.5)"
+                                : undefined,
                             }}
                           >
                             {new Date(m.month + "-01").toLocaleDateString(

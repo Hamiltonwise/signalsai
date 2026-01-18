@@ -458,9 +458,10 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
               <th className="px-6 py-4 w-[20%]">Source</th>
               <th className="px-2 py-4 text-center w-[8%]">Type</th>
               <th className="px-2 py-4 text-center w-[7%]">Ref</th>
-              <th className="px-2 py-4 text-center w-[9%]">Sched</th>
-              <th className="px-2 py-4 text-center w-[9%]">Exam</th>
-              <th className="px-2 py-4 text-center w-[9%]">Start</th>
+              {/* TODO: Sched, Exam, Start columns hidden for now - enable in future updates when data is available */}
+              {/* <th className="px-2 py-4 text-center w-[9%]">Sched</th> */}
+              {/* <th className="px-2 py-4 text-center w-[9%]">Exam</th> */}
+              {/* <th className="px-2 py-4 text-center w-[9%]">Start</th> */}
               <th className="px-4 py-4 text-right w-[13%]">Production</th>
               <th className="px-6 py-4 w-[25%]">Note</th>
             </tr>
@@ -485,7 +486,8 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
                 <td className="px-2 py-5 text-center font-black text-alloro-navy text-sm tabular-nums">
                   {row.referred}
                 </td>
-                <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
+                {/* TODO: Sched, Exam, Start columns hidden for now - enable in future updates when data is available */}
+                {/* <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
                   {row.pct_scheduled?.toFixed(0) || 0}%
                 </td>
                 <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
@@ -493,7 +495,7 @@ export const ReferralMatrices: React.FC<ReferralMatricesProps> = ({
                 </td>
                 <td className="px-2 py-5 text-center font-bold text-slate-400 text-xs tabular-nums">
                   {row.pct_started?.toFixed(0) || 0}%
-                </td>
+                </td> */}
                 <td className="px-4 py-5 text-right font-black text-alloro-navy text-sm tabular-nums">
                   {formatCurrency(row.net_production)}
                 </td>

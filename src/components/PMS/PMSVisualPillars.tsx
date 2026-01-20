@@ -16,7 +16,6 @@ import {
   Clock,
   Loader2,
   Lock,
-  Pencil,
   PenLine,
   Plus,
   ShieldCheck,
@@ -143,10 +142,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [keyData, setKeyData] = useState<PmsKeyDataResponse["data"] | null>(
-    null
+    null,
   );
   const [localProcessing, setLocalProcessing] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isIngestionHighlighted, setIsIngestionHighlighted] = useState(false);
@@ -155,7 +154,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   // Referral Engine data state
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
-    null
+    null,
   );
   const [referralLoading, setReferralLoading] = useState(false);
   const [referralPending, setReferralPending] = useState(false);
@@ -168,7 +167,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   const storageKey = useMemo(
     () => `pmsProcessing:${domain || "unknown"}`,
-    [domain]
+    [domain],
   );
 
   const isMountedRef = useRef(false);
@@ -211,7 +210,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           setError(
             response?.error ||
               response?.message ||
-              "Unable to load PMS visual pillars."
+              "Unable to load PMS visual pillars.",
           );
         }
       } catch (err) {
@@ -231,7 +230,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }
       }
     },
-    [domain]
+    [domain],
   );
 
   useEffect(() => {
@@ -332,7 +331,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
     try {
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`
+        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
       );
 
       if (!response.ok) {
@@ -403,7 +402,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             ];
             if (activeStatuses.includes(activeJob.automationStatus.status)) {
               console.log(
-                "🔍 Setting referralPending = true for active automation"
+                "🔍 Setting referralPending = true for active automation",
               );
               setReferralPending(true);
               setReferralData(null);
@@ -464,7 +463,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             activeJob.automationStatus.currentStep === "client_approval"
           ) {
             console.log(
-              "🔍 Automation reached client_approval, refreshing key data for banner"
+              "🔍 Automation reached client_approval, refreshing key data for banner",
             );
             loadKeyData({ silent: true });
           }
@@ -477,7 +476,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         // Clear the automation status and refresh the referral data
         if (automationStatus || referralPending) {
           console.log(
-            "🔍 Clearing automation state and refreshing data after completion"
+            "🔍 Clearing automation state and refreshing data after completion",
           );
           setAutomationStatus(null);
           setReferralPending(false);
@@ -512,8 +511,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       (automationStatus &&
         automationStatus.status === "awaiting_approval" &&
         noPollingSteps.includes(automationStatus.currentStep)) ||
-      (automationStatus &&
-        noPollingStatuses.includes(automationStatus.status));
+      (automationStatus && noPollingStatuses.includes(automationStatus.status));
 
     const shouldPoll =
       !isOnNonPollingStep &&
@@ -526,7 +524,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           console.log(`⏸️ Polling DISABLED - automation completed`);
         } else {
           console.log(
-            `⏸️ Polling DISABLED - on ${automationStatus?.currentStep} (approval step)`
+            `⏸️ Polling DISABLED - on ${automationStatus?.currentStep} (approval step)`,
           );
         }
       }
@@ -534,7 +532,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     }
 
     console.log(
-      `▶️ Polling ENABLED - referralPending: ${referralPending}, status: ${automationStatus?.status}, step: ${automationStatus?.currentStep}`
+      `▶️ Polling ENABLED - referralPending: ${referralPending}, status: ${automationStatus?.status}, step: ${automationStatus?.currentStep}`,
     );
 
     let isCancelled = false;
@@ -594,7 +592,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
             // If we found an active automation that we weren't tracking, start tracking it
             if (activeStatuses.includes(status)) {
-
               setAutomationStatus(activeJob.automationStatus);
 
               // Set referralPending to trigger the faster polling
@@ -744,13 +741,29 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       docProduction: (totalProduction * doctorPercentage) / 100,
     });
     console.log("🔍 Data source breakdown:", {
-      "referralVelocity.selfReferrals": monthlyData.map(m => ({ month: m.month, selfReferrals: m.selfReferrals })),
-      "referralVelocity.doctorReferrals": monthlyData.map(m => ({ month: m.month, doctorReferrals: m.doctorReferrals })),
-      "productionCards.topSources": topSources.map(s => ({ name: s.name, production: s.production })),
+      "referralVelocity.selfReferrals": monthlyData.map((m) => ({
+        month: m.month,
+        selfReferrals: m.selfReferrals,
+      })),
+      "referralVelocity.doctorReferrals": monthlyData.map((m) => ({
+        month: m.month,
+        doctorReferrals: m.doctorReferrals,
+      })),
+      "productionCards.topSources": topSources.map((s) => ({
+        name: s.name,
+        production: s.production,
+      })),
       "productionCards.totalProduction": totalProduction,
       "productionCards.doctorPercentage": doctorPercentage,
     });
-  }, [monthlyData, topSources, totalProduction, totalReferrals, doctorReferralCount, doctorPercentage]);
+  }, [
+    monthlyData,
+    topSources,
+    totalProduction,
+    totalReferrals,
+    doctorReferralCount,
+    doctorPercentage,
+  ]);
 
   const showClientApprovalBanner =
     !isLoading &&
@@ -783,7 +796,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       return;
     }
 
-    console.log("✅ handleConfirmApproval called with latestJobId:", latestJobId);
+    console.log(
+      "✅ handleConfirmApproval called with latestJobId:",
+      latestJobId,
+    );
     console.log("📊 Current state BEFORE confirmation:", {
       keyData_months: keyData?.months,
       keyData_sources: keyData?.sources,
@@ -806,14 +822,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
       showSparkleToast(
         "Perfect!",
-        "We're now setting up your summary and action items for this month"
+        "We're now setting up your summary and action items for this month",
       );
 
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(storageKey);
       }
 
-      console.log("🔄 Calling loadKeyData AFTER confirmation (with silent: false to see fresh data)");
+      console.log(
+        "🔄 Calling loadKeyData AFTER confirmation (with silent: false to see fresh data)",
+      );
       await loadKeyData({ silent: false });
 
       // Don't refetch referral data immediately - it will return pending anyway
@@ -859,7 +877,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       if (json?.success) {
         showUploadToast(
           "PMS export received!",
-          "We'll notify when ready for checking"
+          "We'll notify when ready for checking",
         );
 
         setInlineStatus("idle");
@@ -873,12 +891,12 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         try {
           window.localStorage.setItem(
             `pmsProcessing:${domain}`,
-            String(Date.now())
+            String(Date.now()),
           );
           window.dispatchEvent(
             new CustomEvent("pms:job-uploaded", {
               detail: { clientId: domain },
-            })
+            }),
           );
         } catch {
           // Ignore localStorage errors
@@ -909,7 +927,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     if (!monthlyData.length) return 25;
     return Math.max(
       ...monthlyData.map((m) => m.selfReferrals + m.doctorReferrals),
-      25
+      25,
     );
   }, [monthlyData]);
 
@@ -1341,8 +1359,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                       {inlineIsDragOver
                         ? "Drop to upload"
                         : inlineFile
-                        ? inlineFile.name
-                        : "Drop CSV Export"}
+                          ? inlineFile.name
+                          : "Drop CSV Export"}
                     </span>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
                       {inlineIsUploading ? "Uploading..." : "Max 50MB"}

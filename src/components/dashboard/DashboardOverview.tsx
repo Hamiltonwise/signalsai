@@ -30,6 +30,10 @@ import {
   ReferralMatrices,
   type ReferralEngineData,
 } from "../PMS/ReferralMatrices";
+import {
+  useIsWizardActive,
+  useWizardDemoData,
+} from "../../contexts/OnboardingWizardContext";
 
 // Ranking data types
 interface RankingResult {
@@ -134,6 +138,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const { userProfile } = useAuth();
   const { data, error, refetch } = useAgentData(googleAccountId || null);
 
+  // Onboarding wizard state - shows demo data when wizard is active
+  const isWizardActive = useIsWizardActive();
+  const wizardDemoData = useWizardDemoData();
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDataHub, setShowDataHub] = useState(false);
   const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
@@ -172,8 +180,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [referralLoading, setReferralLoading] = useState(true);
   const [referralPending, setReferralPending] = useState(false);
 
-  // Fetch PMS data
+  // Fetch PMS data - skip during wizard mode (use demo data instead)
   useEffect(() => {
+    if (isWizardActive) {
+      setPmsLoading(false);
+      return;
+    }
+
     const loadPmsData = async () => {
       const domain = userProfile?.domainName;
       if (!domain) {
@@ -203,10 +216,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadPmsData();
-  }, [userProfile?.domainName]);
+  }, [userProfile?.domainName, isWizardActive]);
 
-  // Fetch ranking data
+  // Fetch ranking data - skip during wizard mode (use demo data instead)
   useEffect(() => {
+    if (isWizardActive) {
+      setRankingLoading(false);
+      return;
+    }
+
     const loadRankingData = async () => {
       if (!googleAccountId) {
         setRankingLoading(false);
@@ -249,10 +267,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadRankingData();
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
-  // Fetch tasks data
+  // Fetch tasks data - skip during wizard mode (use demo data instead)
   useEffect(() => {
+    if (isWizardActive) {
+      setTasksLoading(false);
+      return;
+    }
+
     const loadTasks = async () => {
       if (!googleAccountId) {
         setTasksLoading(false);
@@ -284,10 +307,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadTasks();
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
-  // Fetch Referral Engine data
+  // Fetch Referral Engine data - skip during wizard mode (use demo data instead)
   useEffect(() => {
+    if (isWizardActive) {
+      setReferralLoading(false);
+      return;
+    }
+
     const loadReferralData = async () => {
       if (!googleAccountId) {
         setReferralLoading(false);
@@ -333,7 +361,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadReferralData();
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
   // Calculate PMS metrics from latest month
   const calculatePmsMetrics = () => {
@@ -386,6 +414,90 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   };
 
   const pmsMetrics = calculatePmsMetrics();
+
+  // Wizard demo data overrides - show placeholder data when wizard is active
+  // Fallback demo data in case wizardDemoData hasn't loaded yet
+  const fallbackPmsMetrics = {
+    totalReferrals: 47,
+    selfReferrals: 24,
+    doctorReferrals: 23,
+    production: 156000,
+    month: "Demo",
+    referralChange: 8.3,
+    selfReferralChange: 12.5,
+    doctorReferralChange: 5.2,
+    productionChange: 15.2,
+  };
+
+  const effectivePmsMetrics = isWizardActive
+    ? wizardDemoData
+      ? {
+          totalReferrals: wizardDemoData.pmsMetrics.referrals.value,
+          selfReferrals: wizardDemoData.pmsMetrics.newStarts.value,
+          doctorReferrals: 23,
+          production: wizardDemoData.pmsMetrics.production.value,
+          month: "Demo",
+          referralChange: wizardDemoData.pmsMetrics.referrals.trend,
+          selfReferralChange: wizardDemoData.pmsMetrics.newStarts.trend,
+          doctorReferralChange: 5.2,
+          productionChange: wizardDemoData.pmsMetrics.production.trend,
+        }
+      : fallbackPmsMetrics
+    : pmsMetrics;
+
+  // Fallback ranking data
+  const fallbackRankingData = [{
+    id: 1,
+    googleAccountId: googleAccountId || 0,
+    domain: "demo.com",
+    specialty: "Orthodontics",
+    location: "Local Area",
+    gbpAccountId: null,
+    gbpLocationId: null,
+    gbpLocationName: "Main Office",
+    batchId: null,
+    observedAt: new Date().toISOString(),
+    status: "completed" as const,
+    rankScore: 78,
+    rankPosition: 3,
+    totalCompetitors: 15,
+    rankingFactors: null,
+    rawData: null,
+    llmAnalysis: null,
+    statusDetail: null,
+    errorMessage: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }];
+
+  const effectiveRankingData = isWizardActive
+    ? wizardDemoData
+      ? wizardDemoData.rankingData.map((r) => ({
+          id: 1,
+          googleAccountId: googleAccountId || 0,
+          domain: "demo.com",
+          specialty: "Orthodontics",
+          location: "Local Area",
+          gbpAccountId: null,
+          gbpLocationId: null,
+          gbpLocationName: r.locationName,
+          batchId: null,
+          observedAt: new Date().toISOString(),
+          status: "completed" as const,
+          rankScore: r.visibilityScore,
+          rankPosition: r.rank,
+          totalCompetitors: r.totalCompetitors,
+          rankingFactors: null,
+          rawData: null,
+          llmAnalysis: null,
+          statusDetail: null,
+          errorMessage: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }))
+      : fallbackRankingData
+    : rankingData;
+
 
   // Function to reload PMS data
   const reloadPmsData = useCallback(async () => {
@@ -510,10 +622,19 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const prooflineData = (data?.agents as any)?.proofline;
   // Proofline data is inside the first result object
   const prooflineResult = prooflineData?.results?.[0];
-  const trajectory = prooflineResult?.trajectory;
   const prooflineTitle = prooflineResult?.title;
   const prooflineExplanation = prooflineResult?.explanation;
   const prooflineLastUpdated = prooflineData?.lastUpdated;
+
+  // Use wizard demo trajectory or real trajectory
+  const trajectory = isWizardActive
+    ? wizardDemoData?.prooflineData?.trajectory ?? "Your practice is showing <hl>strong momentum</hl> this month. New patient starts are up 12% and your local visibility continues to improve."
+    : prooflineResult?.trajectory;
+
+  // Use wizard demo user profile or real user profile for lastName
+  const effectiveLastName = isWizardActive
+    ? wizardDemoData?.userProfile?.lastName ?? "Smith"
+    : userProfile?.lastName;
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -544,6 +665,33 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const alloroOpportunities = referralData?.alloro_automation_opportunities;
   const practiceActionPlan = referralData?.practice_action_plan;
 
+  // Fallback proofline data for wizard mode
+  const fallbackWins = ["Strong review response rate", "Consistent GBP posting"];
+  const fallbackRisks = ["Review velocity declining", "Competitor gaining ground"];
+  const fallbackTopFixes = ["Request more patient reviews", "Optimize GBP keywords", "Increase posting frequency"];
+  const fallbackEstimatedRevenue = 24500;
+  const fallbackCriticalActionsCount = 2;
+
+  const effectiveWins = isWizardActive
+    ? wizardDemoData?.prooflineData?.wins ?? fallbackWins
+    : wins;
+
+  const effectiveRisks = isWizardActive
+    ? wizardDemoData?.prooflineData?.risks ?? fallbackRisks
+    : risks;
+
+  const effectiveTopFixes = isWizardActive
+    ? wizardDemoData?.prooflineData?.topFixes?.map((f) => f.description) ?? fallbackTopFixes
+    : topFixes;
+
+  const effectiveEstimatedRevenue = isWizardActive
+    ? wizardDemoData?.prooflineData?.estimatedRevenue ?? fallbackEstimatedRevenue
+    : estimatedRevenue;
+
+  const effectiveCriticalActionsCount = isWizardActive
+    ? wizardDemoData?.criticalActionsCount ?? fallbackCriticalActionsCount
+    : criticalActionsCount;
+
   // Calculate sentiment based on score
   const getSentimentFromScore = (score: number | null | undefined) => {
     if (score === null || score === undefined)
@@ -554,11 +702,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   };
 
   // Get sentiment for current location
-  const currentLocationRanking = rankingData?.[currentLocationIndex];
+  const currentLocationRanking = effectiveRankingData?.[currentLocationIndex];
   const sentiment = getSentimentFromScore(currentLocationRanking?.rankScore);
 
   // Carousel navigation for multiple locations
-  const totalLocations = rankingData?.length || 0;
+  const totalLocations = effectiveRankingData?.length || 0;
 
   const nextLocation = useCallback(() => {
     if (totalLocations > 1) {
@@ -584,10 +732,23 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Get current location data for carousel
   const getCurrentLocationData = () => {
-    if (!rankingData || rankingData.length === 0) return null;
-    const location = rankingData[currentLocationIndex];
+    const dataSource = effectiveRankingData || rankingData;
+    if (!dataSource || dataSource.length === 0) {
+      // Fallback demo data when wizard is active but data hasn't loaded yet
+      if (isWizardActive) {
+        return {
+          score: 78,
+          rank: 3,
+          totalCompetitors: 15,
+          locationName: "Main Office",
+          location: "Local Area",
+        };
+      }
+      return null;
+    }
+    const location = dataSource[currentLocationIndex];
     return {
-      score: Math.round(location.rankScore || 0),
+      score: Math.round(Number(location.rankScore) || 0),
       rank: location.rankPosition || 0,
       totalCompetitors: location.totalCompetitors || 0,
       locationName: location.gbpLocationName || location.domain || "Unknown",
@@ -602,18 +763,19 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     <div className={`skeleton-shimmer rounded-xl ${className}`}></div>
   );
 
-  // Determine if any data is missing for the alert
-  const hasMissingData =
-    !pmsMetrics ||
-    !rankingData ||
-    !tasks ||
-    !referralData ||
-    !wins ||
-    !risks ||
-    !topFixes ||
-    !estimatedRevenue ||
-    !alloroOpportunities ||
-    !practiceActionPlan;
+  // Determine if any data is missing for the alert (skip during wizard since we have demo data)
+  const hasMissingData = isWizardActive
+    ? false
+    : !pmsMetrics ||
+      !rankingData ||
+      !tasks ||
+      !referralData ||
+      !wins ||
+      !risks ||
+      !topFixes ||
+      !estimatedRevenue ||
+      !alloroOpportunities ||
+      !practiceActionPlan;
 
   // Error state
   if (error) {
@@ -692,7 +854,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       {/* Main Content - matches newdesign responsive structure */}
       <main className="w-full max-w-[1100px] mx-auto px-6 lg:px-10 py-6 lg:py-10 space-y-6 lg:space-y-10">
         {/* PERSONALIZED GREETING HERO SECTION - matches newdesign exactly */}
-        <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left">
+        <section
+          data-wizard-target="dashboard-hero"
+          className="animate-in fade-in slide-in-from-bottom-2 duration-700 text-left"
+        >
           <div className="flex items-center gap-4 mb-3">
             <div className="px-3 py-1.5 bg-[#FDECEA] rounded-lg text-[#D66853] text-[10px] font-black uppercase tracking-widest border border-[#D66853]/10 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D66853]"></span>
@@ -705,9 +870,9 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </span>
             </div>
           </div>
-          {userProfile?.lastName ? (
+          {effectiveLastName ? (
             <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-              {getGreeting()}, Dr. {userProfile.lastName}.
+              {getGreeting()}, Dr. {effectiveLastName}.
             </h1>
           ) : (
             <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
@@ -734,8 +899,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         </section>
 
         {/* SECTION 2: MONTHLY PRACTICE TOTALS - matches newdesign */}
-        {pmsMetrics && (
-          <section className="space-y-8 pt-4">
+        {(effectivePmsMetrics || isWizardActive) && (
+          <section data-wizard-target="dashboard-metrics" className="space-y-8 pt-4">
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
                 Monthly Practice Totals
@@ -745,35 +910,35 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
               <MetricCard
                 label="New Starts"
-                value={pmsMetrics.selfReferrals}
+                value={effectivePmsMetrics.selfReferrals}
                 trend={
-                  pmsMetrics.selfReferralChange !== 0
+                  effectivePmsMetrics.selfReferralChange !== 0
                     ? `${
-                        pmsMetrics.selfReferralChange >= 0 ? "+" : ""
-                      }${pmsMetrics.selfReferralChange.toFixed(0)}%`
+                        effectivePmsMetrics.selfReferralChange >= 0 ? "+" : ""
+                      }${effectivePmsMetrics.selfReferralChange.toFixed(0)}%`
                     : undefined
                 }
                 isHighlighted
               />
               <MetricCard
                 label="Referrals"
-                value={pmsMetrics.totalReferrals}
+                value={effectivePmsMetrics.totalReferrals}
                 trend={
-                  pmsMetrics.referralChange !== 0
+                  effectivePmsMetrics.referralChange !== 0
                     ? `${
-                        pmsMetrics.referralChange >= 0 ? "+" : ""
-                      }${pmsMetrics.referralChange.toFixed(0)}%`
+                        effectivePmsMetrics.referralChange >= 0 ? "+" : ""
+                      }${effectivePmsMetrics.referralChange.toFixed(0)}%`
                     : undefined
                 }
               />
               <MetricCard
                 label="Production"
-                value={`$${(pmsMetrics.production / 1000).toFixed(0)}K`}
+                value={`$${(effectivePmsMetrics.production / 1000).toFixed(0)}K`}
                 trend={
-                  pmsMetrics.productionChange !== 0
+                  effectivePmsMetrics.productionChange !== 0
                     ? `${
-                        pmsMetrics.productionChange >= 0 ? "+" : ""
-                      }${pmsMetrics.productionChange.toFixed(0)}%`
+                        effectivePmsMetrics.productionChange >= 0 ? "+" : ""
+                      }${effectivePmsMetrics.productionChange.toFixed(0)}%`
                     : undefined
                 }
               />
@@ -796,10 +961,11 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         )}
 
         {/* SECTION 3: RANKING STRATEGY - PREMIUM DESIGN - matches newdesign */}
-        {rankingData && rankingData.length > 0 && (
+        {((effectiveRankingData && effectiveRankingData.length > 0) || isWizardActive) && (
           <section
+            data-wizard-target="dashboard-ranking"
             className="animate-in fade-in slide-in-from-bottom-4 duration-1000 cursor-pointer"
-            onClick={() => navigate("/rankings")}
+            onClick={() => !isWizardActive && navigate("/rankings")}
           >
             <div className="bg-[#FDFDFD] rounded-3xl border border-slate-100 p-10 lg:px-12 lg:py-10 shadow-premium relative overflow-hidden group hover:border-alloro-orange/20 hover:shadow-2xl transition-all duration-300">
               {/* Decorative Gradient Elements */}
@@ -940,12 +1106,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         )}
 
         {/* SECTION 4: INTELLIGENCE BRIEFING BANNER - Show skeleton while loading, hide if no data after load */}
-        {tasksLoading ? (
+        {tasksLoading && !isWizardActive ? (
           <section className="animate-pulse">
             <div className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-2xl h-32 skeleton-shimmer"></div>
           </section>
-        ) : criticalActionsCount > 0 ? (
-          <section className="animate-in fade-in slide-in-from-top-8 duration-1000">
+        ) : effectiveCriticalActionsCount > 0 || isWizardActive ? (
+          <section
+            data-wizard-target="dashboard-intelligence"
+            className="animate-in fade-in slide-in-from-top-8 duration-1000"
+          >
             <div className="bg-alloro-orange rounded-2xl p-6 lg:px-10 lg:py-8 text-white relative overflow-hidden shadow-xl">
               <div className="absolute top-0 right-0 p-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-[120px] pointer-events-none"></div>
               <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
@@ -1060,8 +1229,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         })()}
 
         {/* SECTION 6: WHAT'S WORKING VS WHAT'S NOT */}
-        {(wins || risks) && (
-          <section className="space-y-8 pt-4">
+        {(effectiveWins || effectiveRisks || isWizardActive) && (
+          <section data-wizard-target="dashboard-wins-risks" className="space-y-8 pt-4">
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
                 What's working vs What's not
@@ -1070,7 +1239,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-              {wins && (
+              {effectiveWins && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-3 text-green-600 font-black text-[10px] uppercase tracking-[0.3em]">
                     <div className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center border border-green-100 shadow-sm">
@@ -1079,7 +1248,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     Good News
                   </div>
                   <div className="space-y-3">
-                    {wins.map((win: string, idx: number) => (
+                    {effectiveWins.map((win: string, idx: number) => (
                       <div
                         key={idx}
                         className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
@@ -1097,7 +1266,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 </div>
               )}
 
-              {risks && (
+              {effectiveRisks && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-3 text-red-600 font-black text-[10px] uppercase tracking-[0.3em]">
                     <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 shadow-sm">
@@ -1106,7 +1275,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     Risks to Fix
                   </div>
                   <div className="space-y-3">
-                    {risks.map((risk: string, idx: number) => (
+                    {effectiveRisks.map((risk: string, idx: number) => (
                       <div
                         key={idx}
                         className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
@@ -1125,8 +1294,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         )}
 
         {/* SECTION: PREMIUM TOP 3 STRATEGIC FIXES - matches newdesign (visible, not in hub) */}
-        {topFixes && estimatedRevenue && (
-          <section className="space-y-10 pt-8">
+        {((effectiveTopFixes && effectiveEstimatedRevenue) || isWizardActive) && (
+          <section data-wizard-target="dashboard-growth" className="space-y-10 pt-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -1138,7 +1307,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
                   3 Fixes to Add{" "}
                   <span className="text-alloro-orange inline-flex items-baseline gap-1">
-                    {formatCurrency(estimatedRevenue)}+
+                    {formatCurrency(effectiveEstimatedRevenue)}+
                   </span>{" "}
                   <br className="hidden md:block" />
                   to your Yearly Revenue.
@@ -1151,7 +1320,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-              {topFixes.map((fix: string, idx: number) => (
+              {effectiveTopFixes.map((fix: string, idx: number) => (
                 <div
                   key={idx}
                   className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[280px] overflow-hidden"

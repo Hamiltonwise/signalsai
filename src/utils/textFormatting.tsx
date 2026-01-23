@@ -15,11 +15,16 @@ export function parseHighlightTags(
 ): React.ReactNode {
   if (!text || typeof text !== "string") return text;
 
-  // Check if text contains <hghlt> tags
-  if (!text.includes("<hghlt>")) return text;
+  // Check if text contains <hghlt> or <hl> tags
+  if (!text.includes("<hghlt>") && !text.includes("<hl>")) return text;
+
+  // Normalize <hl> tags to <hghlt> for consistent processing
+  const normalizedText = text
+    .replace(/<hl>/g, "<hghlt>")
+    .replace(/<\/hl>/g, "</hghlt>");
 
   // Split by <hghlt> and </hghlt> tags
-  const parts = text.split(/(<hghlt>|<\/hghlt>)/);
+  const parts = normalizedText.split(/(<hghlt>|<\/hghlt>)/);
 
   let isHighlighted = false;
   const result: React.ReactNode[] = [];

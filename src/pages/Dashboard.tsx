@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Building2, Settings } from "lucide-react";
+import { AlertTriangle, Building2, Settings, Lock, ChevronRight, ChevronDown } from "lucide-react";
 
 // Import auth and integration hooks for domain selection
 import { useAuth } from "../hooks/useAuth";
@@ -26,10 +26,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
 import onboarding from "../api/onboarding";
 import { getPriorityItem } from "../hooks/useLocalStorage";
+import { useIsWizardActive, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
 
 export default function Dashboard() {
   // Domain selection and auth hooks
   const { selectedDomain, userProfile, refreshUserProperties } = useAuth();
+  const isWizardActive = useIsWizardActive();
+  const recheckWizardStatus = useRecheckWizardStatus();
 
   // Modal state management
   const [showGA4Modal, setShowGA4Modal] = useState(false);
@@ -180,6 +183,12 @@ export default function Dashboard() {
       // After simplified onboarding, properties are NOT connected yet
       setHasProperties(false);
       localStorage.setItem("hasProperties", "false");
+
+      // Start the 22-step wizard tour immediately after onboarding
+      if (isCompleted) {
+        console.log("[Dashboard] Starting wizard tour after onboarding");
+        await recheckWizardStatus();
+      }
     } catch (error) {
       console.error("Failed to re-check status:", error);
       setOnboardingCompleted(true); // Assume success
@@ -204,21 +213,21 @@ export default function Dashboard() {
     <div className="w-full max-w-[1600px] mx-auto min-h-screen flex flex-col bg-alloro-bg font-body text-alloro-navy">
       {/* Show loading state while checking onboarding */}
       {!ready || checkingOnboarding ? (
-        <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+        <div className="flex-1 flex items-center justify-center bg-alloro-bg">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-alloro-orange/20 border-t-alloro-orange mx-auto mb-4"></div>
+            <p className="text-slate-600 font-medium">
               {checkingOnboarding
-                ? "Checking your setup..."
+                ? "Setting things up..."
                 : "Loading dashboard..."}
             </p>
           </div>
         </div>
       ) : clientLoading ? (
-        <div className="h-full flex items-center justify-center bg-gray-50/50">
+        <div className="h-full flex items-center justify-center bg-alloro-bg">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Resolving client access...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-alloro-orange/20 border-t-alloro-orange mx-auto mb-4"></div>
+            <p className="text-slate-600 font-medium">Resolving client access...</p>
           </div>
         </div>
       ) : clientError ? (
@@ -269,25 +278,91 @@ export default function Dashboard() {
           <OnboardingContainer onComplete={handleOnboardingComplete} />
         </div>
       ) : onboardingCompleted === true ? (
-        !hasProperties ? (
-          // Empty State
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-24 h-24 bg-alloro-orange/10 rounded-full flex items-center justify-center mb-6">
-              <Settings className="w-12 h-12 text-alloro-orange" />
+        !hasProperties && !isWizardActive ? (
+          // Empty State - Creative 2-step onboarding flow
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div className="max-w-2xl w-full">
+              {/* Welcome header */}
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 rounded-full mb-4">
+                  <span className="w-2 h-2 bg-alloro-orange rounded-full animate-pulse"></span>
+                  <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">Getting Started</span>
+                </div>
+                <h1 className="text-4xl font-black text-alloro-navy font-heading tracking-tight mb-3">
+                  Let's Set Up Your Dashboard
+                </h1>
+                <p className="text-lg text-slate-500 font-medium">
+                  Complete these two steps to unlock your practice insights
+                </p>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-4">
+                {/* Step 1 - Connect Properties */}
+                <div
+                  onClick={() => navigate("/settings")}
+                  className="group relative bg-white rounded-3xl border-2 border-alloro-orange shadow-xl shadow-alloro-orange/10 p-8 cursor-pointer hover:shadow-2xl hover:shadow-alloro-orange/20 transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div className="flex items-start gap-6">
+                    {/* Step number */}
+                    <div className="shrink-0">
+                      <div className="w-14 h-14 bg-gradient-to-br from-alloro-orange to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-alloro-orange/30 group-hover:scale-110 transition-transform">
+                        <span className="text-2xl font-black text-white">1</span>
+                      </div>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-black text-alloro-navy tracking-tight">Connect Your Google Properties</h3>
+                        <span className="px-2 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-wider rounded-lg">Required</span>
+                      </div>
+                      <p className="text-slate-500 font-medium leading-relaxed mb-4">
+                        Link your Google Analytics, Search Console, and Business Profile to enable tracking and insights.
+                      </p>
+                      <div className="flex items-center gap-2 text-alloro-orange font-bold text-sm group-hover:gap-3 transition-all">
+                        <Settings className="w-4 h-4" />
+                        <span>Go to Settings</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Decorative arrow */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center z-10">
+                    <ChevronDown className="w-4 h-4 text-slate-300" />
+                  </div>
+                </div>
+
+                {/* Step 2 - PMS Data (Locked) */}
+                <div className="relative bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-8 opacity-60">
+                  <div className="flex items-start gap-6">
+                    {/* Step number */}
+                    <div className="shrink-0">
+                      <div className="w-14 h-14 bg-slate-200 rounded-2xl flex items-center justify-center">
+                        <span className="text-2xl font-black text-slate-400">2</span>
+                      </div>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-black text-slate-400 tracking-tight">Upload Your PMS Data</h3>
+                        <span className="px-2 py-1 bg-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Locked
+                        </span>
+                      </div>
+                      <p className="text-slate-400 font-medium leading-relaxed">
+                        Once properties are connected, upload your practice management data to see referral analytics and revenue attribution.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Help text */}
+              <p className="text-center text-sm text-slate-400 mt-8">
+                Need help? <a href="mailto:support@alloro.io" className="text-alloro-orange font-semibold hover:underline">Contact Support</a>
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-alloro-navy mb-2">
-              Connect Your Properties
-            </h2>
-            <p className="text-alloro-navy/70 max-w-md mb-8">
-              Welcome to Alloro! To get started, please connect your Google
-              Analytics, Search Console, and Business Profile in Settings.
-            </p>
-            <button
-              onClick={() => navigate("/settings")}
-              className="px-6 py-3 bg-alloro-orange text-white rounded-xl font-semibold hover:bg-alloro-navy transition-colors shadow-lg shadow-alloro-orange/50 active:scale-95"
-            >
-              Go to Settings
-            </button>
           </div>
         ) : (
           // Dashboard Content
@@ -330,11 +405,12 @@ export default function Dashboard() {
                         </div>
                       }
                     >
-                      {/* Only render PMSVisualPillars when domain is available to prevent wrong domain request */}
-                      {selectedDomain?.domain ? (
+                      {/* Render PMSVisualPillars when domain is available OR during wizard mode (for demo data) */}
+                      {selectedDomain?.domain || isWizardActive ? (
                         <PMSVisualPillars
-                          domain={selectedDomain.domain}
+                          domain={selectedDomain?.domain || ""}
                           googleAccountId={userProfile?.googleAccountId ?? null}
+                          hasProperties={hasProperties}
                         />
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -15,8 +15,15 @@ import {
   Rocket,
   HelpCircle,
   ExternalLink,
+  Settings,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
+import {
+  useIsWizardActive,
+  useWizardDemoData,
+} from "../../contexts/OnboardingWizardContext";
 
 // Type for client GBP data
 interface ClientGbpData {
@@ -270,6 +277,9 @@ const KPICard = ({
 );
 
 export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
+  const navigate = useNavigate();
+  const isWizardActive = useIsWizardActive();
+  const wizardDemoData = useWizardDemoData();
   const [loading, setLoading] = useState(true);
   const [rankings, setRankings] = useState<RankingResult[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
@@ -280,13 +290,18 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     Record<number, RankingTask[]>
   >({});
 
+  // Skip fetching during wizard mode - use demo data instead
   useEffect(() => {
+    if (isWizardActive) {
+      setLoading(false);
+      return;
+    }
     if (googleAccountId) {
       fetchLatestRankings();
     } else {
       setLoading(false);
     }
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
   const fetchLatestRankings = async () => {
     try {
@@ -361,8 +376,9 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     }
   };
 
-  // Fetch tasks when rankings are loaded
+  // Fetch tasks when rankings are loaded - skip during wizard mode
   useEffect(() => {
+    if (isWizardActive) return;
     if (rankings.length > 0) {
       // Fetch tasks for all rankings
       rankings.forEach((ranking) => {
@@ -371,9 +387,9 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
         }
       });
     }
-  }, [rankings]);
+  }, [rankings, isWizardActive]);
 
-  if (loading) {
+  if (loading && !isWizardActive) {
     return (
       <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
         {/* Header */}
@@ -403,7 +419,8 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  if (error) {
+  // When wizard is active, bypass error/empty checks and use demo data
+  if (error && !isWizardActive) {
     return (
       <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16">
         <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
@@ -426,7 +443,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  if (!googleAccountId) {
+  if (!googleAccountId && !isWizardActive) {
     return (
       <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16">
         <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
@@ -444,30 +461,176 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  if (rankings.length === 0) {
+  if (rankings.length === 0 && !isWizardActive) {
     return (
-      <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16">
-        <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
-          <div className="p-4 bg-amber-50 rounded-2xl w-fit mx-auto mb-4">
-            <Trophy className="h-10 w-10 text-amber-500" />
+      <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16 px-6">
+        <div className="max-w-xl w-full">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 rounded-full mb-4">
+              <Sparkles className="w-4 h-4 text-alloro-orange" />
+              <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">Almost There</span>
+            </div>
+            <h1 className="text-3xl font-black text-alloro-navy font-heading tracking-tight mb-3">
+              Local Rankings Coming Soon
+            </h1>
+            <p className="text-base text-slate-500 font-medium max-w-md mx-auto">
+              We're preparing your competitive analysis. Make sure your Google Business Profile is connected to get started.
+            </p>
           </div>
-          <h3 className="text-xl font-black text-alloro-navy font-heading mb-2 tracking-tight">
-            No Ranking Data Yet
-          </h3>
-          <p className="text-slate-500 text-sm font-bold">
-            Your practice ranking analysis hasn't been completed yet. Please
-            check back later or contact your administrator.
+
+          {/* Action Card */}
+          <div
+            onClick={() => navigate("/settings")}
+            className="group bg-white rounded-3xl border-2 border-alloro-orange shadow-xl shadow-alloro-orange/10 p-8 cursor-pointer hover:shadow-2xl hover:shadow-alloro-orange/20 transition-all duration-300 hover:-translate-y-1"
+          >
+            <div className="flex items-start gap-6">
+              <div className="shrink-0">
+                <div className="w-14 h-14 bg-gradient-to-br from-alloro-orange to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-alloro-orange/30 group-hover:scale-110 transition-transform">
+                  <Target className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-xl font-black text-alloro-navy tracking-tight mb-2">
+                  Connect Your Google Business Profile
+                </h3>
+                <p className="text-slate-500 font-medium leading-relaxed mb-4">
+                  Link your GBP to unlock local ranking insights, competitor analysis, and visibility tracking.
+                </p>
+                <div className="flex items-center gap-2 text-alloro-orange font-bold text-sm group-hover:gap-3 transition-all">
+                  <Settings className="w-4 h-4" />
+                  <span>Go to Settings</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Help text */}
+          <p className="text-center text-sm text-slate-400 mt-6">
+            Already connected? Rankings typically appear within 24 hours.
           </p>
         </div>
       </div>
     );
   }
 
+  // Create demo ranking for wizard mode
+  const demoRanking: RankingResult | null =
+    isWizardActive && wizardDemoData
+      ? {
+          id: 1,
+          domain: "example-practice.com",
+          specialty: "Orthodontics",
+          location: "San Francisco, CA",
+          gbpLocationId: "demo-location",
+          gbpLocationName: wizardDemoData.rankingData[0].locationName,
+          observedAt: new Date().toISOString(),
+          rankScore: 78,
+          rankPosition: wizardDemoData.rankingData[0].rank,
+          totalCompetitors: wizardDemoData.rankingData[0].totalCompetitors,
+          rankingFactors: {
+            category_match: { score: 85, weighted: 12.75, weight: 15 },
+            review_count: {
+              score: 72,
+              weighted: 14.4,
+              weight: 20,
+              value: wizardDemoData.rankingData[0].reviews,
+            },
+            star_rating: {
+              score: 96,
+              weighted: 14.4,
+              weight: 15,
+              value: wizardDemoData.rankingData[0].rating,
+            },
+            keyword_name: { score: 80, weighted: 8, weight: 10 },
+            review_velocity: { score: 65, weighted: 9.75, weight: 15, value: 8 },
+            nap_consistency: { score: 90, weighted: 9, weight: 10 },
+            gbp_activity: { score: 70, weighted: 7, weight: 10, value: 12 },
+            sentiment: { score: 88, weighted: 4.4, weight: 5 },
+          },
+          rawData: {
+            client_gbp: {
+              totalReviewCount: wizardDemoData.rankingData[0].reviews,
+              averageRating: wizardDemoData.rankingData[0].rating,
+              primaryCategory: "Orthodontist",
+              reviewsLast30d: 8,
+              postsLast90d: 5,
+              photosCount: 24,
+              hasWebsite: true,
+              hasPhone: true,
+              hasHours: true,
+            },
+            client_gsc: null,
+            competitors: [
+              {
+                name: "Smile Orthodontics",
+                rankScore: 82,
+                rankPosition: 1,
+                totalReviews: 156,
+                averageRating: 4.9,
+              },
+              {
+                name: "Perfect Teeth Ortho",
+                rankScore: 80,
+                rankPosition: 2,
+                totalReviews: 134,
+                averageRating: 4.7,
+              },
+              {
+                name: "City Orthodontics",
+                rankScore: 75,
+                rankPosition: 4,
+                totalReviews: 98,
+                averageRating: 4.6,
+              },
+            ],
+          },
+          llmAnalysis: {
+            gaps: [
+              {
+                type: "review_velocity",
+                impact: "medium",
+                reason: "Your review velocity is below competitors",
+              },
+            ],
+            drivers: [
+              { factor: "Star Rating", weight: "15%", direction: "positive" },
+              { factor: "Review Count", weight: "20%", direction: "positive" },
+            ],
+            render_text:
+              "Your practice is performing well but has room for improvement in review velocity.",
+            verdict: "Good standing with growth opportunities",
+            confidence: 85,
+            top_recommendations: [
+              {
+                priority: 1,
+                title: "Increase review requests",
+                description:
+                  "Send review requests to recent patients to boost velocity",
+              },
+              {
+                priority: 2,
+                title: "Post more GBP updates",
+                description: "Increase posting frequency to improve GBP activity score",
+              },
+            ],
+          },
+          previousAnalysis: null,
+        }
+      : null;
+
+  // Use demo ranking when wizard is active and no real data, otherwise use real data
+  const effectiveRankings =
+    isWizardActive && wizardDemoData && rankings.length === 0
+      ? [demoRanking!]
+      : rankings;
+
   // Get selected ranking
   const selectedRanking =
-    rankings.find(
+    effectiveRankings.find(
       (r) => (r.gbpLocationId || r.id.toString()) === selectedLocationId
-    ) || rankings[0];
+    ) || effectiveRankings[0];
 
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
@@ -493,9 +656,9 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
             </span>
             <span className="text-[11px] font-black text-alloro-navy flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>{" "}
-              {rankings.length} Location{rankings.length !== 1 ? "s" : ""} •{" "}
+              {effectiveRankings.length} Location{effectiveRankings.length !== 1 ? "s" : ""} •{" "}
               {new Date(
-                rankings[0]?.observedAt || new Date()
+                effectiveRankings[0]?.observedAt || new Date()
               ).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -527,9 +690,9 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
         </section>
 
         {/* 1. LOCATION SELECTION - GRID */}
-        {rankings.length > 1 && (
+        {effectiveRankings.length > 1 && (
           <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {rankings.map((ranking, index) => {
+            {effectiveRankings.map((ranking, index) => {
               const isSelected =
                 (ranking.gbpLocationId || ranking.id.toString()) ===
                 selectedLocationId;
@@ -691,7 +854,10 @@ function PerformanceDashboard({
   return (
     <div className="space-y-12 lg:space-y-20">
       {/* 2. MARKET VITALS - KPIS */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section
+        data-wizard-target="rankings-score"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
         <KPICard
           label="Local Rank"
           value={`#${result.rankPosition}`}
@@ -733,7 +899,10 @@ function PerformanceDashboard({
       </section>
 
       {/* 3. COMPETITIVE MATRIX */}
-      <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden">
+      <section
+        data-wizard-target="rankings-competitors"
+        className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden"
+      >
         <div className="px-10 py-8 border-b border-black/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="text-left">
             <h2 className="text-xl font-black font-heading text-alloro-navy tracking-tight">
@@ -877,9 +1046,62 @@ function PerformanceDashboard({
 // Visibility Protocol Component - Only shows approved tasks with "View in Tasks" CTA
 function VisibilityProtocol({ tasks }: { tasks: RankingTask[] }) {
   const navigate = useNavigate();
+  const isWizardActive = useIsWizardActive();
+
+  // Demo tasks for wizard mode
+  const demoTasks: RankingTask[] = [
+    {
+      id: 1,
+      title: "Respond to 3 pending Google reviews",
+      description: "You have 3 reviews from the past week that need responses. Responding to reviews improves your local ranking and shows potential patients you care.",
+      status: "pending",
+      category: "Reputation",
+      agentType: "ranking",
+      isApproved: true,
+      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      completedAt: null,
+      metadata: { practiceRankingId: 1, gbpLocationId: null, gbpLocationName: null, priority: "High", impact: "High", effort: "Low", timeline: "This week" },
+    },
+    {
+      id: 2,
+      title: "Add 5 new photos to Google Business Profile",
+      description: "Practices with 100+ photos get 520% more calls. Your current photo count is below average for your area.",
+      status: "pending",
+      category: "GBP",
+      agentType: "ranking",
+      isApproved: true,
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      completedAt: null,
+      metadata: { practiceRankingId: 1, gbpLocationId: null, gbpLocationName: null, priority: "Medium", impact: "Medium", effort: "Low", timeline: "This week" },
+    },
+    {
+      id: 3,
+      title: "Create a Google Business post about services",
+      description: "Regular GBP posts boost your visibility. Post about a service or special offer to engage potential patients.",
+      status: "pending",
+      category: "GBP",
+      agentType: "ranking",
+      isApproved: true,
+      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      completedAt: null,
+      metadata: { practiceRankingId: 1, gbpLocationId: null, gbpLocationName: null, priority: "Medium", impact: "Medium", effort: "Low", timeline: "This week" },
+    },
+  ];
+
+  // Use demo tasks when wizard is active and no real tasks
+  const effectiveTasks = isWizardActive && (!tasks || tasks.length === 0) ? demoTasks : tasks;
 
   return (
-    <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left">
+    <section
+      data-wizard-target="rankings-factors"
+      className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left"
+    >
       <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
         <div className="space-y-1">
           <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
@@ -895,8 +1117,8 @@ function VisibilityProtocol({ tasks }: { tasks: RankingTask[] }) {
       </div>
       <div className="p-8 lg:p-12 space-y-6">
         {/* Only render approved tasks */}
-        {tasks && tasks.length > 0 ? (
-          tasks.slice(0, 3).map((task) => (
+        {effectiveTasks && effectiveTasks.length > 0 ? (
+          effectiveTasks.slice(0, 3).map((task) => (
             <div
               key={task.id}
               className="p-8 bg-slate-50/50 rounded-2xl border border-black/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 hover:bg-white hover:border-alloro-orange/20 hover:shadow-premium transition-all group"

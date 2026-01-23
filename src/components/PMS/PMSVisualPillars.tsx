@@ -36,10 +36,15 @@ import {
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
 import { PMSManualEntryModal } from "./PMSManualEntryModal";
 import { ReferralMatrices, type ReferralEngineData } from "./ReferralMatrices";
+import {
+  useIsWizardActive,
+  useWizardDemoData,
+} from "../../contexts/OnboardingWizardContext";
 
 interface PMSVisualPillarsProps {
   domain?: string;
   googleAccountId?: number | null;
+  hasProperties?: boolean;
 }
 
 // Removed DEFAULT_DOMAIN - domain should always be provided by parent component
@@ -129,7 +134,12 @@ const MetricCard = ({
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain,
   googleAccountId,
+  hasProperties = true,
 }) => {
+  // Wizard state
+  const isWizardActive = useIsWizardActive();
+  const wizardDemoData = useWizardDemoData();
+
   const [inlineFile, setInlineFile] = useState<File | null>(null);
   const [inlineIsUploading, setInlineIsUploading] = useState(false);
   const [inlineMessage, setInlineMessage] = useState<string>("");
@@ -138,7 +148,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   >("idle");
   const inlineInputRef = useRef<HTMLInputElement>(null);
   const [inlineIsDragOver, setInlineIsDragOver] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Start with loading false if wizard is active (we'll show demo data immediately)
+  const [isLoading, setIsLoading] = useState(!isWizardActive);
   const [error, setError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [keyData, setKeyData] = useState<PmsKeyDataResponse["data"] | null>(
@@ -163,7 +174,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
-  const canUploadPMS = userRole === "admin" || userRole === "manager";
+  const hasRolePermission = userRole === "admin" || userRole === "manager";
+  // Can only upload PMS if user has role permission AND properties are connected (or wizard is active)
+  const canUploadPMS = hasRolePermission && (hasProperties || isWizardActive);
 
   const storageKey = useMemo(
     () => `pmsProcessing:${domain || "unknown"}`,
@@ -174,6 +187,12 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   const loadKeyData = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
+      // Guard: Skip loading during wizard mode - use demo data instead
+      if (isWizardActive) {
+        setIsLoading(false);
+        return;
+      }
+
       // Guard: Skip loading if domain is not available
       if (!domain) {
         setIsLoading(false);
@@ -230,7 +249,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }
       }
     },
-    [domain],
+    [domain, isWizardActive],
   );
 
   useEffect(() => {
@@ -241,6 +260,20 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       isMountedRef.current = false;
     };
   }, [loadKeyData]);
+
+  // Sync loading state - handle both wizard mode AND normal mode
+  // When wizard is active, show demo data immediately (no loading)
+  // When wizard is NOT active but domain is missing, don't show loading forever
+  useEffect(() => {
+    if (isWizardActive) {
+      // Wizard mode: immediately show demo data
+      setIsLoading(false);
+    } else if (!domain) {
+      // No domain yet but not in wizard: don't stay stuck loading forever
+      // The parent (Dashboard.tsx) shows its own skeleton when domain is undefined
+      setIsLoading(false);
+    }
+  }, [isWizardActive, domain]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -320,8 +353,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     }
   }, [latestJobStatus]);
 
-  // Fetch Referral Engine data
+  // Fetch Referral Engine data - skip during wizard mode (use demo data instead)
   const loadReferralData = useCallback(async () => {
+    // Skip during wizard mode - use demo data instead
+    if (isWizardActive) {
+      setReferralLoading(false);
+      return;
+    }
+
     if (!googleAccountId) {
       setReferralLoading(false);
       return;
@@ -364,7 +403,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     } finally {
       setReferralLoading(false);
     }
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
   useEffect(() => {
     loadReferralData();
@@ -372,7 +411,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   // Check for active automation on mount (handles page refresh during automation)
   // Also handles the case where client approval banner should show the timeline
+  // Skip during wizard mode - use demo data instead
   useEffect(() => {
+    if (isWizardActive) return;
+
     const checkForActiveAutomation = async () => {
       if (!domain) return;
 
@@ -417,10 +459,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     };
 
     checkForActiveAutomation();
-  }, [domain]); // Run once on mount when domain is available
+  }, [domain, isWizardActive]); // Run once on mount when domain is available
 
   // Fetch automation status when processing is pending
+  // Skip during wizard mode
   const loadAutomationStatus = useCallback(async () => {
+    if (isWizardActive) {
+      return;
+    }
+
     if (!domain) {
       console.log("🔍 loadAutomationStatus: no domain");
       setAutomationStatus(null);
@@ -492,13 +539,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       console.error("❌ Failed to fetch automation status:", err);
       setAutomationStatus(null);
     }
-  }, [domain, loadReferralData, loadKeyData]);
+  }, [domain, loadReferralData, loadKeyData, isWizardActive]);
 
   // Poll for automation status when referralPending is true OR when there's an active automation
   // This ensures real-time updates regardless of how the user got to this page
   // Uses sequential polling: wait for response, then wait 1 second before next request
+  // Skip during wizard mode
   useEffect(() => {
-    if (!domain) return;
+    if (!domain || isWizardActive) return;
 
     // Define statuses that should trigger polling
     const activeStatuses = ["pending", "processing", "awaiting_approval"];
@@ -562,13 +610,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [domain, referralPending, automationStatus?.status, loadAutomationStatus]);
+  }, [domain, referralPending, automationStatus?.status, loadAutomationStatus, isWizardActive]);
 
   // Background polling: Check for new automation jobs periodically
   // This catches cases where automation starts from admin panel while user is viewing page
   // Uses sequential polling: wait for response, then wait 10 seconds before next request
+  // Skip during wizard mode
   useEffect(() => {
-    if (!domain) return;
+    if (!domain || isWizardActive) return;
 
     let isCancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -621,11 +670,14 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [domain, referralPending]);
+  }, [domain, referralPending, isWizardActive]);
 
   // Fallback: Fetch automation status for specific job when client approval banner shows
   // but we don't have automation status from the active jobs endpoint
+  // Skip during wizard mode
   useEffect(() => {
+    if (isWizardActive) return;
+
     const fetchJobAutomationStatus = async () => {
       // Only run if:
       // 1. Client approval banner should be shown
@@ -666,9 +718,74 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     latestJobIsClientApproved,
     latestJobId,
     automationStatus,
+    isWizardActive,
   ]);
 
+  // Demo data for wizard mode - Referral Velocity
+  const wizardMonthlyData = useMemo(() => {
+    const demoData = wizardDemoData?.referralData?.monthlyData;
+    if (!demoData) {
+      // Fallback demo data
+      return [
+        { month: "Jan", selfReferrals: 12, doctorReferrals: 8, total: 20, totalReferrals: 20, productionTotal: 24000 },
+        { month: "Feb", selfReferrals: 15, doctorReferrals: 10, total: 25, totalReferrals: 25, productionTotal: 30000 },
+        { month: "Mar", selfReferrals: 18, doctorReferrals: 12, total: 30, totalReferrals: 30, productionTotal: 36000 },
+        { month: "Apr", selfReferrals: 14, doctorReferrals: 11, total: 25, totalReferrals: 25, productionTotal: 30000 },
+        { month: "May", selfReferrals: 20, doctorReferrals: 14, total: 34, totalReferrals: 34, productionTotal: 40000 },
+        { month: "Jun", selfReferrals: 22, doctorReferrals: 13, total: 35, totalReferrals: 35, productionTotal: 42000 },
+      ];
+    }
+    return demoData.map((m) => ({
+      month: m.month,
+      selfReferrals: m.marketing,
+      doctorReferrals: m.doctor,
+      total: m.marketing + m.doctor,
+      totalReferrals: m.marketing + m.doctor,
+      productionTotal: (m.marketing + m.doctor) * 1200,
+    }));
+  }, [wizardDemoData]);
+
+  // Demo data for wizard mode - Referral Engine / Intelligence Hub
+  const wizardReferralEngineData = useMemo((): ReferralEngineData => {
+    return {
+      observed_period: {
+        start_date: "2025-01-01",
+        end_date: "2025-06-30",
+      },
+      executive_summary: [
+        "Marketing referrals show strong growth trajectory",
+        "Doctor referral network expanding steadily",
+        "Overall conversion rates above industry average",
+      ],
+      doctor_referral_matrix: [
+        { referrer_name: "Dr. Sarah Johnson", referred: 12, pct_scheduled: 92, pct_examined: 85, pct_started: 75, net_production: 18500, trend_label: "increasing" },
+        { referrer_name: "Dr. Michael Chen", referred: 8, pct_scheduled: 88, pct_examined: 80, pct_started: 70, net_production: 12000, trend_label: "stable" },
+        { referrer_name: "Dr. Emily Davis", referred: 6, pct_scheduled: 95, pct_examined: 90, pct_started: 82, net_production: 10800, trend_label: "new" },
+        { referrer_name: "Dr. Robert Wilson", referred: 5, pct_scheduled: 80, pct_examined: 75, pct_started: 65, net_production: 7500, trend_label: "decreasing" },
+      ],
+      non_doctor_referral_matrix: [
+        { source_label: "Google Search", source_type: "digital", referred: 35, pct_scheduled: 78, pct_examined: 70, pct_started: 58, net_production: 42000, trend_label: "increasing" },
+        { source_label: "Patient Referral", source_type: "patient", referred: 28, pct_scheduled: 95, pct_examined: 90, pct_started: 85, net_production: 52000, trend_label: "increasing" },
+        { source_label: "Facebook Ads", source_type: "digital", referred: 18, pct_scheduled: 65, pct_examined: 55, pct_started: 45, net_production: 18000, trend_label: "stable" },
+        { source_label: "Website Direct", source_type: "digital", referred: 14, pct_scheduled: 72, pct_examined: 65, pct_started: 55, net_production: 16800, trend_label: "new" },
+      ],
+      growth_opportunity_summary: {
+        top_three_fixes: [
+          "Increase follow-up on Google Search leads to improve conversion",
+          "Implement patient referral program incentives",
+          "Optimize Facebook ad targeting for higher quality leads",
+        ],
+        estimated_additional_annual_revenue: 45000,
+      },
+    };
+  }, []);
+
   const monthlyData = useMemo(() => {
+    // Use wizard demo data if wizard is active and no real data
+    if (isWizardActive && !keyData?.months?.length) {
+      return wizardMonthlyData;
+    }
+
     if (!keyData?.months?.length) {
       return [];
     }
@@ -688,7 +805,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         productionTotal,
       };
     });
-  }, [keyData]);
+  }, [keyData, isWizardActive, wizardMonthlyData]);
+
+  // Effective referral data - use wizard demo data if wizard is active and no real data
+  const effectiveReferralData = useMemo(() => {
+    if (isWizardActive && !referralData) {
+      return wizardReferralEngineData;
+    }
+    return referralData;
+  }, [isWizardActive, referralData, wizardReferralEngineData]);
 
   const latestTimestamp = keyData?.stats?.latestJobTimestamp
     ? new Date(keyData.stats.latestJobTimestamp)
@@ -701,8 +826,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const topSources = keyData?.sources ?? [];
 
   const totalProduction = useMemo(() => {
-    return topSources.reduce((sum, s) => sum + (s.production || 0), 0);
-  }, [topSources]);
+    const realProduction = topSources.reduce((sum, s) => sum + (s.production || 0), 0);
+    // Use wizard demo data if wizard is active and no real production data
+    if (isWizardActive && realProduction === 0) {
+      return wizardDemoData?.referralData?.keyData?.mktProduction ?? 89000;
+    }
+    return realProduction;
+  }, [topSources, isWizardActive, wizardDemoData]);
 
   const totalReferrals = useMemo(() => {
     return monthlyData.reduce((sum, m) => sum + m.totalReferrals, 0);
@@ -723,10 +853,23 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   //     ? Math.round((selfReferralCount / totalReferrals) * 100)
   //     : 0;
 
-  const doctorPercentage =
-    totalReferrals > 0
-      ? Math.round((doctorReferralCount / totalReferrals) * 100)
-      : 0;
+  const doctorPercentage = useMemo(() => {
+    if (totalReferrals > 0) {
+      return Math.round((doctorReferralCount / totalReferrals) * 100);
+    }
+    // Fallback for wizard mode when no real data
+    if (isWizardActive) {
+      const demoKeyData = wizardDemoData?.referralData?.keyData;
+      if (demoKeyData) {
+        const total = (demoKeyData.mktProduction ?? 0) + (demoKeyData.docProduction ?? 0);
+        if (total > 0) {
+          return Math.round(((demoKeyData.docProduction ?? 0) / total) * 100);
+        }
+      }
+      return 43; // Fallback percentage
+    }
+    return 0;
+  }, [totalReferrals, doctorReferralCount, isWizardActive, wizardDemoData]);
 
   // Debug: Log calculated data only on change (not on every render)
   useMemo(() => {
@@ -1125,10 +1268,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         )}
 
         {/* Main Content */}
-        {!isLoading && !error && keyData && (
+        {!isLoading && !error && (keyData || isWizardActive) && (
           <>
             {/* 1. ATTRIBUTION VITALS - Matching newdesign */}
-            <section className="space-y-4">
+            <section data-wizard-target="pms-attribution" className="space-y-4">
               <div className="flex items-center gap-4 px-2">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
                   Your PMS Vitals (YTD)
@@ -1162,7 +1305,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             </section>
 
             {/* 2. REFERRAL VELOCITY - Matching newdesign */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden">
+            <section
+              data-wizard-target="pms-velocity"
+              className="bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden"
+            >
               <div className="px-6 sm:px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                   <Calendar size={20} className="text-alloro-orange" />
@@ -1259,7 +1405,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
             {/* 3. INTELLIGENCE HUB MATRICES - Always show, including during client approval */}
             {/* When client approval banner is shown, show the progress timeline at "Your confirmation" step */}
-            <section className="space-y-4">
+            <section data-wizard-target="pms-matrices" className="space-y-4">
               <div className="flex items-center gap-4 px-2">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
                   Intelligence Hub Matrices
@@ -1268,10 +1414,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               </div>
               <>
                 <ReferralMatrices
-                  referralData={referralData}
-                  isLoading={referralLoading}
-                  isPending={referralPending || showClientApprovalBanner}
-                  automationStatus={automationStatus}
+                  referralData={effectiveReferralData}
+                  isLoading={referralLoading && !isWizardActive}
+                  isPending={(referralPending || showClientApprovalBanner) && !isWizardActive}
+                  automationStatus={isWizardActive ? null : automationStatus}
                   onConfirmationClick={scrollToApprovalBanner}
                 />
               </>
@@ -1281,6 +1427,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
             {canUploadPMS ? (
               <section
                 id="data-ingestion-hub"
+                data-wizard-target="pms-upload"
                 className={`bg-white rounded-2xl shadow-premium p-6 sm:p-10 lg:p-14 flex flex-col md:flex-row items-center justify-between gap-12 transition-all duration-300 ${
                   isIngestionHighlighted
                     ? "border-2 border-alloro-orange ring-8 ring-alloro-orange/30 scale-[1.01]"
@@ -1397,18 +1544,35 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 </div>
               </section>
             ) : (
-              <section className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14">
+              <section
+                data-wizard-target="pms-upload"
+                className="bg-white rounded-2xl border border-slate-100 shadow-premium p-6 sm:p-10 lg:p-14"
+              >
                 <div className="flex flex-col items-center text-center space-y-6">
                   <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center">
-                    <AlertCircle size={32} className="text-amber-600" />
+                    {!hasProperties && !isWizardActive ? (
+                      <Lock size={32} className="text-amber-600" />
+                    ) : (
+                      <AlertCircle size={32} className="text-amber-600" />
+                    )}
                   </div>
                   <div>
                     <h3 className="text-xl font-bold font-heading text-alloro-navy mb-2">
-                      Upload Restricted
+                      {!hasProperties && !isWizardActive ? "Connect Properties First" : "Upload Restricted"}
                     </h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                      Only admins and managers can upload PMS data
+                    <p className="text-sm text-slate-500 font-medium max-w-md">
+                      {!hasProperties && !isWizardActive
+                        ? "Please connect your Google Analytics, Search Console, and Business Profile in Settings before uploading PMS data."
+                        : "Only admins and managers can upload PMS data"}
                     </p>
+                    {!hasProperties && !isWizardActive && (
+                      <a
+                        href="/settings"
+                        className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-alloro-orange text-white rounded-xl text-sm font-bold hover:bg-alloro-orange/90 transition-colors"
+                      >
+                        Go to Settings
+                      </a>
+                    )}
                   </div>
                 </div>
               </section>

@@ -11,10 +11,12 @@ import {
   AlertTriangle,
   X,
   HelpCircle,
+  Lock,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchClientTasks } from "../api/tasks";
 import { fetchNotifications } from "../api/notifications";
+import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -36,6 +38,7 @@ interface NavItemProps {
   onClick: () => void;
   badge?: string;
   hasNotification?: boolean;
+  isLocked?: boolean;
 }
 
 // NavItem Component - MATCHES newdesign exactly
@@ -46,12 +49,16 @@ const NavItem = ({
   onClick,
   badge,
   hasNotification = false,
+  isLocked = false,
 }: NavItemProps) => (
   <button
     onClick={onClick}
+    disabled={isLocked}
     className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-300 group relative
     ${
-      active
+      isLocked
+        ? "opacity-40 cursor-not-allowed"
+        : active
         ? "bg-alloro-sidehover text-white shadow-sm border border-white/5"
         : "text-white/40 hover:text-white hover:bg-alloro-sidehover"
     }`}
@@ -73,7 +80,7 @@ const NavItem = ({
       >
         {label}
       </span>
-      {hasNotification && !active && (
+      {hasNotification && !active && !isLocked && (
         <span className="absolute left-2.5 top-2.5 flex h-1.5 w-1.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-alloro-orange opacity-75"></span>
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-alloro-orange"></span>
@@ -81,7 +88,8 @@ const NavItem = ({
       )}
     </div>
     <div className="flex items-center gap-2">
-      {badge && (
+      {isLocked && <Lock size={12} className="text-white/30" />}
+      {badge && !isLocked && (
         <span
           className={`px-2 py-0.5 rounded-md text-[9px] font-black leading-none
           ${
@@ -91,7 +99,7 @@ const NavItem = ({
           {badge}
         </span>
       )}
-      {!badge && active && <ChevronRight size={14} className="opacity-20" />}
+      {!badge && !isLocked && active && <ChevronRight size={14} className="opacity-20" />}
     </div>
   </button>
 );
@@ -105,6 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isWizardActive = useIsWizardActive();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [userTaskCount, setUserTaskCount] = useState<number>(0);
@@ -262,6 +271,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleNavigate = (path: string) => {
+    // Block navigation during wizard - the wizard controls navigation
+    if (isWizardActive) {
+      return;
+    }
     navigate(path);
     onClose?.();
   };
@@ -373,6 +386,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-1.5">
             <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
               Operations
+              {isWizardActive && (
+                <span className="ml-2 text-alloro-orange">(Tour Active)</span>
+              )}
             </div>
             {filteredMainNav.map(({ label, icon, path }) => (
               <NavItem
@@ -381,6 +397,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 label={label}
                 active={isActive(path)}
                 onClick={() => handleNavigate(path)}
+                isLocked={isWizardActive}
               />
             ))}
           </div>
@@ -402,6 +419,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => handleNavigate(path)}
                       badge={badge}
                       hasNotification={hasNotification}
+                      isLocked={isWizardActive}
                     />
                   ) : null
               )}
@@ -419,6 +437,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 label="Help Center"
                 active={location.pathname === "/help"}
                 onClick={() => handleNavigate("/help")}
+                isLocked={isWizardActive}
               />
             </div>
           )}

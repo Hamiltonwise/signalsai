@@ -14,6 +14,8 @@ import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
+import { OnboardingWizardProvider } from "./contexts/OnboardingWizardContext.tsx";
+import { WizardController } from "./components/onboarding-wizard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
 import { PilotHandler } from "./components/PilotHandler";
@@ -42,8 +44,10 @@ function App() {
     <BrowserRouter>
       <PilotHandler />
       <AuthProvider>
-        <Toaster position="top-right" />
-        <Routes>
+        <OnboardingWizardProvider>
+          <Toaster position="top-right" />
+          <WizardController />
+          <Routes>
           <Route path="/" element={<Navigate to="/signin" replace />} />
           <Route
             path="/signin"
@@ -160,7 +164,8 @@ function App() {
             }
           />
         </Routes>
-        <PilotBanner />
+          <PilotBanner />
+        </OnboardingWizardProvider>
       </AuthProvider>
     </BrowserRouter>
   );

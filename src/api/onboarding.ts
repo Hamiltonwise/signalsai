@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./index";
+import { apiGet, apiPost, apiPut } from "./index";
 
 const baseurl = "/onboarding";
 
@@ -62,10 +62,66 @@ async function saveProperties(data: {
   }
 }
 
+/**
+ * Check if user has completed the onboarding wizard (product tour)
+ */
+async function getWizardStatus() {
+  try {
+    return await apiGet({
+      path: baseurl + `/wizard/status`,
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      successful: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Mark the onboarding wizard as completed
+ */
+async function completeWizard() {
+  try {
+    return await apiPut({
+      path: baseurl + `/wizard/complete`,
+      passedData: {},
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      successful: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Reset the onboarding wizard (for re-showing the tour)
+ */
+async function restartWizard() {
+  try {
+    return await apiPost({
+      path: baseurl + `/wizard/restart`,
+      passedData: {},
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      successful: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
 const onboarding = {
   getOnboardingStatus,
   getAvailableProperties,
   saveProperties,
+  getWizardStatus,
+  completeWizard,
+  restartWizard,
 };
 
 export default onboarding;

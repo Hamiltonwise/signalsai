@@ -405,7 +405,7 @@ export const Settings: React.FC = () => {
       name: "Google Business Profile",
       icon: "/google-business-profile.png",
       connected: properties.gbp && properties.gbp.length > 0,
-      lastSync: properties.gbp.length > 0 ? "1 hour ago" : "Not connected",
+      lastSync: properties.gbp && properties.gbp.length > 0 ? "1 hour ago" : "Not connected",
       locations: properties.gbp,
     },
     {
@@ -618,7 +618,10 @@ export const Settings: React.FC = () => {
               </section>
 
               {/* Right Column - Integrations */}
-              <section className="xl:col-span-7 space-y-10">
+              <section
+                data-wizard-target="settings-integrations"
+                className="xl:col-span-7 space-y-10"
+              >
                 <div className="space-y-8">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-4">
                     <button

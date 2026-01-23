@@ -21,6 +21,7 @@ import {
 import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
 import { parseHighlightTags } from "../../utils/textFormatting";
+import { useIsWizardActive } from "../../contexts/OnboardingWizardContext";
 
 // CSS for pulse animation
 const pulseAnimationStyle = `
@@ -278,6 +279,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
 export function TasksView({ googleAccountId }: TasksViewProps) {
   const location = useLocation();
+  const isWizardActive = useIsWizardActive();
   const [tasks, setTasks] = useState<GroupedActionItems | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -288,6 +290,13 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const [completionPct, setCompletionPct] = useState(0);
   const [pulsingTaskId, setPulsingTaskId] = useState<number | null>(null);
   const [showAlloroTasks, setShowAlloroTasks] = useState(false);
+
+  // Auto-expand Alloro tasks when wizard is active and targeting this section
+  useEffect(() => {
+    if (isWizardActive) {
+      setShowAlloroTasks(true);
+    }
+  }, [isWizardActive]);
   const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
   const hasScrolledToTask = useRef(false);
 
@@ -351,14 +360,20 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   }, [tasks]);
 
   // Fetch tasks on mount and when googleAccountId changes
+  // Skip during wizard mode - use demo data instead
   useEffect(() => {
+    if (isWizardActive) {
+      setLoading(false);
+      return;
+    }
+
     if (!googleAccountId) {
       setLoading(false);
       return;
     }
 
     loadTasks();
-  }, [googleAccountId]);
+  }, [googleAccountId, isWizardActive]);
 
   const loadTasks = async () => {
     if (!googleAccountId) return;
@@ -529,7 +544,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
         </section>
 
         {/* TEAM TASKS - MAIN VIEW */}
-        <section className="space-y-10">
+        <section data-wizard-target="tasks-team" className="space-y-10">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-5">
               <div className="w-12 h-12 bg-alloro-orange text-white rounded-2xl flex items-center justify-center shadow-xl">
@@ -640,7 +655,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
         </section>
 
         {/* ALLORO TASKS - COLLAPSIBLE */}
-        <section className="pt-8">
+        <section data-wizard-target="tasks-alloro" className="pt-8">
           <div className="w-full">
             <button
               onClick={() => setShowAlloroTasks(!showAlloroTasks)}

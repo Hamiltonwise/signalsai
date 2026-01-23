@@ -22,6 +22,10 @@ interface OnboardingWizardContextType {
   isWizardActive: boolean;
   /** Whether we're still loading the wizard status from the API */
   isLoadingWizardStatus: boolean;
+  /** Whether the welcome modal is showing (before steps begin) */
+  showWelcomeModal: boolean;
+  /** Dismiss the welcome modal and start the steps */
+  dismissWelcomeModal: () => void;
   /** Current step index */
   currentStepIndex: number;
   /** Current step configuration */
@@ -62,6 +66,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
 
   const [isWizardActive, setIsWizardActive] = useState(false);
   const [isLoadingWizardStatus, setIsLoadingWizardStatus] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [wizardCompleted, setWizardCompleted] = useState<boolean | null>(null);
 
@@ -88,6 +93,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
           setWizardCompleted(response.onboarding_wizard_completed);
           // Auto-start wizard if not completed
           if (!response.onboarding_wizard_completed) {
+            setShowWelcomeModal(true);
             setIsWizardActive(true);
           }
         }
@@ -113,6 +119,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
 
   const startWizard = useCallback(() => {
     setCurrentStepIndex(0);
+    setShowWelcomeModal(true);
     setIsWizardActive(true);
     // Navigate to first step's page
     const firstStep = WIZARD_STEPS[0];
@@ -120,6 +127,10 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
       navigate(getPageRoute(firstStep.page));
     }
   }, [navigate]);
+
+  const dismissWelcomeModal = useCallback(() => {
+    setShowWelcomeModal(false);
+  }, []);
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < totalSteps - 1) {
@@ -162,6 +173,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
       await onboarding.restartWizard();
       setCurrentStepIndex(0);
       setWizardCompleted(false);
+      setShowWelcomeModal(true);
       setIsWizardActive(true);
       // Navigate to first step's page
       const firstStep = WIZARD_STEPS[0];
@@ -183,6 +195,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
         // Auto-start wizard if not completed
         if (!response.onboarding_wizard_completed) {
           setCurrentStepIndex(0);
+          setShowWelcomeModal(true);
           setIsWizardActive(true);
           // Navigate to first step's page
           const firstStep = WIZARD_STEPS[0];
@@ -217,6 +230,8 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   const contextValue: OnboardingWizardContextType = {
     isWizardActive,
     isLoadingWizardStatus,
+    showWelcomeModal,
+    dismissWelcomeModal,
     currentStepIndex,
     currentStep,
     totalSteps,

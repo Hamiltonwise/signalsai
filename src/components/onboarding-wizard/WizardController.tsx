@@ -1,7 +1,9 @@
 import { useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useOnboardingWizard } from "../../contexts/OnboardingWizardContext";
 import { SpotlightOverlay } from "./SpotlightOverlay";
 import { WizardTooltip } from "./WizardTooltip";
+import { WelcomeModal } from "./WelcomeModal";
 import { WIZARD_STEPS } from "./wizardConfig";
 
 /**
@@ -12,6 +14,8 @@ export function WizardController() {
   const {
     isWizardActive,
     isLoadingWizardStatus,
+    showWelcomeModal,
+    dismissWelcomeModal,
     currentStep,
     currentStepIndex,
     totalSteps,
@@ -38,7 +42,24 @@ export function WizardController() {
   }, [skipWizard]);
 
   // Don't render anything while loading or if wizard is not active
-  if (isLoadingWizardStatus || !isWizardActive || !currentStep) {
+  if (isLoadingWizardStatus || !isWizardActive) {
+    return null;
+  }
+
+  // Show welcome modal first, before any wizard steps
+  if (showWelcomeModal) {
+    return (
+      <AnimatePresence>
+        <WelcomeModal
+          onStart={dismissWelcomeModal}
+          onSkip={handleSkip}
+        />
+      </AnimatePresence>
+    );
+  }
+
+  // Don't render steps if no current step
+  if (!currentStep) {
     return null;
   }
 

@@ -8,6 +8,8 @@ interface SpotlightOverlayProps {
   isVisible: boolean;
   /** Whether this is a page overview (no specific element highlighted) */
   isPageOverview?: boolean;
+  /** Whether to block interaction with the highlighted element (educational only) */
+  blockInteraction?: boolean;
 }
 
 /**
@@ -19,6 +21,7 @@ export function SpotlightOverlay({
   targetSelector,
   isVisible,
   isPageOverview = false,
+  blockInteraction = false,
 }: SpotlightOverlayProps) {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -147,6 +150,21 @@ export function SpotlightOverlay({
             transition={{ duration: 0.3 }}
             className="fixed inset-0 z-[80] pointer-events-none bg-black/10"
           />
+
+          {/* Blocking overlay for educational-only steps (final 2 steps) */}
+          {blockInteraction && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-[90] cursor-not-allowed"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            />
+          )}
 
           {/* Inject styles for the pulsing border highlight */}
           <style>{`

@@ -13,23 +13,29 @@ interface WelcomeModalProps {
 export function WelcomeModal({ onStart, onSkip }: WelcomeModalProps) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      initial={{ opacity: 0, scale: 1 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0 }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      className="fixed inset-0 z-[100] flex items-center justify-center origin-center"
     >
       {/* Orange gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-alloro-orange via-alloro-orange to-orange-600">
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-br from-alloro-orange via-alloro-orange to-orange-600"
+        exit={{ scale: 0, borderRadius: "50%" }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/10 rounded-full -ml-40 -mb-40 blur-3xl" />
         <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-white/5 rounded-full blur-2xl" />
-      </div>
+      </motion.div>
 
       {/* Content */}
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0 }}
         transition={{ delay: 0.1, type: "spring", duration: 0.5 }}
         className="relative z-10 max-w-xl mx-auto px-6 text-center"
       >

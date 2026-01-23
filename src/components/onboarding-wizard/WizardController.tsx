@@ -28,6 +28,8 @@ export function WizardController() {
 
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
+  // Final 2 steps are educational only - block interaction
+  const isFinalEducationalStep = currentStepIndex >= totalSteps - 2;
 
   const handleNext = useCallback(() => {
     if (isLastStep) {
@@ -70,6 +72,7 @@ export function WizardController() {
         targetSelector={currentStep.targetSelector}
         isVisible={true}
         isPageOverview={currentStep.isPageOverview}
+        blockInteraction={isFinalEducationalStep}
       />
 
       {/* Tooltip */}

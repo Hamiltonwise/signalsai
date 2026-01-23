@@ -907,6 +907,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </h3>
               <div className="h-px w-full bg-black/10"></div>
             </div>
+            {effectivePmsMetrics && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
               <MetricCard
                 label="New Starts"
@@ -957,6 +958,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 trend={currentLocationData ? "+1%" : undefined}
               />
             </div>
+            )}
           </section>
         )}
 
@@ -1320,7 +1322,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-              {effectiveTopFixes.map((fix: string, idx: number) => (
+              {effectiveTopFixes?.map((fix: string, idx: number) => (
                 <div
                   key={idx}
                   className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[280px] overflow-hidden"

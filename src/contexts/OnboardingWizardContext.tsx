@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -68,7 +68,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   const [isLoadingWizardStatus, setIsLoadingWizardStatus] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [wizardCompleted, setWizardCompleted] = useState<boolean | null>(null);
+  const [, setWizardCompleted] = useState<boolean | null>(null);
 
   const currentStep =
     currentStepIndex >= 0 && currentStepIndex < WIZARD_STEPS.length
@@ -212,7 +212,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   }, [navigate]);
 
   const shouldBlockNavigation = useCallback(
-    (targetPath: string): boolean => {
+    (_targetPath: string): boolean => {
       if (!isWizardActive) return false;
       // During wizard, block all navigation except what the wizard controls
       return true;

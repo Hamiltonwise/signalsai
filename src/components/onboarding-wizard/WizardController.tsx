@@ -4,7 +4,6 @@ import { useOnboardingWizard } from "../../contexts/OnboardingWizardContext";
 import { SpotlightOverlay } from "./SpotlightOverlay";
 import { WizardTooltip } from "./WizardTooltip";
 import { WelcomeModal } from "./WelcomeModal";
-import { WIZARD_STEPS } from "./wizardConfig";
 
 /**
  * WizardController - Main component that renders the wizard UI

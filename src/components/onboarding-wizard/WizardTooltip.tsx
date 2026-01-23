@@ -52,9 +52,8 @@ export function WizardTooltip({
   const retryCountRef = useRef(0);
   const maxRetries = 30; // 30 * 200ms = 6 seconds max
 
-  // Check if this is one of the final CTA steps (last 2 steps)
-  const isFinalStep = currentIndex >= totalSteps - 1; // Last 2 steps (21 and 22)
-  const isSecondToLast = currentIndex === totalSteps - 1;
+  // Check if this is the final CTA step
+  const isFinalStep = currentIndex >= totalSteps - 1;
 
   const calculatePosition = useCallback(() => {
     if (!step) {

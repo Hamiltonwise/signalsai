@@ -108,8 +108,8 @@ const MetricCard = ({
               isUp
                 ? "bg-green-100 text-green-700"
                 : isDown
-                ? "bg-red-100 text-red-700"
-                : "bg-slate-100 text-slate-600"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-slate-100 text-slate-600"
             }`}
           >
             {trend}{" "}
@@ -146,10 +146,20 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const [showDataHub, setShowDataHub] = useState(false);
   const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
 
+  // TopFix interface for enriched fix data (additional fields optional for backwards compatibility)
+  interface TopFix {
+    title: string;
+    description: string;
+    why_important?: string;
+    expected_impact?: string;
+    estimated_return?: number;
+    sources?: string[];
+  }
+
   // Modal state for Strategic Growth fixes
   const [selectedFix, setSelectedFix] = useState<{
     index: number;
-    text: string;
+    fix: TopFix | string;
   } | null>(null);
 
   // Modal state for Proofline trajectory details
@@ -157,7 +167,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // PMS data state
   const [pmsData, setPmsData] = useState<PmsKeyDataResponse["data"] | null>(
-    null
+    null,
   );
   const [, setPmsLoading] = useState(true);
   const [, setPmsError] = useState<string | null>(null);
@@ -175,7 +185,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Referral Engine data state
   const [referralData, setReferralData] = useState<ReferralEngineData | null>(
-    null
+    null,
   );
   const [referralLoading, setReferralLoading] = useState(true);
   const [referralPending, setReferralPending] = useState(false);
@@ -203,12 +213,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
           setPmsData(response.data);
         } else {
           setPmsError(
-            response?.error || response?.message || "Failed to load PMS data"
+            response?.error || response?.message || "Failed to load PMS data",
           );
         }
       } catch (err) {
         setPmsError(
-          err instanceof Error ? err.message : "Failed to load PMS data"
+          err instanceof Error ? err.message : "Failed to load PMS data",
         );
       } finally {
         setPmsLoading(false);
@@ -236,7 +246,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
       try {
         const response = await fetch(
-          `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`
+          `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
         );
 
         if (!response.ok) {
@@ -259,7 +269,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         }
       } catch (err) {
         setRankingError(
-          err instanceof Error ? err.message : "Failed to load ranking data"
+          err instanceof Error ? err.message : "Failed to load ranking data",
         );
       } finally {
         setRankingLoading(false);
@@ -290,7 +300,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         if (response?.success && response.tasks) {
           const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
           const opportunityTasks = allTasks.filter(
-            (task) => task.agent_type === "OPPORTUNITY"
+            (task) => task.agent_type === "OPPORTUNITY",
           );
           setTasks(opportunityTasks);
           setAllUserTasks(response.tasks.USER);
@@ -299,7 +309,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         }
       } catch (err) {
         setTasksError(
-          err instanceof Error ? err.message : "Failed to load tasks"
+          err instanceof Error ? err.message : "Failed to load tasks",
         );
       } finally {
         setTasksLoading(false);
@@ -326,7 +336,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
       try {
         const response = await fetch(
-          `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`
+          `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
         );
 
         if (!response.ok) {
@@ -377,7 +387,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
     const calculatePercentChange = (
       current: number,
-      previous: number | undefined
+      previous: number | undefined,
     ) => {
       if (!previous || previous === 0) return 0;
       return ((current - previous) / previous) * 100;
@@ -396,19 +406,19 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       month: latestMonth.month,
       referralChange: calculatePercentChange(
         totalReferrals,
-        previousMonth?.totalReferrals
+        previousMonth?.totalReferrals,
       ),
       selfReferralChange: calculatePercentChange(
         selfReferrals,
-        previousMonth?.selfReferrals
+        previousMonth?.selfReferrals,
       ),
       doctorReferralChange: calculatePercentChange(
         doctorReferrals,
-        previousMonth?.doctorReferrals
+        previousMonth?.doctorReferrals,
       ),
       productionChange: calculatePercentChange(
         production,
-        previousMonth?.productionTotal
+        previousMonth?.productionTotal,
       ),
     };
   };
@@ -446,29 +456,31 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     : pmsMetrics;
 
   // Fallback ranking data
-  const fallbackRankingData = [{
-    id: 1,
-    googleAccountId: googleAccountId || 0,
-    domain: "demo.com",
-    specialty: "Orthodontics",
-    location: "Local Area",
-    gbpAccountId: null,
-    gbpLocationId: null,
-    gbpLocationName: "Main Office",
-    batchId: null,
-    observedAt: new Date().toISOString(),
-    status: "completed" as const,
-    rankScore: 78,
-    rankPosition: 3,
-    totalCompetitors: 15,
-    rankingFactors: null,
-    rawData: null,
-    llmAnalysis: null,
-    statusDetail: null,
-    errorMessage: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }];
+  const fallbackRankingData = [
+    {
+      id: 1,
+      googleAccountId: googleAccountId || 0,
+      domain: "demo.com",
+      specialty: "Orthodontics",
+      location: "Local Area",
+      gbpAccountId: null,
+      gbpLocationId: null,
+      gbpLocationName: "Main Office",
+      batchId: null,
+      observedAt: new Date().toISOString(),
+      status: "completed" as const,
+      rankScore: 78,
+      rankPosition: 3,
+      totalCompetitors: 15,
+      rankingFactors: null,
+      rawData: null,
+      llmAnalysis: null,
+      statusDetail: null,
+      errorMessage: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
 
   const effectiveRankingData = isWizardActive
     ? wizardDemoData
@@ -498,7 +510,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       : fallbackRankingData
     : rankingData;
 
-
   // Function to reload PMS data
   const reloadPmsData = useCallback(async () => {
     const domain = userProfile?.domainName;
@@ -524,7 +535,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     setRankingLoading(true);
     try {
       const response = await fetch(
-        `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`
+        `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -552,7 +563,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       if (response?.success && response.tasks) {
         const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
         const opportunityTasks = allTasks.filter(
-          (task) => task.agent_type === "OPPORTUNITY"
+          (task) => task.agent_type === "OPPORTUNITY",
         );
         setTasks(opportunityTasks);
         setAllUserTasks(response.tasks.USER);
@@ -571,7 +582,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     setReferralLoading(true);
     try {
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`
+        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -628,12 +639,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Use wizard demo trajectory or real trajectory
   const trajectory = isWizardActive
-    ? wizardDemoData?.prooflineData?.trajectory ?? "Your practice is showing <hl>strong momentum</hl> this month. New patient starts are up 12% and your local visibility continues to improve."
+    ? (wizardDemoData?.prooflineData?.trajectory ??
+      "Your practice is showing <hl>strong momentum</hl> this month. New patient starts are up 12% and your local visibility continues to improve.")
     : prooflineResult?.trajectory;
 
   // Use wizard demo user profile or real user profile for lastName
   const effectiveLastName = isWizardActive
-    ? wizardDemoData?.userProfile?.lastName ?? "Smith"
+    ? (wizardDemoData?.userProfile?.lastName ?? "Smith")
     : userProfile?.lastName;
 
   // Get greeting based on time of day
@@ -666,30 +678,42 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const practiceActionPlan = referralData?.practice_action_plan;
 
   // Fallback proofline data for wizard mode
-  const fallbackWins = ["Strong review response rate", "Consistent GBP posting"];
-  const fallbackRisks = ["Review velocity declining", "Competitor gaining ground"];
-  const fallbackTopFixes = ["Request more patient reviews", "Optimize GBP keywords", "Increase posting frequency"];
+  const fallbackWins = [
+    "Strong review response rate",
+    "Consistent GBP posting",
+  ];
+  const fallbackRisks = [
+    "Review velocity declining",
+    "Competitor gaining ground",
+  ];
+  const fallbackTopFixes: (TopFix | string)[] = [
+    "Request more patient reviews",
+    "Optimize GBP keywords",
+    "Increase posting frequency",
+  ];
   const fallbackEstimatedRevenue = 24500;
   const fallbackCriticalActionsCount = 2;
 
   const effectiveWins = isWizardActive
-    ? wizardDemoData?.prooflineData?.wins ?? fallbackWins
+    ? (wizardDemoData?.prooflineData?.wins ?? fallbackWins)
     : wins;
 
   const effectiveRisks = isWizardActive
-    ? wizardDemoData?.prooflineData?.risks ?? fallbackRisks
+    ? (wizardDemoData?.prooflineData?.risks ?? fallbackRisks)
     : risks;
 
-  const effectiveTopFixes = isWizardActive
-    ? wizardDemoData?.prooflineData?.topFixes?.map((f) => f.description) ?? fallbackTopFixes
+  // topFixes can be either string[] (legacy) or TopFix[] (new enriched format)
+  const effectiveTopFixes: (TopFix | string)[] | undefined = isWizardActive
+    ? (wizardDemoData?.prooflineData?.topFixes ?? fallbackTopFixes)
     : topFixes;
 
   const effectiveEstimatedRevenue = isWizardActive
-    ? wizardDemoData?.prooflineData?.estimatedRevenue ?? fallbackEstimatedRevenue
+    ? (wizardDemoData?.prooflineData?.estimatedRevenue ??
+      fallbackEstimatedRevenue)
     : estimatedRevenue;
 
   const effectiveCriticalActionsCount = isWizardActive
-    ? wizardDemoData?.criticalActionsCount ?? fallbackCriticalActionsCount
+    ? (wizardDemoData?.criticalActionsCount ?? fallbackCriticalActionsCount)
     : criticalActionsCount;
 
   // Calculate sentiment based on score
@@ -717,7 +741,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const prevLocation = useCallback(() => {
     if (totalLocations > 1) {
       setCurrentLocationIndex(
-        (prev) => (prev - 1 + totalLocations) % totalLocations
+        (prev) => (prev - 1 + totalLocations) % totalLocations,
       );
     }
   }, [totalLocations]);
@@ -900,7 +924,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
         {/* SECTION 2: MONTHLY PRACTICE TOTALS - matches newdesign */}
         {(effectivePmsMetrics || isWizardActive) && (
-          <section data-wizard-target="dashboard-metrics" className="space-y-8 pt-4">
+          <section
+            data-wizard-target="dashboard-metrics"
+            className="space-y-8 pt-4"
+          >
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
                 Monthly Practice Totals
@@ -908,62 +935,63 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               <div className="h-px w-full bg-black/10"></div>
             </div>
             {effectivePmsMetrics && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-              <MetricCard
-                label="New Starts"
-                value={effectivePmsMetrics.selfReferrals}
-                trend={
-                  effectivePmsMetrics.selfReferralChange !== 0
-                    ? `${
-                        effectivePmsMetrics.selfReferralChange >= 0 ? "+" : ""
-                      }${effectivePmsMetrics.selfReferralChange.toFixed(0)}%`
-                    : undefined
-                }
-                isHighlighted
-              />
-              <MetricCard
-                label="Referrals"
-                value={effectivePmsMetrics.totalReferrals}
-                trend={
-                  effectivePmsMetrics.referralChange !== 0
-                    ? `${
-                        effectivePmsMetrics.referralChange >= 0 ? "+" : ""
-                      }${effectivePmsMetrics.referralChange.toFixed(0)}%`
-                    : undefined
-                }
-              />
-              <MetricCard
-                label="Production"
-                value={`$${(effectivePmsMetrics.production / 1000).toFixed(0)}K`}
-                trend={
-                  effectivePmsMetrics.productionChange !== 0
-                    ? `${
-                        effectivePmsMetrics.productionChange >= 0 ? "+" : ""
-                      }${effectivePmsMetrics.productionChange.toFixed(0)}%`
-                    : undefined
-                }
-              />
-              <MetricCard
-                label="Market Coverage"
-                value={
-                  currentLocationData
-                    ? `${Math.round(
-                        ((currentLocationData.totalCompetitors -
-                          currentLocationData.rank) /
-                          currentLocationData.totalCompetitors) *
-                          100
-                      )}%`
-                    : "--%"
-                }
-                trend={currentLocationData ? "+1%" : undefined}
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+                <MetricCard
+                  label="New Starts"
+                  value={effectivePmsMetrics.selfReferrals}
+                  trend={
+                    effectivePmsMetrics.selfReferralChange !== 0
+                      ? `${
+                          effectivePmsMetrics.selfReferralChange >= 0 ? "+" : ""
+                        }${effectivePmsMetrics.selfReferralChange.toFixed(0)}%`
+                      : undefined
+                  }
+                  isHighlighted
+                />
+                <MetricCard
+                  label="Referrals"
+                  value={effectivePmsMetrics.totalReferrals}
+                  trend={
+                    effectivePmsMetrics.referralChange !== 0
+                      ? `${
+                          effectivePmsMetrics.referralChange >= 0 ? "+" : ""
+                        }${effectivePmsMetrics.referralChange.toFixed(0)}%`
+                      : undefined
+                  }
+                />
+                <MetricCard
+                  label="Production"
+                  value={`$${(effectivePmsMetrics.production / 1000).toFixed(0)}K`}
+                  trend={
+                    effectivePmsMetrics.productionChange !== 0
+                      ? `${
+                          effectivePmsMetrics.productionChange >= 0 ? "+" : ""
+                        }${effectivePmsMetrics.productionChange.toFixed(0)}%`
+                      : undefined
+                  }
+                />
+                <MetricCard
+                  label="Market Coverage"
+                  value={
+                    currentLocationData
+                      ? `${Math.round(
+                          ((currentLocationData.totalCompetitors -
+                            currentLocationData.rank) /
+                            currentLocationData.totalCompetitors) *
+                            100,
+                        )}%`
+                      : "--%"
+                  }
+                  trend={currentLocationData ? "+1%" : undefined}
+                />
+              </div>
             )}
           </section>
         )}
 
         {/* SECTION 3: RANKING STRATEGY - PREMIUM DESIGN - matches newdesign */}
-        {((effectiveRankingData && effectiveRankingData.length > 0) || isWizardActive) && (
+        {((effectiveRankingData && effectiveRankingData.length > 0) ||
+          isWizardActive) && (
           <section
             data-wizard-target="dashboard-ranking"
             className="animate-in fade-in slide-in-from-bottom-4 duration-1000 cursor-pointer"
@@ -1082,8 +1110,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                           sentiment.label === "High"
                             ? "text-alloro-navy group-hover/stat:text-green-500"
                             : sentiment.label === "Okay"
-                            ? "text-alloro-navy group-hover/stat:text-yellow-500"
-                            : "text-alloro-navy"
+                              ? "text-alloro-navy group-hover/stat:text-yellow-500"
+                              : "text-alloro-navy"
                         }`}
                       >
                         {sentiment.label}
@@ -1093,10 +1121,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                           sentiment.label === "High"
                             ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
                             : sentiment.label === "Okay"
-                            ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
-                            : sentiment.label === "Low"
-                            ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
-                            : "bg-slate-400"
+                              ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+                              : sentiment.label === "Low"
+                                ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                                : "bg-slate-400"
                         }`}
                       ></div>
                     </div>
@@ -1202,13 +1230,13 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 <h2 className="text-3xl lg:text-4xl font-black font-heading text-alloro-navy tracking-tight leading-none">
                   {parseHighlightTags(
                     (immediateTask.title || "").replace(/<[^>]*>/g, ""),
-                    "highlight-red"
+                    "highlight-red",
                   )}
                 </h2>
                 <p className="text-base lg:text-lg text-[#636E72] font-medium leading-relaxed tracking-tight max-w-2xl">
                   {parseHighlightTags(
                     (immediateTask.description || "").replace(/<[^>]*>/g, ""),
-                    "highlight-red"
+                    "highlight-red",
                   )}
                 </p>
               </div>
@@ -1232,7 +1260,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
         {/* SECTION 6: WHAT'S WORKING VS WHAT'S NOT */}
         {(effectiveWins || effectiveRisks || isWizardActive) && (
-          <section data-wizard-target="dashboard-wins-risks" className="space-y-8 pt-4">
+          <section
+            data-wizard-target="dashboard-wins-risks"
+            className="space-y-8 pt-4"
+          >
             <div className="flex items-center gap-4 px-1">
               <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-alloro-textDark/40 whitespace-nowrap">
                 What's working vs What's not
@@ -1277,17 +1308,24 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     Risks to Fix
                   </div>
                   <div className="space-y-3">
-                    {effectiveRisks.map((risk: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
-                        <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
-                          {risk}
-                        </span>
-                      </div>
-                    ))}
+                    {effectiveRisks.map(
+                      (
+                        risk: string | { title?: string; description?: string },
+                        idx: number,
+                      ) => (
+                        <div
+                          key={idx}
+                          className="flex gap-4 p-5 bg-white border border-slate-50 rounded-2xl shadow-sm hover:shadow-md transition-all"
+                        >
+                          <div className="w-2.5 h-2.5 bg-red-400 rounded-full shrink-0 mt-2"></div>
+                          <span className="text-sm font-bold text-slate-500 leading-relaxed tracking-tight">
+                            {typeof risk === "string"
+                              ? risk
+                              : risk.title || risk.description || ""}
+                          </span>
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               )}
@@ -1296,121 +1334,213 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
         )}
 
         {/* SECTION: PREMIUM TOP 3 STRATEGIC FIXES - matches newdesign (visible, not in hub) */}
-        {((effectiveTopFixes && effectiveEstimatedRevenue) || isWizardActive) && (
-          <section data-wizard-target="dashboard-growth" className="space-y-10 pt-8">
+        {((effectiveTopFixes && effectiveEstimatedRevenue) ||
+          isWizardActive) && (
+          <section
+            data-wizard-target="dashboard-growth"
+            className="space-y-10 pt-8"
+          >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="px-4 py-1.5 bg-alloro-navy text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-lg leading-none">
-                    STRATEGIC GROWTH
+                  <div className="px-4 py-1.5 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-[0.3em] rounded-lg leading-none">
+                    Estimates Only
                   </div>
                   <div className="h-px w-24 bg-alloro-navy/10"></div>
                 </div>
                 <h2 className="text-4xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-tight">
-                  3 Fixes to Add{" "}
+                  3 Fixes That Could Return{" "}
                   <span className="text-alloro-orange inline-flex items-baseline gap-1">
-                    {formatCurrency(effectiveEstimatedRevenue)}+
+                    {formatCurrency(effectiveEstimatedRevenue)}
                   </span>{" "}
-                  <br className="hidden md:block" />
-                  to your Yearly Revenue.
+                  Annually
                 </h2>
-                <p className="text-slate-400 font-bold text-lg tracking-tight max-w-3xl leading-relaxed">
-                  Simple changes that will help you stop losing patients and
-                  grow your practice faster.
+                <p className="text-slate-400 font-medium text-sm tracking-tight max-w-3xl leading-relaxed">
+                  Estimates are based on your historical revenue trends and
+                  relevant available data sources.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-              {effectiveTopFixes?.map((fix: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[280px] overflow-hidden"
-                >
-                  {/* Elite Background Gradient Glow */}
-                  <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
+              {effectiveTopFixes?.map((fix: TopFix | string, idx: number) => {
+                // Handle both string (legacy) and object (new) formats
+                const isEnrichedFix = typeof fix !== "string";
+                const title = isEnrichedFix ? fix.title : `Fix ${idx + 1}`;
+                const description = isEnrichedFix ? fix.description : fix;
+                const estimatedReturn = isEnrichedFix
+                  ? fix.estimated_return
+                  : null;
 
-                  {/* Orange Sidebar Indicator */}
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
+                return (
+                  <div
+                    key={idx}
+                    className="group relative bg-white rounded-3xl p-8 lg:p-10 border border-slate-100 shadow-premium hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col min-h-[280px] overflow-hidden"
+                  >
+                    {/* Elite Background Gradient Glow */}
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-alloro-orange/[0.04] rounded-full blur-[80px] -mr-32 -mt-32 group-hover:bg-alloro-orange/[0.08] transition-all duration-500 pointer-events-none"></div>
 
-                  <div className="relative z-10 mb-6">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                      <DollarSign size={14} /> Revenue Tip
-                    </div>
-                  </div>
+                    {/* Orange Sidebar Indicator */}
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-alloro-orange transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
 
-                  <div className="mt-auto space-y-6 relative z-10">
-                    <div className="space-y-3">
-                      <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight">
-                        Fix {idx + 1}
+                    <div className="relative z-10 flex flex-col h-full">
+                      {/* Title at top */}
+                      <h4 className="text-xl lg:text-2xl font-black font-heading text-alloro-navy leading-tight tracking-tight mb-4">
+                        {title}
                       </h4>
-                      <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-3">
-                        {fix}
+
+                      {/* Description */}
+                      <p className="text-[15px] text-slate-500 font-bold leading-relaxed tracking-tight line-clamp-3 mb-4">
+                        {description}
                       </p>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                      <button
-                        onClick={() =>
-                          setSelectedFix({ index: idx + 1, text: fix })
-                        }
-                        className="flex items-center gap-3 text-[10px] font-black text-alloro-navy uppercase tracking-[0.3em] group-hover:text-alloro-orange transition-colors cursor-pointer hover:gap-4"
-                      >
-                        View More <ArrowRight size={16} />
-                      </button>
+
+                      {/* Estimated Return Pill */}
+                      {estimatedReturn != null && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 text-sm font-bold rounded-lg w-fit mb-4">
+                          <DollarSign size={14} />
+                          {formatCurrency(estimatedReturn)}
+                        </div>
+                      )}
+
+                      {/* View More button pushed to bottom */}
+                      <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50">
+                        <button
+                          onClick={() =>
+                            setSelectedFix({ index: idx + 1, fix })
+                          }
+                          className="flex items-center gap-3 text-[10px] font-black text-alloro-navy uppercase tracking-[0.3em] group-hover:text-alloro-orange transition-colors cursor-pointer hover:gap-4"
+                        >
+                          View More <ArrowRight size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
 
         {/* Strategic Growth Fix Modal */}
-        {selectedFix && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedFix(null)}
-          >
-            <div
-              className="bg-white rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-8 lg:p-10 space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-alloro-orange uppercase tracking-[0.3em] bg-alloro-orange/5 px-4 py-2 rounded-xl border border-alloro-orange/10 w-fit">
-                      <DollarSign size={14} /> Revenue Tip
+        {selectedFix &&
+          (() => {
+            const isEnrichedFix = typeof selectedFix.fix !== "string";
+            const fixData = isEnrichedFix ? (selectedFix.fix as TopFix) : null;
+            const title = fixData ? fixData.title : `Fix ${selectedFix.index}`;
+            const description = fixData
+              ? fixData.description
+              : (selectedFix.fix as string);
+
+            return (
+              <div
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                onClick={() => setSelectedFix(null)}
+              >
+                <div
+                  className="bg-white rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="p-8 lg:p-10 space-y-6">
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-2xl lg:text-3xl font-black font-heading text-alloro-navy tracking-tight">
+                        {title}
+                      </h3>
+                      <button
+                        onClick={() => setSelectedFix(null)}
+                        className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                      >
+                        <X size={24} className="text-slate-400" />
+                      </button>
                     </div>
-                    <h3 className="text-2xl lg:text-3xl font-black font-heading text-alloro-navy tracking-tight">
-                      Fix {selectedFix.index}
-                    </h3>
+
+                    {/* Estimated Return Badge */}
+                    {fixData && fixData.estimated_return && (
+                      <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
+                        <DollarSign size={18} className="text-green-600" />
+                        <span className="text-sm font-bold text-green-700">
+                          Estimated Return:
+                        </span>
+                        <span className="text-lg font-black text-green-600">
+                          {formatCurrency(fixData.estimated_return)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="pt-6 border-t border-slate-100 space-y-6">
+                      {/* Description */}
+                      <div>
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                          Description
+                        </h4>
+                        <p className="text-lg text-slate-600 font-medium leading-relaxed">
+                          {description}
+                        </p>
+                      </div>
+
+                      {/* Why Important */}
+                      {fixData && fixData.why_important && (
+                        <div>
+                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Why This Matters
+                          </h4>
+                          <p className="text-base text-slate-600 font-medium leading-relaxed">
+                            {fixData.why_important}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Expected Impact */}
+                      {fixData && fixData.expected_impact && (
+                        <div>
+                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Expected Impact
+                          </h4>
+                          <p className="text-base text-slate-600 font-medium leading-relaxed">
+                            {fixData.expected_impact}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Sources */}
+                      {fixData &&
+                        fixData.sources &&
+                        fixData.sources.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
+                              Data Sources
+                            </h4>
+                            <ul className="space-y-1.5">
+                              {fixData.sources.map(
+                                (source: string, idx: number) => (
+                                  <li
+                                    key={idx}
+                                    className="flex items-start gap-2 text-sm text-slate-500"
+                                  >
+                                    <span className="text-alloro-orange mt-0.5">
+                                      •
+                                    </span>
+                                    {source}
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                    </div>
+
+                    <div className="pt-4 flex justify-end">
+                      <button
+                        onClick={() => setSelectedFix(null)}
+                        className="px-6 py-3 bg-alloro-navy text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedFix(null)}
-                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-                  >
-                    <X size={24} className="text-slate-400" />
-                  </button>
-                </div>
-
-                <div className="pt-6 border-t border-slate-100">
-                  <p className="text-lg text-slate-600 font-medium leading-relaxed">
-                    {selectedFix.text}
-                  </p>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    onClick={() => setSelectedFix(null)}
-                    className="px-6 py-3 bg-alloro-navy text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
-                  >
-                    Close
-                  </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })()}
 
         {/* Proofline Details Modal */}
         {showProoflineModal && (

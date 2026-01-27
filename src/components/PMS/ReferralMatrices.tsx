@@ -29,6 +29,16 @@ export interface NonDoctorReferral {
   notes?: string;
 }
 
+// TopFix interface for enriched fix data (additional fields optional for backwards compatibility)
+export interface TopFix {
+  title: string;
+  description: string;
+  why_important?: string;
+  expected_impact?: string;
+  estimated_return?: number;
+  sources?: string[];
+}
+
 export interface ReferralEngineData {
   lineage?: string;
   citations?: string[];
@@ -45,7 +55,7 @@ export interface ReferralEngineData {
   doctor_referral_matrix?: DoctorReferral[];
   non_doctor_referral_matrix?: NonDoctorReferral[];
   growth_opportunity_summary?: {
-    top_three_fixes?: string[];
+    top_three_fixes?: (TopFix | string)[];
     estimated_additional_annual_revenue?: number;
   };
   practice_action_plan?: string[];

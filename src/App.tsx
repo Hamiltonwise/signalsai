@@ -17,6 +17,10 @@ import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
 import { OnboardingWizardProvider } from "./contexts/OnboardingWizardContext.tsx";
 import { WizardController } from "./components/onboarding-wizard";
+import {
+  SetupProgressProvider,
+  SetupProgressWizard,
+} from "./components/SetupProgressWizard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
 import { PilotHandler } from "./components/PilotHandler";
@@ -46,9 +50,11 @@ function App() {
       <PilotHandler />
       <AuthProvider>
         <OnboardingWizardProvider>
-          <Toaster position="top-right" />
-          <WizardController />
-          <Routes>
+          <SetupProgressProvider>
+            <Toaster position="top-right" />
+            <WizardController />
+            <SetupProgressWizard />
+            <Routes>
             <Route path="/" element={<Navigate to="/signin" replace />} />
             <Route
               path="/signin"
@@ -175,7 +181,8 @@ function App() {
               }
             />
           </Routes>
-          <PilotBanner />
+            <PilotBanner />
+          </SetupProgressProvider>
         </OnboardingWizardProvider>
       </AuthProvider>
     </BrowserRouter>

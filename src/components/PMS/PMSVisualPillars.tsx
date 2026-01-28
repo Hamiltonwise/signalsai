@@ -13,16 +13,20 @@ import {
   BarChart3,
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock,
   Loader2,
   Lock,
   PenLine,
   Plus,
+  Settings,
   ShieldCheck,
   // Target, // Temporarily unused - Practice Diagnosis hidden
   TrendingDown,
   Upload,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   fetchPmsKeyData,
@@ -40,6 +44,7 @@ import {
   useIsWizardActive,
   useWizardDemoData,
 } from "../../contexts/OnboardingWizardContext";
+import { apiGet } from "../../api";
 
 interface PMSVisualPillarsProps {
   domain?: string;
@@ -136,9 +141,29 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   googleAccountId,
   hasProperties = true,
 }) => {
+  const navigate = useNavigate();
+
   // Wizard state
   const isWizardActive = useIsWizardActive();
   const wizardDemoData = useWizardDemoData();
+
+  // Connection status state - track if all 3 Google services are connected
+  const [connectionStatus, setConnectionStatus] = useState<{
+    ga4Connected: boolean;
+    gscConnected: boolean;
+    gbpConnected: boolean;
+    isLoading: boolean;
+  }>({
+    ga4Connected: false,
+    gscConnected: false,
+    gbpConnected: false,
+    isLoading: true,
+  });
+
+  const allServicesConnected =
+    connectionStatus.ga4Connected &&
+    connectionStatus.gscConnected &&
+    connectionStatus.gbpConnected;
 
   const [inlineFile, setInlineFile] = useState<File | null>(null);
   const [inlineIsUploading, setInlineIsUploading] = useState(false);
@@ -260,6 +285,43 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       isMountedRef.current = false;
     };
   }, [loadKeyData]);
+
+  // Fetch connection status to check if all 3 Google services are connected
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      // Skip in wizard mode - assume connected
+      if (isWizardActive) {
+        setConnectionStatus({
+          ga4Connected: true,
+          gscConnected: true,
+          gbpConnected: true,
+          isLoading: false,
+        });
+        return;
+      }
+
+      try {
+        const response = await apiGet({ path: "/settings/properties" });
+
+        if (response.success) {
+          setConnectionStatus({
+            ga4Connected: !!response.properties?.ga4,
+            gscConnected: !!response.properties?.gsc,
+            gbpConnected:
+              response.properties?.gbp && response.properties.gbp.length > 0,
+            isLoading: false,
+          });
+        } else {
+          setConnectionStatus((prev) => ({ ...prev, isLoading: false }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch connection status:", err);
+        setConnectionStatus((prev) => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    fetchConnectionStatus();
+  }, [isWizardActive]);
 
   // Sync loading state - handle both wizard mode AND normal mode
   // When wizard is active, show demo data immediately (no loading)
@@ -1075,7 +1137,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   }, [monthlyData]);
 
   // Scroll to Data Ingestion Hub section with highlight animation
-  const scrollToIngestionHub = () => {
+  const scrollToIngestionHub = useCallback(() => {
     const ingestionSection = document.getElementById("data-ingestion-hub");
     if (ingestionSection) {
       ingestionSection.scrollIntoView({ behavior: "smooth" });
@@ -1088,7 +1150,19 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }, 700);
       }, 200);
     }
-  };
+  }, []);
+
+  // Check for scroll-to-upload flag from sessionStorage (set by PMSUploadBanner)
+  useEffect(() => {
+    const shouldScroll = sessionStorage.getItem("scrollToUpload");
+    if (shouldScroll === "true") {
+      sessionStorage.removeItem("scrollToUpload");
+      // Delay to ensure component is fully rendered
+      setTimeout(() => {
+        scrollToIngestionHub();
+      }, 500);
+    }
+  }, [scrollToIngestionHub]);
 
   // Scroll to Client Approval Banner with highlight animation
   const scrollToApprovalBanner = () => {
@@ -1114,6 +1188,120 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     };
     tryScroll();
   };
+
+  // Show setup required screen if not all services are connected
+  if (!connectionStatus.isLoading && !allServicesConnected && !isWizardActive) {
+    const disconnectedServices = [];
+    if (!connectionStatus.ga4Connected) disconnectedServices.push("Google Analytics");
+    if (!connectionStatus.gscConnected) disconnectedServices.push("Search Console");
+    if (!connectionStatus.gbpConnected) disconnectedServices.push("Business Profile");
+
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy flex flex-col items-center justify-center p-8">
+        <div className="max-w-2xl w-full">
+          {/* Welcome header */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 rounded-full mb-4">
+              <span className="w-2 h-2 bg-alloro-orange rounded-full animate-pulse"></span>
+              <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">
+                Setup Required
+              </span>
+            </div>
+            <h1 className="text-4xl font-black text-alloro-navy font-heading tracking-tight mb-3">
+              Let's Set Up Your Dashboard
+            </h1>
+            <p className="text-lg text-slate-500 font-medium">
+              Complete these two steps to unlock your practice insights
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-4">
+            {/* Step 1 - Connect Properties */}
+            <div
+              onClick={() => navigate("/settings")}
+              className="group relative bg-white rounded-3xl border-2 border-alloro-orange shadow-xl shadow-alloro-orange/10 p-8 cursor-pointer hover:shadow-2xl hover:shadow-alloro-orange/20 transition-all duration-300 hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-6">
+                {/* Step number */}
+                <div className="shrink-0">
+                  <div className="w-14 h-14 bg-gradient-to-br from-alloro-orange to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-alloro-orange/30 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl font-black text-white">1</span>
+                  </div>
+                </div>
+                {/* Content */}
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-black text-alloro-navy tracking-tight">
+                      Connect Your Google Properties
+                    </h3>
+                    <span className="px-2 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-wider rounded-lg">
+                      Required
+                    </span>
+                  </div>
+                  <p className="text-slate-500 font-medium leading-relaxed mb-3">
+                    Link your Google Analytics, Search Console, and Business
+                    Profile to enable tracking and insights.
+                  </p>
+                  <p className="text-sm text-amber-600 font-semibold">
+                    Missing: {disconnectedServices.join(", ")}
+                  </p>
+                  <div className="flex items-center gap-2 text-alloro-orange font-bold text-sm group-hover:gap-3 transition-all mt-3">
+                    <Settings className="w-4 h-4" />
+                    <span>Go to Settings</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+              {/* Decorative arrow */}
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center z-10">
+                <ChevronDown className="w-4 h-4 text-slate-300" />
+              </div>
+            </div>
+
+            {/* Step 2 - PMS Data (Locked) */}
+            <div className="relative bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-8 opacity-60">
+              <div className="flex items-start gap-6">
+                {/* Step number */}
+                <div className="shrink-0">
+                  <div className="w-14 h-14 bg-slate-200 rounded-2xl flex items-center justify-center">
+                    <span className="text-2xl font-black text-slate-400">2</span>
+                  </div>
+                </div>
+                {/* Content */}
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-black text-slate-400 tracking-tight">
+                      Upload Your PMS Data
+                    </h3>
+                    <span className="px-2 py-1 bg-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  </div>
+                  <p className="text-slate-400 font-medium leading-relaxed">
+                    Once properties are connected, upload your practice management
+                    data to see referral analytics and revenue attribution.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Help text */}
+          <p className="text-center text-sm text-slate-400 mt-8">
+            Need help?{" "}
+            <a
+              href="mailto:support@alloro.io"
+              className="text-alloro-orange font-semibold hover:underline"
+            >
+              Contact Support
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body text-alloro-navy">

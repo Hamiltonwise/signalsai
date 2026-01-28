@@ -17,15 +17,20 @@ import {
   Check,
   X,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { PropertySelectionModal } from "../components/settings/PropertySelectionModal";
 import { ConfirmModal } from "../components/settings/ConfirmModal";
 import { UsersTab } from "../components/settings/UsersTab";
 import { MissingScopeBanner } from "../components/settings/MissingScopeBanner";
+import { DisconnectedServicesBanner } from "../components/settings/DisconnectedServicesBanner";
+import { PMSUploadBanner } from "../components/settings/PMSUploadBanner";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
+import { fetchPmsKeyData } from "../api/pms";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 import { apiGet, apiPost } from "../api";
+import { useSetupProgressSafe } from "../components/SetupProgressWizard/SetupProgressContext";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -181,6 +186,7 @@ const EditableInfoRow = ({
 
 export const Settings: React.FC = () => {
   const { userProfile, selectedDomain } = useAuth();
+  const setupProgress = useSetupProgressSafe();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
   const [properties, setProperties] = useState<PropertiesState>({
     ga4: null,
@@ -195,6 +201,9 @@ export const Settings: React.FC = () => {
   const [scopesStatus, setScopesStatus] = useState<ScopesState | null>(null);
   const [missingScopes, setMissingScopes] = useState<string[]>([]);
   const [missingScopeCount, setMissingScopeCount] = useState(0);
+
+  // PMS Data State - to check if user has uploaded any PMS data
+  const [hasPmsData, setHasPmsData] = useState<boolean | null>(null);
 
   // Profile State
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -219,13 +228,38 @@ export const Settings: React.FC = () => {
   >(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
+  // Per-card loading states
+  const [loadingCards, setLoadingCards] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
     fetchProperties();
     fetchProfile();
     fetchScopes();
+    fetchPmsStatus();
   }, []);
+
+  // Fetch PMS data status to check if user has uploaded any data
+  const fetchPmsStatus = async () => {
+    try {
+      const domain = selectedDomain?.domain;
+      if (!domain) {
+        setHasPmsData(false);
+        return;
+      }
+
+      const response = await fetchPmsKeyData(domain);
+      if (response?.success && response.data?.months && response.data.months.length > 0) {
+        setHasPmsData(true);
+      } else {
+        setHasPmsData(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch PMS status:", err);
+      setHasPmsData(false);
+    }
+  };
 
   const fetchScopes = async () => {
     try {
@@ -353,6 +387,8 @@ export const Settings: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSelectProperty = async (item: any) => {
     setIsSaving(true);
+    setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
+    setModalOpen(false); // Close modal immediately for better UX
     try {
       const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
@@ -370,18 +406,35 @@ export const Settings: React.FC = () => {
         passedData: { type: modalType, data, action: "connect" },
       });
 
-      setModalOpen(false);
-      fetchProperties();
+      // Fetch updated properties and check if all are now connected
+      const response = await apiGet({ path: "/settings/properties" });
+      if (response.success) {
+        const props = response.properties;
+        setProperties({
+          ga4: props.ga4 || null,
+          gsc: props.gsc || null,
+          gbp: props.gbp || [],
+        });
+
+        // Check if all services are now connected
+        const allConnected = !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+        if (allConnected && missingScopeCount === 0) {
+          setupProgress?.markStep1Complete();
+        }
+      }
     } catch (err) {
       console.error("Failed to connect property:", err);
     } finally {
       setIsSaving(false);
+      setLoadingCards((prev) => ({ ...prev, [modalType]: false }));
     }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleMultiSelectProperty = async (items: any[]) => {
     setIsSaving(true);
+    setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
+    setModalOpen(false); // Close modal immediately for better UX
     try {
       const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
@@ -397,12 +450,27 @@ export const Settings: React.FC = () => {
         passedData: { type: modalType, data, action: "connect" },
       });
 
-      setModalOpen(false);
-      fetchProperties();
+      // Fetch updated properties and check if all are now connected
+      const response = await apiGet({ path: "/settings/properties" });
+      if (response.success) {
+        const props = response.properties;
+        setProperties({
+          ga4: props.ga4 || null,
+          gsc: props.gsc || null,
+          gbp: props.gbp || [],
+        });
+
+        // Check if all services are now connected
+        const allConnected = !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+        if (allConnected && missingScopeCount === 0) {
+          setupProgress?.markStep1Complete();
+        }
+      }
     } catch (err) {
       console.error("Failed to connect properties:", err);
     } finally {
       setIsSaving(false);
+      setLoadingCards((prev) => ({ ...prev, [modalType]: false }));
     }
   };
 
@@ -415,6 +483,8 @@ export const Settings: React.FC = () => {
     if (!disconnectType) return;
 
     setIsDisconnecting(true);
+    setLoadingCards((prev) => ({ ...prev, [disconnectType]: true }));
+    setConfirmOpen(false); // Close modal immediately for better UX
     try {
       const googleAccountId = getPriorityItem("google_account_id");
       if (!googleAccountId) return;
@@ -424,13 +494,27 @@ export const Settings: React.FC = () => {
         passedData: { type: disconnectType, action: "disconnect" },
       });
 
-      fetchProperties();
-      setConfirmOpen(false);
+      // Fetch updated properties
+      const response = await apiGet({ path: "/settings/properties" });
+      if (response.success) {
+        const props = response.properties;
+        setProperties({
+          ga4: props.ga4 || null,
+          gsc: props.gsc || null,
+          gbp: props.gbp || [],
+        });
+
+        // Mark step 1 as incomplete since a service was disconnected
+        setupProgress?.markStep1Incomplete();
+      }
       setDisconnectType(null);
     } catch (err) {
       console.error("Failed to disconnect property:", err);
     } finally {
       setIsDisconnecting(false);
+      if (disconnectType) {
+        setLoadingCards((prev) => ({ ...prev, [disconnectType]: false }));
+      }
     }
   };
 
@@ -706,6 +790,29 @@ export const Settings: React.FC = () => {
                     />
                   )}
 
+                  {/* Disconnected Services Banner - show when scopes granted but services not connected */}
+                  {missingScopeCount === 0 && (() => {
+                    const disconnected: string[] = [];
+                    if (!properties.ga4) disconnected.push("ga4");
+                    if (!properties.gsc) disconnected.push("gsc");
+                    if (!properties.gbp || properties.gbp.length === 0) disconnected.push("gbp");
+
+                    if (disconnected.length > 0) {
+                      return <DisconnectedServicesBanner disconnectedServices={disconnected} />;
+                    }
+                    return null;
+                  })()}
+
+                  {/* PMS Upload Banner - show when all services connected but no PMS data */}
+                  {missingScopeCount === 0 &&
+                    properties.ga4 &&
+                    properties.gsc &&
+                    properties.gbp &&
+                    properties.gbp.length > 0 &&
+                    hasPmsData === false && (
+                      <PMSUploadBanner />
+                    )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {integrations.map((app, index) => (
                       <motion.div
@@ -721,6 +828,21 @@ export const Settings: React.FC = () => {
                               : "bg-white border-black/5 hover:border-alloro-orange/20"
                         }`}
                       >
+                        {/* Loading Overlay */}
+                        {loadingCards[app.id] && (
+                          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                            <div className="flex flex-col items-center gap-3">
+                              <Loader2
+                                size={32}
+                                className="animate-spin text-alloro-orange"
+                              />
+                              <span className="text-sm font-medium text-alloro-navy">
+                                Updating...
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Missing Scope Warning Banner on Card */}
                         {!app.scopeGranted && app.id !== "clarity" && (
                           <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">

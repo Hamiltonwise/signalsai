@@ -48,7 +48,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     targetSelector: "[data-wizard-target='dashboard-hero']",
     title: "Personalized Insights",
     description:
-      "Every day, you'll see a personalized greeting with the latest update on your practice's trajectory and growth status.",
+      "Every time you log in, you'll see a personalized greeting with the latest update on your practice's trajectory and growth status.",
     scrollToElement: true,
   },
   {

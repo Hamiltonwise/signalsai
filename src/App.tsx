@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
+import NewAccountOnboarding from "./pages/NewAccountOnboarding";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import { Settings } from "./pages/Settings";
@@ -48,122 +49,132 @@ function App() {
           <Toaster position="top-right" />
           <WizardController />
           <Routes>
-          <Route path="/" element={<Navigate to="/signin" replace />} />
-          <Route
-            path="/signin"
-            element={
-              <PublicRoute>
-                <AuthOnlyProviders>
-                  <SignIn />
-                </AuthOnlyProviders>
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
+            <Route path="/" element={<Navigate to="/signin" replace />} />
+            <Route
+              path="/signin"
+              element={
+                <PublicRoute>
+                  <AuthOnlyProviders>
+                    <SignIn />
+                  </AuthOnlyProviders>
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/new-account-onboarding"
+              element={
+                <PublicRoute>
+                  <AuthOnlyProviders>
+                    <NewAccountOnboarding />
+                  </AuthOnlyProviders>
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Dashboard />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/patientJourneyInsights"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Dashboard />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pmsStatistics"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Dashboard />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Dashboard />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rankings"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Dashboard />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/*"
+              element={
                 <AppProviders>
-                  <PageWrapper>
-                    <Dashboard />
-                  </PageWrapper>
+                  <Admin />
                 </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/patientJourneyInsights"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Dashboard />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/pmsStatistics"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Dashboard />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tasks"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Dashboard />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rankings"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Dashboard />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/*"
-            element={
-              <AppProviders>
-                <Admin />
-              </AppProviders>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Settings />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Notifications />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/help"
-            element={
-              <ProtectedRoute>
-                <AppProviders>
-                  <PageWrapper>
-                    <Help />
-                  </PageWrapper>
-                </AppProviders>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Settings />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Notifications />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/help"
+              element={
+                <ProtectedRoute>
+                  <AppProviders>
+                    <PageWrapper>
+                      <Help />
+                    </PageWrapper>
+                  </AppProviders>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
           <PilotBanner />
         </OnboardingWizardProvider>
       </AuthProvider>

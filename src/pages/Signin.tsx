@@ -4,7 +4,7 @@ import { GoogleConnectButton } from "../components/GoogleConnectButton";
 import { AccountSelectionHelperModal } from "../components/AccountSelectionHelperModal";
 import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Shield, Loader2, CheckCircle2, HelpCircle } from "lucide-react";
+import { Mail, Loader2, CheckCircle2, HelpCircle } from "lucide-react";
 
 type LoginMode = "owner" | "collaborator";
 type OTPStep = "email" | "code" | "verifying";
@@ -13,7 +13,7 @@ export default function SignIn() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useGoogleAuthContext();
 
-  const [mode, setMode] = useState<LoginMode>("owner");
+  const [mode, setMode] = useState<LoginMode>("collaborator");
   const [otpStep, setOtpStep] = useState<OTPStep>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -84,7 +84,7 @@ export default function SignIn() {
         if (data.user.googleAccountId) {
           localStorage.setItem(
             "google_account_id",
-            data.user.googleAccountId.toString()
+            data.user.googleAccountId.toString(),
           );
         }
         if (data.user.role) {
@@ -114,6 +114,20 @@ export default function SignIn() {
     }
   };
 
+  const switchToOwner = () => {
+    setMode("owner");
+    setOtpStep("email");
+    setError("");
+    setMessage("");
+  };
+
+  const switchToCollaborator = () => {
+    setMode("collaborator");
+    setOtpStep("email");
+    setError("");
+    setMessage("");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-alloro-bg font-body">
       <div className="max-w-md w-full">
@@ -136,42 +150,6 @@ export default function SignIn() {
             <p className="text-slate-500 text-sm">
               Growth you can see. Sign in to get started.
             </p>
-          </div>
-
-          {/* Tab Selector */}
-          <div className="flex gap-2 mb-6 p-1.5 bg-slate-100 rounded-xl">
-            <button
-              onClick={() => {
-                setMode("owner");
-                setOtpStep("email");
-                setError("");
-                setMessage("");
-              }}
-              className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                mode === "owner"
-                  ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-alloro-navy"
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              Owner
-            </button>
-            <button
-              onClick={() => {
-                setMode("collaborator");
-                setOtpStep("email");
-                setError("");
-                setMessage("");
-              }}
-              className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                mode === "collaborator"
-                  ? "bg-white text-alloro-navy shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-alloro-navy"
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              Collaborator
-            </button>
           </div>
 
           {/* Error/Success Messages */}
@@ -217,6 +195,14 @@ export default function SignIn() {
                     <span className="underline decoration-dashed underline-offset-4 decoration-slate-300 group-hover:decoration-alloro-orange">
                       Seeing multiple accounts? Not sure which to use?
                     </span>
+                  </button>
+
+                  {/* Switch to Collaborator Link */}
+                  <button
+                    onClick={switchToCollaborator}
+                    className="text-sm text-alloro-orange hover:text-alloro-orange/80 transition-colors font-medium"
+                  >
+                    Login as collaborator?
                   </button>
                 </div>
               </motion.div>
@@ -329,8 +315,14 @@ export default function SignIn() {
                           </>
                         )}
                       </button>
-                      <p className="text-xs text-center text-slate-500">
-                        You'll receive a 6-digit code to verify your identity
+                      {/* Switch to Owner Link */}
+                      <p className="text-center">
+                        <button
+                          onClick={switchToOwner}
+                          className="text-sm text-alloro-orange hover:text-alloro-orange/80 transition-colors font-medium"
+                        >
+                          Login as owner?
+                        </button>
                       </p>
                     </motion.div>
                   ) : (
@@ -430,7 +422,15 @@ export default function SignIn() {
         {/* Help Text */}
         <div className="text-center mt-6">
           <p className="text-slate-500 text-sm">
-            By signing in, you agree to our Terms of Service
+            By signing in, you agree to our{" "}
+            <a
+              href="https://getalloro.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-alloro-orange hover:underline"
+            >
+              Terms of Service
+            </a>
           </p>
         </div>
       </div>

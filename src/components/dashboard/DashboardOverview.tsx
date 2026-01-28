@@ -894,14 +894,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
               </span>
             </div>
           </div>
-          {effectiveLastName ? (
-            <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-              {getGreeting()}, Dr. {effectiveLastName}.
-            </h1>
-          ) : (
-            <LoadingSkeleton className="h-16 w-96 max-w-full mb-4" />
-          )}
-          {trajectory && (
+          <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
+            {getGreeting()}{effectiveLastName ? `, Dr. ${effectiveLastName}` : ""}.
+          </h1>
+          {trajectory ? (
             <div className="space-y-4">
               <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
                 {parseHighlightTags(trajectory, "glow-blue")}
@@ -919,6 +915,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                 </button>
               )}
             </div>
+          ) : (
+            <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
+              Welcome to your practice dashboard. We're loading your latest insights.
+            </p>
           )}
         </section>
 

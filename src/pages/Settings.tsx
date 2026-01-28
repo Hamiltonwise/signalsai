@@ -16,11 +16,13 @@ import {
   Edit3,
   Check,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { PropertySelectionModal } from "../components/settings/PropertySelectionModal";
 import { ConfirmModal } from "../components/settings/ConfirmModal";
 import { UsersTab } from "../components/settings/UsersTab";
+import { MissingScopeBanner } from "../components/settings/MissingScopeBanner";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 import { apiGet, apiPost } from "../api";
@@ -39,6 +41,19 @@ interface PropertiesState {
   ga4: Property | null;
   gsc: Property | null;
   gbp: Property[] | [];
+}
+
+interface ScopeStatus {
+  granted: boolean;
+  scope: string;
+  name: string;
+  description: string;
+}
+
+interface ScopesState {
+  ga4: ScopeStatus;
+  gsc: ScopeStatus;
+  gbp: ScopeStatus;
 }
 
 interface InfoRowProps {
@@ -176,6 +191,11 @@ export const Settings: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Scopes State
+  const [scopesStatus, setScopesStatus] = useState<ScopesState | null>(null);
+  const [missingScopes, setMissingScopes] = useState<string[]>([]);
+  const [missingScopeCount, setMissingScopeCount] = useState(0);
+
   // Profile State
   const [profileData, setProfileData] = useState<ProfileData>({
     phone: null,
@@ -204,7 +224,31 @@ export const Settings: React.FC = () => {
     setUserRole(role);
     fetchProperties();
     fetchProfile();
+    fetchScopes();
   }, []);
+
+  const fetchScopes = async () => {
+    try {
+      const googleAccountId = getPriorityItem("google_account_id");
+      if (!googleAccountId) return;
+
+      const response = await apiGet({ path: "/settings/scopes" });
+
+      if (response.success) {
+        setScopesStatus(response.scopes);
+        setMissingScopes(response.missingScopes || []);
+        setMissingScopeCount(response.missingCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch scopes:", err);
+    }
+  };
+
+  const handleGrantAccessComplete = () => {
+    // Refresh scopes after granting access
+    fetchScopes();
+    fetchProperties();
+  };
 
   const fetchProfile = async () => {
     try {
@@ -219,7 +263,7 @@ export const Settings: React.FC = () => {
 
   const handleUpdateProfile = async (
     field: keyof ProfileData,
-    value: string
+    value: string,
   ) => {
     setIsProfileSaving(true);
     try {
@@ -293,7 +337,7 @@ export const Settings: React.FC = () => {
 
           const matchedIds = available
             .filter((item: { locationId: string }) =>
-              gbpIds.includes(item.locationId)
+              gbpIds.includes(item.locationId),
             )
             .map((item: { id: string }) => item.id);
           setInitialSelections(matchedIds);
@@ -390,6 +434,13 @@ export const Settings: React.FC = () => {
     }
   };
 
+  // Check if a scope is granted
+  const isScopeGranted = (serviceId: string): boolean => {
+    if (!scopesStatus) return true; // Assume granted if we don't have scope info yet
+    const scopeKey = serviceId as keyof ScopesState;
+    return scopesStatus[scopeKey]?.granted ?? true;
+  };
+
   // Integration definitions
   const integrations = [
     {
@@ -399,14 +450,19 @@ export const Settings: React.FC = () => {
       connected: !!properties.ga4,
       lastSync: properties.ga4 ? "10 mins ago" : "Not connected",
       property: properties.ga4,
+      scopeGranted: isScopeGranted("ga4"),
     },
     {
       id: "gbp",
       name: "Google Business Profile",
       icon: "/google-business-profile.png",
       connected: properties.gbp && properties.gbp.length > 0,
-      lastSync: properties.gbp && properties.gbp.length > 0 ? "1 hour ago" : "Not connected",
+      lastSync:
+        properties.gbp && properties.gbp.length > 0
+          ? "1 hour ago"
+          : "Not connected",
       locations: properties.gbp,
+      scopeGranted: isScopeGranted("gbp"),
     },
     {
       id: "gsc",
@@ -415,6 +471,7 @@ export const Settings: React.FC = () => {
       connected: !!properties.gsc,
       lastSync: properties.gsc ? "2 hours ago" : "Not connected",
       property: properties.gsc,
+      scopeGranted: isScopeGranted("gsc"),
     },
     {
       id: "clarity",
@@ -422,6 +479,7 @@ export const Settings: React.FC = () => {
       icon: "/microsoft-clarity.png",
       connected: true,
       lastSync: "30 mins ago",
+      scopeGranted: true, // Clarity doesn't use Google OAuth
     },
   ];
 
@@ -635,9 +693,18 @@ export const Settings: React.FC = () => {
                           isSyncing ? "animate-spin" : ""
                         }`}
                       />
-                      Sync All Connections
+                      Refresh Page
                     </button>
                   </div>
+
+                  {/* Missing Scopes Banner */}
+                  {missingScopeCount > 0 && (
+                    <MissingScopeBanner
+                      missingCount={missingScopeCount}
+                      missingScopes={missingScopes}
+                      onGrantAccess={handleGrantAccessComplete}
+                    />
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {integrations.map((app, index) => (
@@ -646,17 +713,40 @@ export const Settings: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="bg-white rounded-[2rem] border border-black/5 p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:border-alloro-orange/20 hover:-translate-y-1 text-left"
+                        className={`rounded-[2rem] border p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
+                          !app.scopeGranted && app.id !== "clarity"
+                            ? "bg-red-50/60 border-red-200 hover:border-red-300"
+                            : app.connected
+                              ? "bg-white border-black/5 hover:border-alloro-orange/20"
+                              : "bg-white border-black/5 hover:border-alloro-orange/20"
+                        }`}
                       >
-                        <div className="flex items-center justify-between mb-10">
-                          <div className="w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border border-black/5 shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden">
+                        {/* Missing Scope Warning Banner on Card */}
+                        {!app.scopeGranted && app.id !== "clarity" && (
+                          <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">
+                            <AlertTriangle size={12} />
+                            API Access Not Granted
+                          </div>
+                        )}
+
+                        <div
+                          className={`flex items-center justify-between mb-10 ${!app.scopeGranted && app.id !== "clarity" ? "mt-6" : ""}`}
+                        >
+                          <div
+                            className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted && app.id !== "clarity" ? "border-red-200 opacity-60" : "border-black/5"}`}
+                          >
                             <img
                               src={app.icon}
                               alt={app.name}
                               className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
                             />
                           </div>
-                          {app.connected ? (
+                          {!app.scopeGranted && app.id !== "clarity" ? (
+                            <span className="px-4 py-1.5 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 flex items-center gap-2 shadow-sm">
+                              <AlertTriangle size={12} />
+                              No Access
+                            </span>
+                          ) : app.connected ? (
                             <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
                               <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
                               Connected
@@ -667,52 +757,63 @@ export const Settings: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <h3 className="font-black text-alloro-navy text-xl font-heading tracking-tight mb-2 truncate leading-tight group-hover:text-alloro-orange transition-colors">
+                        <h3
+                          className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted && app.id !== "clarity" ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
+                        >
                           {app.name}
                         </h3>
-                        <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-10 leading-none">
-                          {app.connected
-                            ? `Updated: ${app.lastSync}`
-                            : "Not connected"}
+                        <p
+                          className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted && app.id !== "clarity" ? "text-red-500" : "text-slate-400"}`}
+                        >
+                          {!app.scopeGranted && app.id !== "clarity"
+                            ? "Requires API permission"
+                            : app.connected
+                              ? "Active"
+                              : "Not connected"}
                         </p>
 
                         {canManageConnections && app.id !== "clarity" ? (
                           <div className="flex flex-col gap-3">
-                            <button
-                              onClick={() =>
-                                handleConnect(app.id as "ga4" | "gsc" | "gbp")
-                              }
-                              className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
-                            >
-                              View API Settings
-                              <ChevronRight
-                                size={16}
-                                className="group-hover/btn:translate-x-1 transition-transform"
-                              />
-                            </button>
+                            {app.scopeGranted ? (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleConnect(
+                                      app.id as "ga4" | "gsc" | "gbp",
+                                    )
+                                  }
+                                  className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
+                                >
+                                  {app.connected
+                                    ? "Update Connection"
+                                    : "Connect Property"}
+                                  <ChevronRight
+                                    size={16}
+                                    className="group-hover/btn:translate-x-1 transition-transform"
+                                  />
+                                </button>
 
-                            {app.connected && (
-                              <button
-                                onClick={() =>
-                                  initiateDisconnect(
-                                    app.id as "ga4" | "gsc" | "gbp"
-                                  )
-                                }
-                                className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
-                              >
-                                Disconnect
-                              </button>
+                                {app.connected && (
+                                  <button
+                                    onClick={() =>
+                                      initiateDisconnect(
+                                        app.id as "ga4" | "gsc" | "gbp",
+                                      )
+                                    }
+                                    className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
+                                  >
+                                    Disconnect
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-red-600 text-xs">
+                                Grant API access using the banner above to
+                                enable this integration.
+                              </p>
                             )}
                           </div>
-                        ) : (
-                          <button className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn">
-                            View API Settings{" "}
-                            <ChevronRight
-                              size={16}
-                              className="group-hover/btn:translate-x-1 transition-transform"
-                            />
-                          </button>
-                        )}
+                        ) : null}
                       </motion.div>
                     ))}
                   </div>

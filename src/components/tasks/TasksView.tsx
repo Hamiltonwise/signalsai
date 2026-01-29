@@ -300,15 +300,23 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const descriptionRefs = useRef<Map<number, HTMLParagraphElement>>(new Map());
   const hasScrolledToTask = useRef(false);
 
-  // Get scrollToTaskId from navigation state
+  // Get scrollToTaskId from navigation state (single task)
   const scrollToTaskId = (location.state as { scrollToTaskId?: number } | null)
     ?.scrollToTaskId;
+
+  // Get highlightTaskIds from navigation state (multiple tasks)
+  const highlightTaskIds = (location.state as { highlightTaskIds?: number[] } | null)
+    ?.highlightTaskIds;
+
+  // Track if highlight animation was interrupted by user scroll
+  const isAnimationInterrupted = useRef(false);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user role for permission checks
   const userRole = localStorage.getItem("user_role");
   const canEditTasks = userRole === "admin" || userRole === "manager";
 
-  // Scroll to task and pulse when navigated from dashboard
+  // Scroll to task and pulse when navigated from dashboard (single task)
   useEffect(() => {
     if (scrollToTaskId && tasks && !hasScrolledToTask.current) {
       hasScrolledToTask.current = true;
@@ -331,6 +339,78 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
       }, 300);
     }
   }, [scrollToTaskId, tasks]);
+
+  // Scroll and highlight multiple tasks one by one (from Important Updates banner)
+  useEffect(() => {
+    if (!highlightTaskIds || highlightTaskIds.length === 0 || !tasks || hasScrolledToTask.current) {
+      return;
+    }
+
+    hasScrolledToTask.current = true;
+    isAnimationInterrupted.current = false;
+
+    // Detect user scroll to interrupt animation
+    const handleUserScroll = () => {
+      isAnimationInterrupted.current = true;
+      setPulsingTaskId(null);
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+      window.removeEventListener("wheel", handleUserScroll);
+      window.removeEventListener("touchmove", handleUserScroll);
+    };
+
+    window.addEventListener("wheel", handleUserScroll, { passive: true });
+    window.addEventListener("touchmove", handleUserScroll, { passive: true });
+
+    // Animate through tasks one by one
+    const animateTasks = async () => {
+      // Wait for DOM to be fully ready
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      for (let i = 0; i < highlightTaskIds.length; i++) {
+        if (isAnimationInterrupted.current) break;
+
+        const taskId = highlightTaskIds[i];
+        const taskElement = document.getElementById(`task-${taskId}`);
+
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          setPulsingTaskId(taskId);
+
+          // Wait for scroll + pulse animation (500ms delay between tasks)
+          await new Promise((resolve) => {
+            animationTimeoutRef.current = setTimeout(resolve, 500);
+          });
+
+          if (isAnimationInterrupted.current) break;
+
+          // Keep pulse for remaining duration then clear
+          await new Promise((resolve) => {
+            animationTimeoutRef.current = setTimeout(resolve, 1200);
+          });
+
+          if (!isAnimationInterrupted.current) {
+            setPulsingTaskId(null);
+          }
+        }
+      }
+
+      // Cleanup
+      window.removeEventListener("wheel", handleUserScroll);
+      window.removeEventListener("touchmove", handleUserScroll);
+    };
+
+    animateTasks();
+
+    return () => {
+      window.removeEventListener("wheel", handleUserScroll);
+      window.removeEventListener("touchmove", handleUserScroll);
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, [highlightTaskIds, tasks]);
 
   // Check which descriptions are clamped after tasks load
   useEffect(() => {
@@ -487,6 +567,41 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const alloroTasks = tasks?.ALLORO || [];
   const userTasks = tasks?.USER || [];
 
+  // Skeleton card component for loading state
+  const SkeletonCard = () => (
+    <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-premium">
+      <style>{`
+        @keyframes skeleton-shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .skeleton-shimmer {
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-shimmer 1.5s infinite;
+        }
+      `}</style>
+      <div className="flex items-start gap-5">
+        <div className="w-7 h-7 bg-slate-200 rounded-lg skeleton-shimmer shrink-0 mt-1"></div>
+        <div className="flex-1 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-16 bg-slate-200 rounded-full skeleton-shimmer"></div>
+            <div className="h-5 w-20 bg-slate-200 rounded-full skeleton-shimmer"></div>
+          </div>
+          <div className="h-5 w-3/4 bg-slate-200 rounded skeleton-shimmer"></div>
+          <div className="space-y-2">
+            <div className="h-3 w-full bg-slate-200 rounded skeleton-shimmer"></div>
+            <div className="h-3 w-5/6 bg-slate-200 rounded skeleton-shimmer"></div>
+            <div className="h-3 w-2/3 bg-slate-200 rounded skeleton-shimmer"></div>
+          </div>
+          <div className="h-3 w-24 bg-slate-200 rounded skeleton-shimmer"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const isLoadingTasks = loading && !tasks;
+
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
       {/* Inject pulse animation styles */}
@@ -613,7 +728,15 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {userTasks.length === 0 ? (
+            {isLoadingTasks ? (
+              // Loading skeleton cards
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : userTasks.length === 0 ? (
               <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center shadow-premium col-span-2">
                 <div className="p-4 bg-green-50 rounded-2xl w-fit mx-auto mb-4">
                   <CheckCircle2 className="w-10 h-10 text-green-500" />
@@ -645,17 +768,22 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
                 />
               ))
             )}
-            <button className="h-full min-h-[280px] border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 text-slate-400 font-black uppercase tracking-[0.4em] text-[9px] hover:border-alloro-orange hover:text-alloro-orange hover:bg-white transition-all group shadow-inner-soft active:scale-[0.99]">
-              <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
-                <Plus size={24} />
-              </div>
-              Add Task
-            </button>
+            {!isLoadingTasks && (
+              <button className="h-full min-h-[280px] border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 text-slate-400 font-black uppercase tracking-[0.4em] text-[9px] hover:border-alloro-orange hover:text-alloro-orange hover:bg-white transition-all group shadow-inner-soft active:scale-[0.99]">
+                <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-premium transition-all">
+                  <Plus size={24} />
+                </div>
+                Add Task
+              </button>
+            )}
           </div>
         </section>
 
         {/* ALLORO TASKS - COLLAPSIBLE */}
         <section data-wizard-target="tasks-alloro" className="pt-8">
+          {isLoadingTasks ? (
+            <div className="w-full h-24 bg-slate-200 rounded-[2rem] skeleton-shimmer"></div>
+          ) : (
           <div className="w-full">
             <button
               onClick={() => setShowAlloroTasks(!showAlloroTasks)}
@@ -743,6 +871,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
               </div>
             )}
           </div>
+          )}
         </section>
 
         <footer className="pt-16 pb-12 flex flex-col items-center gap-10 text-center">

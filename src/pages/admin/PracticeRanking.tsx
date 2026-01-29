@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp,
   Play,
@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Trophy,
   Zap,
-  Search,
+  Sparkles,
   Trash2,
   Users,
   Layers,
@@ -591,15 +591,11 @@ interface GoogleAccount {
   gbpCount: number;
 }
 
-// Location form state for multi-location trigger
+// Location form state for multi-location trigger (simplified - specialty/location auto-detected)
 interface LocationFormData {
   gbpAccountId: string;
   gbpLocationId: string;
   gbpLocationName: string;
-  specialty: string;
-  marketLocation: string;
-  marketLocationSearch: string;
-  showDropdown: boolean;
 }
 
 interface StatusDetail {
@@ -610,6 +606,14 @@ interface StatusDetail {
   timestamps: Record<string, string>;
 }
 
+// Search params from Identifier Agent for Apify
+interface SearchParams {
+  city?: string | null;
+  state?: string | null;
+  county?: string | null;
+  postalCode?: string | null;
+}
+
 interface RankingJob {
   id: number;
   googleAccountId?: number;
@@ -617,6 +621,8 @@ interface RankingJob {
   domain: string;
   specialty: string;
   location: string | null;
+  rankKeywords?: string | null;
+  rank_keywords?: string | null;
   gbpLocationId?: string | null;
   gbp_location_id?: string | null;
   gbpLocationName?: string | null;
@@ -636,6 +642,8 @@ interface RankingJob {
   created_at?: string;
   statusDetail?: StatusDetail | null;
   status_detail?: StatusDetail | null;
+  // Search params used for Apify (for debugging)
+  searchParams?: SearchParams | null;
 }
 
 // Helper to normalize job data (handle both camelCase and snake_case)
@@ -672,8 +680,11 @@ interface RankingResult {
   domain: string;
   specialty: string;
   location: string | null;
+  rankKeywords?: string | null;
   gbpLocationId?: string | null;
   gbpLocationName?: string | null;
+  // Search params used for Apify (for debugging)
+  searchParams?: SearchParams | null;
   observedAt: string;
   rankScore: number | string;
   rankPosition: number;
@@ -849,10 +860,10 @@ export function PracticeRanking() {
   const [triggering, setTriggering] = useState(false);
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [jobResults, setJobResults] = useState<Record<number, RankingResult>>(
-    {}
+    {},
   );
   const [rankingTasks, setRankingTasks] = useState<
     Record<number, RankingTask[]>
@@ -868,7 +879,7 @@ export function PracticeRanking() {
 
   // Get selected account data (use == for type coercion since API returns id as string)
   const selectedAccountData = accounts.find(
-    (a) => String(a.id) === String(selectedAccount)
+    (a) => String(a.id) === String(selectedAccount),
   );
 
   // Group jobs by batch - flat list sorted by date (newest first)
@@ -895,12 +906,12 @@ export function PracticeRanking() {
         batch.jobs.push(job);
         batch.totalLocations = batch.jobs.length;
         batch.completedLocations = batch.jobs.filter(
-          (j) => j.status === "completed"
+          (j) => j.status === "completed",
         ).length;
 
         // Determine batch status
         const hasProcessing = batch.jobs.some(
-          (j) => j.status === "processing" || j.status === "pending"
+          (j) => j.status === "processing" || j.status === "pending",
         );
         const hasFailed = batch.jobs.some((j) => j.status === "failed");
         const allCompleted = batch.jobs.every((j) => j.status === "completed");
@@ -919,7 +930,7 @@ export function PracticeRanking() {
 
     // Convert to array and sort by date (newest first)
     return Array.from(batchMap.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }, [jobs]);
 
@@ -930,7 +941,7 @@ export function PracticeRanking() {
       .sort(
         (a, b) =>
           new Date(b.created_at || 0).getTime() -
-          new Date(a.created_at || 0).getTime()
+          new Date(a.created_at || 0).getTime(),
       );
   }, [jobs]);
 
@@ -952,7 +963,7 @@ export function PracticeRanking() {
     fetchJobs();
   }, []);
 
-  // When account is selected, initialize location forms
+  // When account is selected, initialize location forms (simplified - no specialty/location needed)
   useEffect(() => {
     if (selectedAccountData && selectedAccountData.gbpLocations.length > 0) {
       const initialForms: LocationFormData[] =
@@ -960,10 +971,7 @@ export function PracticeRanking() {
           gbpAccountId: loc.accountId,
           gbpLocationId: loc.locationId,
           gbpLocationName: loc.displayName,
-          specialty: "",
-          marketLocation: loc.address || "", // Auto-populate from GBP address
-          marketLocationSearch: "",
-          showDropdown: false,
+          // specialty and marketLocation are auto-detected by Identifier Agent
         }));
       setLocationForms(initialForms);
     } else {
@@ -1021,7 +1029,8 @@ export function PracticeRanking() {
       // Start polling for any in-progress jobs
       const inProgress = data.rankings
         .filter(
-          (j: RankingJob) => j.status === "processing" || j.status === "pending"
+          (j: RankingJob) =>
+            j.status === "processing" || j.status === "pending",
         )
         .map((j: RankingJob) => j.id);
       setPollingJobs(new Set(inProgress));
@@ -1049,7 +1058,7 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/status/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!response.ok) return;
@@ -1069,7 +1078,7 @@ export function PracticeRanking() {
       };
 
       setJobs((prev) =>
-        prev.map((j) => (j.id === jobId ? { ...j, ...statusUpdate } : j))
+        prev.map((j) => (j.id === jobId ? { ...j, ...statusUpdate } : j)),
       );
 
       // Stop polling if job is complete or failed
@@ -1094,7 +1103,7 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/batch/${batchId}/status`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!response.ok) return;
@@ -1130,7 +1139,7 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/results/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!response.ok) throw new Error("Failed to fetch results");
@@ -1155,7 +1164,7 @@ export function PracticeRanking() {
         `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1170,31 +1179,13 @@ export function PracticeRanking() {
     }
   };
 
-  const updateLocationForm = (
-    index: number,
-    updates: Partial<LocationFormData>
-  ) => {
-    setLocationForms((prev) =>
-      prev.map((form, i) => (i === index ? { ...form, ...updates } : form))
-    );
-  };
-
   const triggerAnalysis = async () => {
     if (!selectedAccount || locationForms.length === 0) {
       toast.error("Please select an account");
       return;
     }
 
-    // Validate all location forms
-    const invalidForms = locationForms.filter(
-      (form) => !form.specialty || !form.marketLocation
-    );
-    if (invalidForms.length > 0) {
-      toast.error(
-        "Please fill in specialty and market location for all locations"
-      );
-      return;
-    }
+    // No validation needed for specialty/marketLocation - they are auto-detected
 
     setTriggering(true);
     try {
@@ -1211,8 +1202,7 @@ export function PracticeRanking() {
             gbpAccountId: form.gbpAccountId,
             gbpLocationId: form.gbpLocationId,
             gbpLocationName: form.gbpLocationName,
-            specialty: form.specialty,
-            marketLocation: form.marketLocation,
+            // specialty and marketLocation are auto-detected by Identifier Agent
           })),
         }),
       });
@@ -1220,13 +1210,13 @@ export function PracticeRanking() {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(
-          error.message || error.error || "Failed to trigger analysis"
+          error.message || error.error || "Failed to trigger analysis",
         );
       }
 
       const data = await response.json();
       toast.success(
-        `Batch analysis started for ${data.totalLocations} location(s)!`
+        `Batch analysis started for ${data.totalLocations} location(s)!`,
       );
 
       // Start polling for batch status
@@ -1264,7 +1254,7 @@ export function PracticeRanking() {
 
     if (
       !confirm(
-        "Are you sure you want to delete this analysis? This action cannot be undone."
+        "Are you sure you want to delete this analysis? This action cannot be undone.",
       )
     ) {
       return;
@@ -1321,7 +1311,7 @@ export function PracticeRanking() {
       !confirm(
         `Are you sure you want to delete this entire batch? This will delete ${locationCount} analysis record${
           locationCount !== 1 ? "s" : ""
-        }. This action cannot be undone.`
+        }. This action cannot be undone.`,
       )
     ) {
       return;
@@ -1335,7 +1325,7 @@ export function PracticeRanking() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1380,7 +1370,7 @@ export function PracticeRanking() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ specialty, location }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1505,13 +1495,8 @@ export function PracticeRanking() {
               {locationForms.length > 1 ? "s" : ""}
             </div>
 
-            {locationForms.map((form, index) => (
-              <LocationFormRow
-                key={form.gbpLocationId}
-                form={form}
-                index={index}
-                updateForm={updateLocationForm}
-              />
+            {locationForms.map((form) => (
+              <LocationFormRow key={form.gbpLocationId} form={form} />
             ))}
 
             {/* Trigger Button */}
@@ -1787,7 +1772,7 @@ function JobRow({
             <div className="text-right">
               <div
                 className={`text-xl font-bold ${getScoreColor(
-                  Number(job.rank_score)
+                  Number(job.rank_score),
                 )}`}
               >
                 {Number(job.rank_score).toFixed(1)}
@@ -1873,47 +1858,13 @@ function JobRow({
   );
 }
 
-// Location Form Row Component
-function LocationFormRow({
-  form,
-  index,
-  updateForm,
-}: {
-  form: LocationFormData;
-  index: number;
-  updateForm: (index: number, updates: Partial<LocationFormData>) => void;
-}) {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Filter cities based on search
-  const filteredCities = useMemo(() => {
-    if (!form.marketLocationSearch) return US_CITIES.slice(0, 20);
-    const search = form.marketLocationSearch.toLowerCase();
-    return US_CITIES.filter((city) =>
-      city.toLowerCase().includes(search)
-    ).slice(0, 20);
-  }, [form.marketLocationSearch]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        updateForm(index, { showDropdown: false });
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [index, updateForm]);
-
+// Location Form Row Component (simplified - specialty/location auto-detected)
+function LocationFormRow({ form }: { form: LocationFormData }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="flex items-center gap-4">
         {/* Location Name (read-only) */}
-        <div>
+        <div className="flex-1">
           <label className="mb-1.5 block text-xs font-medium text-gray-500">
             GBP Location
           </label>
@@ -1923,124 +1874,15 @@ function LocationFormRow({
           </div>
         </div>
 
-        {/* Specialty Selector */}
-        <div>
+        {/* Auto-detect indicator */}
+        <div className="flex-1">
           <label className="mb-1.5 block text-xs font-medium text-gray-500">
-            Specialty *
+            Specialty & Location
           </label>
-          <select
-            value={form.specialty}
-            onChange={(e) => updateForm(index, { specialty: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">Select specialty...</option>
-            {SPECIALTIES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Market Location Searchable Select */}
-        <div className="relative md:col-span-2" ref={dropdownRef}>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">
-            Market Location *
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={form.marketLocation || form.marketLocationSearch}
-              onChange={(e) => {
-                updateForm(index, {
-                  marketLocationSearch: e.target.value,
-                  marketLocation: "",
-                  showDropdown: true,
-                });
-              }}
-              onFocus={() => updateForm(index, { showDropdown: true })}
-              placeholder="Search or enter market location..."
-              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            {form.marketLocation && (
-              <button
-                onClick={() => {
-                  updateForm(index, {
-                    marketLocation: "",
-                    marketLocationSearch: "",
-                  });
-                }}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-              >
-                <XCircle className="h-4 w-4" />
-              </button>
-            )}
+          <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
+            <Sparkles className="h-4 w-4 text-blue-500" />
+            <span>Auto-detected by AI</span>
           </div>
-          {form.showDropdown && !form.marketLocation && (
-            <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-              {filteredCities.length > 0 ? (
-                <>
-                  {filteredCities.map((city) => (
-                    <button
-                      key={city}
-                      onClick={() => {
-                        updateForm(index, {
-                          marketLocation: city,
-                          marketLocationSearch: "",
-                          showDropdown: false,
-                        });
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                    >
-                      <MapPin className="inline h-3 w-3 mr-2 text-gray-400" />
-                      {city}
-                    </button>
-                  ))}
-                  {form.marketLocationSearch &&
-                    !US_CITIES.some(
-                      (c) =>
-                        c.toLowerCase() ===
-                        form.marketLocationSearch.toLowerCase()
-                    ) && (
-                      <button
-                        onClick={() => {
-                          updateForm(index, {
-                            marketLocation: form.marketLocationSearch,
-                            marketLocationSearch: "",
-                            showDropdown: false,
-                          });
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm border-t border-gray-100 bg-gray-50 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                      >
-                        <Search className="inline h-3 w-3 mr-2 text-blue-500" />
-                        Use "{form.marketLocationSearch}" as custom location
-                      </button>
-                    )}
-                </>
-              ) : form.marketLocationSearch ? (
-                <button
-                  onClick={() => {
-                    updateForm(index, {
-                      marketLocation: form.marketLocationSearch,
-                      marketLocationSearch: "",
-                      showDropdown: false,
-                    });
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                >
-                  <Search className="inline h-3 w-3 mr-2 text-blue-500" />
-                  Use "{form.marketLocationSearch}" as custom location
-                </button>
-              ) : (
-                <div className="px-3 py-2 text-sm text-gray-500">
-                  Start typing to search cities...
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -2084,8 +1926,75 @@ function RankingResultsView({
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <MapPin className="h-4 w-4" />
           <span className="font-medium">{result.gbpLocationName}</span>
-          <span className="text-gray-400">•</span>
-          <span>{result.location}</span>
+          {result.location && (
+            <>
+              <span className="text-gray-400">•</span>
+              <span>{result.location}</span>
+            </>
+          )}
+          {result.specialty && (
+            <>
+              <span className="text-gray-400">•</span>
+              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
+                {result.specialty}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Keywords Used for Ranking */}
+      {result.rankKeywords && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <h4 className="mb-2 text-sm font-semibold text-gray-700">
+            Keywords Used for Ranking
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {result.rankKeywords.split(",").map((kw: string) => (
+              <span
+                key={kw.trim()}
+                className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700"
+              >
+                {kw.trim()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Apify Search Parameters (for debugging) */}
+      {result.searchParams && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h4 className="mb-2 text-sm font-semibold text-amber-700 flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            Apify Search Parameters (Debug)
+          </h4>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-gray-600">City:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {result.searchParams.city || "(not set)"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">State:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {result.searchParams.state || "(not set)"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">County:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {result.searchParams.county || "(not set)"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Postal Code:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {result.searchParams.postalCode || "(not set)"}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2095,7 +2004,7 @@ function RankingResultsView({
           <div className="text-sm font-medium text-gray-500">Rank Score</div>
           <div
             className={`mt-1 text-3xl font-bold ${getScoreColor(
-              Number(result.rankScore)
+              Number(result.rankScore),
             )}`}
           >
             {Number(result.rankScore).toFixed(1)}
@@ -2168,9 +2077,9 @@ function RankingResultsView({
                             task.metadata.priority === "high"
                               ? "bg-red-100 text-red-700"
                               : task.metadata.priority === "2" ||
-                                task.metadata.priority === "medium"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-gray-100 text-gray-700"
+                                  task.metadata.priority === "medium"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-700"
                           }`}
                         >
                           Priority {task.metadata.priority}
@@ -2356,7 +2265,7 @@ function RankingResultsView({
                     </td>
                     <td
                       className={`py-2 px-2 text-center font-medium ${getScoreColor(
-                        comp.rankScore
+                        comp.rankScore,
                       )}`}
                     >
                       {comp.rankScore?.toFixed(1) || "-"}
@@ -2398,8 +2307,8 @@ function RankingResultsView({
                         gap.impact === "high"
                           ? "bg-red-100 text-red-700"
                           : gap.impact === "medium"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-gray-100 text-gray-700"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-gray-100 text-gray-700"
                       }`}
                     >
                       {gap.impact}
@@ -2436,8 +2345,8 @@ function RankingResultsView({
                           driver.direction === "positive"
                             ? "bg-green-500"
                             : driver.direction === "negative"
-                            ? "bg-red-500"
-                            : "bg-gray-400"
+                              ? "bg-red-500"
+                              : "bg-gray-400"
                         }`}
                       />
                       <span className="text-gray-700">{driver.factor}</span>

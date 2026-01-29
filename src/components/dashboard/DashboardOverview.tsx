@@ -656,16 +656,21 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     return "Good Evening";
   };
 
-  // Get critical actions count
-  const criticalActionsCount = tasks.filter((t) => {
+  // Get critical actions (approved, not complete, USER category, Immediate/High urgency)
+  const criticalActions = tasks.filter((t) => {
     try {
+      if (!t.is_approved || t.status === "complete" || t.category !== "USER") {
+        return false;
+      }
       const metadata =
         typeof t.metadata === "string" ? JSON.parse(t.metadata) : t.metadata;
       return metadata?.urgency === "Immediate" || metadata?.urgency === "High";
     } catch {
       return false;
     }
-  }).length;
+  });
+  const criticalActionsCount = criticalActions.length;
+  const criticalActionIds = criticalActions.map((t) => t.id);
 
   // Data availability flags
   const wins = summaryData?.wins;
@@ -715,19 +720,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const effectiveCriticalActionsCount = isWizardActive
     ? (wizardDemoData?.criticalActionsCount ?? fallbackCriticalActionsCount)
     : criticalActionsCount;
-
-  // Calculate sentiment based on score
-  const getSentimentFromScore = (score: number | null | undefined) => {
-    if (score === null || score === undefined)
-      return { label: "N/A", color: "slate", pulse: false };
-    if (score < 50) return { label: "Low", color: "red", pulse: false };
-    if (score <= 75) return { label: "Okay", color: "yellow", pulse: true };
-    return { label: "High", color: "green", pulse: true };
-  };
-
-  // Get sentiment for current location
-  const currentLocationRanking = effectiveRankingData?.[currentLocationIndex];
-  const sentiment = getSentimentFromScore(currentLocationRanking?.rankScore);
 
   // Carousel navigation for multiple locations
   const totalLocations = effectiveRankingData?.length || 0;
@@ -895,7 +887,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
           </div>
           <h1 className="text-5xl lg:text-6xl font-black font-heading text-alloro-navy tracking-tight leading-none mb-4">
-            {getGreeting()}{effectiveLastName ? `, Dr. ${effectiveLastName}` : ""}.
+            {getGreeting()}
+            {effectiveLastName ? `, Dr. ${effectiveLastName}` : ""}.
           </h1>
           {trajectory ? (
             <div className="space-y-4">
@@ -917,7 +910,8 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
             </div>
           ) : (
             <p className="text-xl lg:text-2xl text-slate-500 font-medium tracking-tight leading-relaxed max-w-4xl">
-              Welcome to your practice dashboard. We're loading your latest insights.
+              Welcome to your practice dashboard. We're loading your latest
+              insights.
             </p>
           )}
         </section>
@@ -1064,13 +1058,24 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                             #{currentLocationData.rank} of{" "}
                             {currentLocationData.totalCompetitors}
                           </span>{" "}
-                          locally. Your practice is growing.
+                          locally.
                         </h2>
-                        <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
-                          Your authority score has increased by 12 points since
-                          last month. Focus on review velocity to challenge the
-                          #{Math.max(1, currentLocationData.rank - 1)} position.
-                        </p>
+                        {(() => {
+                          // Get the one_line_summary from the current location's llmAnalysis
+                          const currentRanking =
+                            effectiveRankingData?.[currentLocationIndex];
+                          const oneLineSummary = currentRanking?.llmAnalysis
+                            ?.one_line_summary as string | undefined;
+
+                          if (oneLineSummary) {
+                            return (
+                              <p className="text-lg text-slate-500 font-medium tracking-tight max-w-2xl mt-4">
+                                {oneLineSummary}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1097,36 +1102,6 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                       ) : (
                         <LoadingSkeleton className="h-16 w-24" />
                       )}
-                    </div>
-                  </div>
-                  <div className="w-px h-16 bg-slate-100 hidden sm:block"></div>
-                  <div className="flex flex-col items-center group/stat">
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
-                      Patient Mood
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-3xl font-black font-heading transition-colors ${
-                          sentiment.label === "High"
-                            ? "text-alloro-navy group-hover/stat:text-green-500"
-                            : sentiment.label === "Okay"
-                              ? "text-alloro-navy group-hover/stat:text-yellow-500"
-                              : "text-alloro-navy"
-                        }`}
-                      >
-                        {sentiment.label}
-                      </span>
-                      <div
-                        className={`w-4 h-4 rounded-full ${
-                          sentiment.label === "High"
-                            ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                            : sentiment.label === "Okay"
-                              ? "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
-                              : sentiment.label === "Low"
-                                ? "bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
-                                : "bg-slate-400"
-                        }`}
-                      ></div>
                     </div>
                   </div>
                 </div>
@@ -1162,14 +1137,14 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                     <p className="text-white/80 text-base font-medium tracking-tight max-w-lg leading-relaxed">
                       You have{" "}
                       <span className="text-white font-black underline decoration-white/40 underline-offset-4">
-                        {criticalActionsCount} tasks to do
+                        {criticalActionsCount} tasks
                       </span>{" "}
-                      that could save $50k+ in revenue.
+                      that need attention.
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate("/tasks")}
+                  onClick={() => navigate("/tasks", { state: { highlightTaskIds: criticalActionIds } })}
                   className="w-full sm:w-auto px-10 py-4 bg-white text-alloro-orange rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 shrink-0"
                 >
                   SEE TASKS <ArrowRight size={16} />
@@ -1201,6 +1176,10 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
           const immediateTask = tasks.find((task) => {
             try {
+              // Must be approved, not completed, and USER category to show in ACTION NEEDED
+              if (!task.is_approved || task.status === "complete" || task.category !== "USER") {
+                return false;
+              }
               const metadata =
                 typeof task.metadata === "string"
                   ? JSON.parse(task.metadata)

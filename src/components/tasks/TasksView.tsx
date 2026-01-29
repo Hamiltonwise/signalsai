@@ -22,6 +22,7 @@ import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
 import { parseHighlightTags } from "../../utils/textFormatting";
 import { useIsWizardActive } from "../../contexts/OnboardingWizardContext";
+import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 // CSS for pulse animation
 const pulseAnimationStyle = `
@@ -312,8 +313,8 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   const isAnimationInterrupted = useRef(false);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get user role for permission checks
-  const userRole = localStorage.getItem("user_role");
+  // Get user role for permission checks (sessionStorage for pilot mode, localStorage for normal)
+  const userRole = getPriorityItem("user_role");
   const canEditTasks = userRole === "admin" || userRole === "manager";
 
   // Scroll to task and pulse when navigated from dashboard (single task)

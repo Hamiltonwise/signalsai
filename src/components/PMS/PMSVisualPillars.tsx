@@ -45,6 +45,7 @@ import {
   useWizardDemoData,
 } from "../../contexts/OnboardingWizardContext";
 import { apiGet } from "../../api";
+import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 interface PMSVisualPillarsProps {
   domain?: string;
@@ -197,8 +198,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [automationStatus, setAutomationStatus] =
     useState<AutomationStatusDetail | null>(null);
 
-  // Get user role for permission checks
-  const userRole = localStorage.getItem("user_role");
+  // Get user role for permission checks (sessionStorage for pilot mode, localStorage for normal)
+  const userRole = getPriorityItem("user_role");
   const hasRolePermission = userRole === "admin" || userRole === "manager";
   // Can only upload PMS if user has role permission AND properties are connected (or wizard is active)
   const canUploadPMS = hasRolePermission && (hasProperties || isWizardActive);

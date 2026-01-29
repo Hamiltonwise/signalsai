@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { fetchClientTasks } from "../api/tasks";
 import { fetchNotifications } from "../api/notifications";
 import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
+import { getPriorityItem } from "../hooks/useLocalStorage";
 
 type UserRole = "admin" | "manager" | "viewer";
 
@@ -120,9 +121,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [unreadNotificationCount, setUnreadNotificationCount] =
     useState<number>(0);
 
-  // Get user role from localStorage
+  // Get user role from storage (sessionStorage for pilot mode, localStorage for normal)
   useEffect(() => {
-    const role = localStorage.getItem("user_role") as UserRole | null;
+    const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
   }, []);
 

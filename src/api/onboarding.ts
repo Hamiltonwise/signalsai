@@ -115,6 +115,46 @@ async function restartWizard() {
   }
 }
 
+/**
+ * Get setup progress wizard state
+ */
+async function getSetupProgress() {
+  try {
+    return await apiGet({
+      path: baseurl + `/setup-progress`,
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Update setup progress wizard state
+ */
+async function updateSetupProgress(progress: {
+  step1_api_connected: boolean;
+  step2_pms_uploaded: boolean;
+  dismissed: boolean;
+  completed: boolean;
+}) {
+  try {
+    return await apiPut({
+      path: baseurl + `/setup-progress`,
+      passedData: { progress },
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
 const onboarding = {
   getOnboardingStatus,
   getAvailableProperties,
@@ -122,6 +162,8 @@ const onboarding = {
   getWizardStatus,
   completeWizard,
   restartWizard,
+  getSetupProgress,
+  updateSetupProgress,
 };
 
 export default onboarding;

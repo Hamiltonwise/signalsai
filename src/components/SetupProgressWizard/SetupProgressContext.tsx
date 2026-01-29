@@ -4,17 +4,15 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
-import { apiGet } from "../../api";
-import { fetchPmsKeyData, type PmsKeyDataResponse } from "../../api/pms";
+import onboarding from "../../api/onboarding";
 import { fireConfetti } from "../../lib/confetti";
 
 interface SetupProgress {
   step1_api_connected: boolean; // All 3 scopes granted AND all 3 services connected
   step2_pms_uploaded: boolean; // At least 1 PMS data uploaded
-  step2_pms_uploaded_at: string | null; // ISO timestamp of first PMS upload
-  step3_insights_ready: boolean; // 24 hours have passed since PMS upload
   dismissed: boolean; // User manually dismissed (still show icon)
   completed: boolean; // All steps done (hide entirely)
 }
@@ -37,14 +35,12 @@ const STORAGE_KEY = "alloro_setup_progress";
 const defaultProgress: SetupProgress = {
   step1_api_connected: false,
   step2_pms_uploaded: false,
-  step2_pms_uploaded_at: null,
-  step3_insights_ready: false,
   dismissed: false,
   completed: false,
 };
 
 const SetupProgressContext = createContext<SetupProgressContextType | null>(
-  null,
+  null
 );
 
 function getStoredProgress(): SetupProgress {
@@ -59,7 +55,7 @@ function getStoredProgress(): SetupProgress {
   return defaultProgress;
 }
 
-function saveProgress(progress: SetupProgress): void {
+function saveProgressToStorage(progress: SetupProgress): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   } catch {
@@ -70,129 +66,59 @@ function saveProgress(progress: SetupProgress): void {
 export function SetupProgressProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<SetupProgress>(getStoredProgress);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [justCompletedStep, setJustCompletedStep] = useState<number | null>(
-    null,
+    null
   );
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const clearJustCompleted = useCallback(() => {
     setJustCompletedStep(null);
   }, []);
 
-  // Check if 24 hours have passed since PMS upload
-  const checkStep3Completion = useCallback((uploadedAt: string | null) => {
-    if (!uploadedAt) return false;
-    const uploadTime = new Date(uploadedAt).getTime();
-    const now = Date.now();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    return now - uploadTime >= twentyFourHours;
+  // Debounced save to API
+  const saveProgressToApi = useCallback((newProgress: SetupProgress) => {
+    // Always save to localStorage immediately
+    saveProgressToStorage(newProgress);
+
+    // Debounce API calls
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await onboarding.updateSetupProgress(newProgress);
+      } catch (err) {
+        console.error("Failed to save setup progress to API:", err);
+      }
+    }, 500);
   }, []);
 
-  // Refresh progress by checking actual API state
-  const refreshProgress = useCallback(
-    async (showLoading = false) => {
-      if (showLoading) {
-        setIsLoading(true);
+  // Fetch progress from database (no live API checks)
+  const refreshProgress = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const apiProgress = await onboarding.getSetupProgress();
+
+      if (
+        apiProgress.success &&
+        "progress" in apiProgress &&
+        apiProgress.progress
+      ) {
+        const dbProgress = { ...defaultProgress, ...apiProgress.progress };
+        setProgress(dbProgress);
+        saveProgressToStorage(dbProgress);
+      } else {
+        // Fall back to localStorage if API fails
+        setProgress(getStoredProgress());
       }
-
-      try {
-        // Fetch all data in parallel for faster response
-        const [propertiesResponse, scopesResponse, pmsResponse] =
-          await Promise.all([
-            apiGet({ path: "/settings/properties" }),
-            apiGet({ path: "/settings/scopes" }),
-            fetchPmsKeyData().catch(() => ({ success: false })),
-          ]);
-
-        // Check connection status (Step 1)
-        let allConnected = false;
-        let allScopesGranted = false;
-
-        if (propertiesResponse.success) {
-          const props = propertiesResponse.properties;
-          allConnected =
-            !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
-        }
-
-        if (scopesResponse.success) {
-          const scopes = scopesResponse.scopes;
-          allScopesGranted =
-            scopes?.ga4?.granted &&
-            scopes?.gsc?.granted &&
-            scopes?.gbp?.granted;
-        }
-
-        const step1Complete = allConnected && allScopesGranted;
-
-        // Check PMS data status (Step 2) - verify from API
-        const storedProgress = getStoredProgress();
-        let step2Complete = false;
-        let uploadedAt = storedProgress.step2_pms_uploaded_at;
-
-        // Type guard to check if pmsResponse has data property (full PmsKeyDataResponse)
-        const hasPmsData = (
-          response: PmsKeyDataResponse | { success: boolean },
-        ): response is PmsKeyDataResponse => {
-          return "data" in response && response.data !== undefined;
-        };
-
-        if (
-          pmsResponse.success &&
-          hasPmsData(pmsResponse) &&
-          pmsResponse.data &&
-          pmsResponse.data.stats &&
-          pmsResponse.data.stats.jobCount > 0
-        ) {
-          step2Complete = true;
-          // Use earliest job timestamp if we don't have one stored
-          if (!uploadedAt && pmsResponse.data.stats.earliestJobTimestamp) {
-            uploadedAt = pmsResponse.data.stats.earliestJobTimestamp;
-          }
-        } else if (!pmsResponse.success) {
-          // Fall back to stored value if API fails
-          step2Complete = storedProgress.step2_pms_uploaded;
-        }
-
-        // Check Step 3 (24 hours since upload)
-        const step3Complete = step2Complete && checkStep3Completion(uploadedAt);
-
-        // Update progress
-        const newProgress: SetupProgress = {
-          step1_api_connected: step1Complete,
-          step2_pms_uploaded: step2Complete,
-          step2_pms_uploaded_at: uploadedAt,
-          step3_insights_ready: step3Complete,
-          dismissed: storedProgress.dismissed,
-          completed: step1Complete && step2Complete && step3Complete,
-        };
-
-        // Check if a step was just completed (trigger confetti)
-        // Only check for transitions after initial load to avoid false positives
-        setProgress((prev) => {
-          if (!isInitialLoad) {
-            if (!prev.step1_api_connected && step1Complete) {
-              setJustCompletedStep(1);
-            } else if (!prev.step2_pms_uploaded && step2Complete) {
-              setJustCompletedStep(2);
-            } else if (!prev.step3_insights_ready && step3Complete) {
-              setJustCompletedStep(3);
-            }
-          }
-          return newProgress;
-        });
-
-        saveProgress(newProgress);
-      } catch (err) {
-        console.error("Failed to refresh setup progress:", err);
-      } finally {
-        if (isInitialLoad) {
-          setIsLoading(false);
-          setIsInitialLoad(false);
-        }
-      }
-    },
-    [checkStep3Completion, isInitialLoad],
-  );
+    } catch (err) {
+      console.error("Failed to fetch setup progress:", err);
+      setProgress(getStoredProgress());
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Mark step 1 as complete (with confetti)
   const markStep1Complete = useCallback(() => {
@@ -201,53 +127,56 @@ export function SetupProgressProvider({ children }: { children: ReactNode }) {
       if (!prev.step1_api_connected) {
         setJustCompletedStep(1);
       }
-      const updated = { ...prev, step1_api_connected: true };
-      saveProgress(updated);
+      const updated = {
+        ...prev,
+        step1_api_connected: true,
+        completed: prev.step2_pms_uploaded, // Complete if step 2 also done
+      };
+      saveProgressToApi(updated);
       return updated;
     });
-  }, []);
+  }, [saveProgressToApi]);
 
   // Mark step 1 as incomplete (when a service is disconnected)
   const markStep1Incomplete = useCallback(() => {
     setProgress((prev) => {
       const updated = { ...prev, step1_api_connected: false, completed: false };
-      saveProgress(updated);
+      saveProgressToApi(updated);
       return updated;
     });
-  }, []);
+  }, [saveProgressToApi]);
 
-  // Mark step 2 as complete (with timestamp)
+  // Mark step 2 as complete
   const markStep2Complete = useCallback(() => {
     setProgress((prev) => {
       // Only trigger confetti if this is a new completion
       if (!prev.step2_pms_uploaded) {
         setJustCompletedStep(2);
       }
-      const now = new Date().toISOString();
       const updated = {
         ...prev,
         step2_pms_uploaded: true,
-        step2_pms_uploaded_at: prev.step2_pms_uploaded_at || now,
+        completed: prev.step1_api_connected, // Complete if step 1 also done
       };
-      saveProgress(updated);
+      saveProgressToApi(updated);
       return updated;
     });
-  }, []);
+  }, [saveProgressToApi]);
 
   // Dismiss wizard (hide panel but keep icon)
   const dismissWizard = useCallback(() => {
     setProgress((prev) => {
       const updated = { ...prev, dismissed: true };
-      saveProgress(updated);
+      saveProgressToApi(updated);
       return updated;
     });
-  }, []);
+  }, [saveProgressToApi]);
 
   // Reset wizard (for testing/debugging)
   const resetWizard = useCallback(() => {
     setProgress(defaultProgress);
-    saveProgress(defaultProgress);
-  }, []);
+    saveProgressToApi(defaultProgress);
+  }, [saveProgressToApi]);
 
   // Initial load and listen for PMS upload events
   useEffect(() => {
@@ -264,43 +193,6 @@ export function SetupProgressProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshProgress, markStep2Complete]);
 
-  // Periodically check if step 3 is complete (every minute)
-  useEffect(() => {
-    if (progress.step2_pms_uploaded && !progress.step3_insights_ready) {
-      const interval = setInterval(() => {
-        const isReady = checkStep3Completion(progress.step2_pms_uploaded_at);
-        if (isReady) {
-          setProgress((prev) => {
-            const updated = {
-              ...prev,
-              step3_insights_ready: true,
-              completed:
-                prev.step1_api_connected && prev.step2_pms_uploaded && true,
-            };
-            saveProgress(updated);
-            return updated;
-          });
-        }
-      }, 60000); // Check every minute
-
-      return () => clearInterval(interval);
-    }
-  }, [
-    progress.step2_pms_uploaded,
-    progress.step2_pms_uploaded_at,
-    progress.step3_insights_ready,
-    checkStep3Completion,
-  ]);
-
-  // Poll for connection updates every 5 seconds
-  useEffect(() => {
-    const pollInterval = setInterval(() => {
-      refreshProgress();
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [refreshProgress]);
-
   // Fire confetti when a step is completed (handled here so it works even if wizard UI is hidden)
   useEffect(() => {
     if (justCompletedStep) {
@@ -313,6 +205,15 @@ export function SetupProgressProvider({ children }: { children: ReactNode }) {
       fireConfetti(confettiPosition);
     }
   }, [justCompletedStep]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <SetupProgressContext.Provider
@@ -338,7 +239,7 @@ export function useSetupProgress(): SetupProgressContextType {
   const context = useContext(SetupProgressContext);
   if (!context) {
     throw new Error(
-      "useSetupProgress must be used within a SetupProgressProvider",
+      "useSetupProgress must be used within a SetupProgressProvider"
     );
   }
   return context;

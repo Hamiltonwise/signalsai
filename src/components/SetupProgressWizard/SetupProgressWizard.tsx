@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, X, Loader2, Info } from "lucide-react";
+import { CheckCircle2, Circle, X, Info } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSetupProgressSafe } from "./SetupProgressContext";
 import { useIsWizardActive } from "../../contexts/OnboardingWizardContext";
@@ -70,18 +70,6 @@ export function SetupProgressWizard() {
       completed: progress.step2_pms_uploaded,
       link: "Go to Referrals Hub",
       onClick: goToReferralsHub,
-    },
-    {
-      number: 3,
-      title: "Standby for your practice insights",
-      completed: progress.step3_insights_ready,
-      subtitle: progress.step2_pms_uploaded
-        ? progress.step3_insights_ready
-          ? "Insights ready!"
-          : "Processing..."
-        : "Waiting for PMS data",
-      link: null,
-      onClick: null,
     },
   ];
 
@@ -201,21 +189,6 @@ export function SetupProgressWizard() {
                       >
                         {step.number}. {step.title}
                       </p>
-
-                      {/* Subtitle (for step 3) */}
-                      {step.subtitle && !step.completed && (
-                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-                          {step.number === 3 &&
-                            progress.step2_pms_uploaded &&
-                            !progress.step3_insights_ready && (
-                              <Loader2
-                                size={10}
-                                className="animate-spin text-alloro-orange"
-                              />
-                            )}
-                          {step.subtitle}
-                        </p>
-                      )}
 
                       {/* Link */}
                       {step.link && step.onClick && !step.completed && (

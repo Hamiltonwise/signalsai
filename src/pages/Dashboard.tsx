@@ -24,13 +24,21 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 // Onboarding Components
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
-import onboarding from "../api/onboarding";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 import { useIsWizardActive, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
 
 export default function Dashboard() {
-  // Domain selection and auth hooks
-  const { selectedDomain, userProfile, refreshUserProperties } = useAuth();
+  // Domain selection and auth hooks - now includes centralized onboarding state
+  const {
+    selectedDomain,
+    userProfile,
+    refreshUserProperties,
+    onboardingCompleted,
+    hasProperties,
+    setOnboardingCompleted,
+    setHasProperties,
+    isLoadingUserProperties,
+  } = useAuth();
   const isWizardActive = useIsWizardActive();
   const recheckWizardStatus = useRecheckWizardStatus();
 
@@ -52,22 +60,9 @@ export default function Dashboard() {
     | "Referral Engine"
   >("Dashboard");
 
-  // Onboarding state - initialize from localStorage for instant rendering
-  const [onboardingCompleted, setOnboardingCompleted] = useState<
-    boolean | null
-  >(() => {
-    const cached = localStorage.getItem("onboardingCompleted");
-    return cached === "true" ? true : cached === "false" ? false : null;
-  });
-  const [hasProperties, setHasProperties] = useState<boolean>(() => {
-    const cached = localStorage.getItem("hasProperties");
-    return cached !== "false"; // Default to true unless explicitly false
-  });
-  const [checkingOnboarding, setCheckingOnboarding] = useState(() => {
-    // Skip initial loading screen if we have cached status
-    const cached = localStorage.getItem("onboardingCompleted");
-    return cached === null;
-  });
+  // Use context loading state instead of local checkingOnboarding
+  // This avoids duplicate API calls - AuthContext already fetches onboarding status
+  const checkingOnboarding = isLoadingUserProperties && onboardingCompleted === null;
 
   // Map between tabs and routes
   const tabFromPath = (path: string): typeof activeTab => {
@@ -99,101 +94,34 @@ export default function Dashboard() {
     }
   }, [userProfile?.googleAccountId, refreshUserProperties]);
 
-  // Check onboarding status on mount
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const response = await onboarding.getOnboardingStatus();
-        console.log("[Dashboard] Onboarding status response:", response);
-
-        // Backend returns { success: true, onboardingCompleted: boolean, hasPropertyIds: boolean }
-        if (response.success || response.successful) {
-          const isCompleted = response.onboardingCompleted === true;
-          setOnboardingCompleted(isCompleted);
-          localStorage.setItem("onboardingCompleted", String(isCompleted));
-
-          // Check if properties are actually connected (parsing the JSON if needed)
-          let hasProps = false;
-          if (response.propertyIds) {
-            const props =
-              typeof response.propertyIds === "string"
-                ? JSON.parse(response.propertyIds)
-                : response.propertyIds;
-
-            hasProps = !!(
-              props.ga4 ||
-              props.gsc ||
-              (props.gbp && props.gbp.length > 0)
-            );
-          }
-          setHasProperties(hasProps);
-          localStorage.setItem("hasProperties", String(hasProps));
-
-          console.log(
-            "[Dashboard] Onboarding completed:",
-            response.onboardingCompleted,
-            "Has properties:",
-            hasProps
-          );
-        } else {
-          // If check fails, assume onboarding is needed
-          setOnboardingCompleted(false);
-          localStorage.setItem("onboardingCompleted", "false");
-        }
-      } catch (error) {
-        console.error("Failed to check onboarding status:", error);
-        // Only reset to false if we don't have a cached value
-        if (localStorage.getItem("onboardingCompleted") === null) {
-          setOnboardingCompleted(false);
-        }
-      } finally {
-        setCheckingOnboarding(false);
-      }
-    };
-
-    checkStatus();
-  }, []);
+  // REMOVED: Duplicate onboarding status check
+  // AuthContext now handles this centrally - see AuthContext.tsx loadUserProperties()
+  // This eliminates one of the duplicate /api/onboarding/status calls
 
   // Handler for when onboarding is completed
   const handleOnboardingComplete = async () => {
     console.log("[Dashboard] Onboarding completed, showing loading screen");
     // Set to null to show loading screen
     setOnboardingCompleted(null);
-    setCheckingOnboarding(true);
 
     // Wait a moment for the backend to fully complete
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Refresh user properties from database
+    // Refresh user properties from database - this also updates onboarding state in AuthContext
     try {
       await refreshUserProperties();
       console.log("[Dashboard] User properties refreshed from database");
-    } catch (error) {
-      console.error("Failed to refresh user properties:", error);
-    }
 
-    // Re-check status to get fresh data
-    try {
-      const response = await onboarding.getOnboardingStatus();
-      console.log("[Dashboard] Re-checked status after completion:", response);
-      const isCompleted =
-        response.onboardingCompleted === true || response.success === true;
-      setOnboardingCompleted(isCompleted);
-      localStorage.setItem("onboardingCompleted", String(isCompleted));
       // After simplified onboarding, properties are NOT connected yet
       setHasProperties(false);
       localStorage.setItem("hasProperties", "false");
 
       // Start the 22-step wizard tour immediately after onboarding
-      if (isCompleted) {
-        console.log("[Dashboard] Starting wizard tour after onboarding");
-        await recheckWizardStatus();
-      }
+      console.log("[Dashboard] Starting wizard tour after onboarding");
+      await recheckWizardStatus();
     } catch (error) {
-      console.error("Failed to re-check status:", error);
-      setOnboardingCompleted(true); // Assume success
-    } finally {
-      setCheckingOnboarding(false);
+      console.error("Failed to refresh user properties:", error);
+      setOnboardingCompleted(true); // Assume success on error
     }
   };
 

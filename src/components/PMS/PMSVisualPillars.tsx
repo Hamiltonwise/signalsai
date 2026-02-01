@@ -79,12 +79,14 @@ const MetricCard = ({
   sub,
   trend,
   isHighlighted,
+  isLoading,
 }: {
   label: string;
   value: string | number;
   sub: string;
   trend?: string;
   isHighlighted?: boolean;
+  isLoading?: boolean;
 }) => (
   <div
     className={`flex flex-col p-5 lg:p-6 rounded-2xl border transition-all ${
@@ -97,14 +99,18 @@ const MetricCard = ({
       {label}
     </span>
     <div className="flex items-center justify-between mb-2">
-      <span
-        className={`text-2xl font-bold font-heading tracking-tighter leading-none ${
-          isHighlighted ? "text-alloro-orange" : "text-alloro-navy"
-        }`}
-      >
-        {value}
-      </span>
-      {trend && (
+      {isLoading ? (
+        <div className="h-8 w-20 bg-slate-200 rounded animate-pulse" />
+      ) : (
+        <span
+          className={`text-2xl font-bold font-heading tracking-tighter leading-none ${
+            isHighlighted ? "text-alloro-orange" : "text-alloro-navy"
+          }`}
+        >
+          {value}
+        </span>
+      )}
+      {!isLoading && trend && (
         <span
           className={`text-[9px] font-bold flex items-center gap-0.5 ${
             trend.startsWith("+") ? "text-green-600" : "text-red-500"
@@ -1410,31 +1416,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           </motion.div>
         )}
 
-        {/* Loading State - Skeleton */}
-        {isLoading && (
-          <div className="animate-pulse space-y-6">
-            {/* KPI Strip Skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-2xl p-5 lg:p-6 border border-slate-100"
-                >
-                  <div className="h-3 w-24 bg-slate-200 rounded mb-3" />
-                  <div className="h-8 w-20 bg-slate-200 rounded mb-2" />
-                  <div className="h-3 w-16 bg-slate-200 rounded" />
-                </div>
-              ))}
-            </div>
-
-            {/* Content Skeleton */}
-            <div className="space-y-8">
-              <div className="bg-white rounded-2xl border border-slate-200 h-96" />
-              <div className="bg-white rounded-2xl border border-slate-200 h-80" />
-            </div>
-          </div>
-        )}
-
         {/* Error State */}
         {!isLoading && error && (
           <motion.div
@@ -1456,8 +1437,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           </motion.div>
         )}
 
-        {/* Main Content */}
-        {!isLoading && !error && (keyData || isWizardActive) && (
+        {/* Main Content - Show titles during loading, with skeleton placeholders for data */}
+        {!error && (keyData || isWizardActive || isLoading) && (
           <>
             {/* 1. ATTRIBUTION VITALS - Matching newdesign */}
             <section data-wizard-target="pms-attribution" className="space-y-4">
@@ -1474,6 +1455,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   sub="Marketing Attribution"
                   trend={monthlyData.length > 1 ? "+11%" : undefined}
                   isHighlighted
+                  isLoading={isLoading}
                 />
                 <MetricCard
                   label="DOC Production"
@@ -1484,11 +1466,13 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   ).toFixed(1)}K`}
                   sub="Referral Attribution"
                   trend={monthlyData.length > 1 ? "+4%" : undefined}
+                  isLoading={isLoading}
                 />
                 <MetricCard
                   label="Total Referrals"
                   value={totalReferrals.toString()}
                   sub="Synced Ledger"
+                  isLoading={isLoading}
                 />
               </div>
             </section>
@@ -1521,73 +1505,93 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                 </div>
               </div>
               <div className="p-6 sm:p-10 space-y-8 max-h-[500px] overflow-y-auto">
-                {monthlyData.map((data, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8"
-                  >
-                    <div className="w-16 sm:text-right shrink-0">
-                      <div className="text-[12px] font-bold text-alloro-navy uppercase">
-                        {data.month}
-                      </div>
-                      <div className="text-[9px] text-slate-300 font-bold">
-                        2025
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-2.5">
-                      <div className="relative h-4 flex items-center gap-4">
-                        <motion.div
-                          className="h-full bg-alloro-orange rounded-lg shadow-sm"
-                          initial={{ width: 0 }}
-                          animate={{
-                            width: `${
-                              (data.selfReferrals / maxBarValue) * 100
-                            }%`,
-                          }}
-                          transition={{
-                            delay: index * 0.05 + 0.2,
-                            duration: 0.6,
-                            ease: "easeOut",
-                          }}
-                        />
-                        <span className="text-[11px] font-bold text-alloro-navy tabular-nums">
-                          {data.selfReferrals}
-                        </span>
-                      </div>
-                      {data.doctorReferrals > 0 && (
-                        <div className="relative h-2.5 flex items-center gap-4">
-                          <motion.div
-                            className="h-full bg-alloro-navy rounded-lg opacity-80"
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${
-                                (data.doctorReferrals / maxBarValue) * 100
-                              }%`,
-                            }}
-                            transition={{
-                              delay: index * 0.05 + 0.3,
-                              duration: 0.6,
-                              ease: "easeOut",
-                            }}
-                          />
-                          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-                            {data.doctorReferrals}
-                          </span>
+                {isLoading ? (
+                  // Loading skeleton for velocity chart
+                  <div className="space-y-6 animate-pulse">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-8">
+                        <div className="w-16 shrink-0">
+                          <div className="h-4 w-12 bg-slate-200 rounded" />
+                          <div className="h-2 w-8 bg-slate-100 rounded mt-1" />
                         </div>
-                      )}
-                    </div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-slate-200 rounded-lg" style={{ width: `${70 - i * 15}%` }} />
+                          <div className="h-2.5 bg-slate-100 rounded-lg" style={{ width: `${40 - i * 8}%` }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {monthlyData.length === 0 && (
-                  <div className="text-center py-12 text-slate-400">
-                    <Calendar size={32} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-semibold">
-                      No monthly data available
-                    </p>
-                    <p className="text-[10px] uppercase tracking-widest mt-1">
-                      Upload PMS data to see trends
-                    </p>
-                  </div>
+                ) : (
+                  <>
+                    {monthlyData.map((data, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8"
+                      >
+                        <div className="w-16 sm:text-right shrink-0">
+                          <div className="text-[12px] font-bold text-alloro-navy uppercase">
+                            {data.month}
+                          </div>
+                          <div className="text-[9px] text-slate-300 font-bold">
+                            2025
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-2.5">
+                          <div className="relative h-4 flex items-center gap-4">
+                            <motion.div
+                              className="h-full bg-alloro-orange rounded-lg shadow-sm"
+                              initial={{ width: 0 }}
+                              animate={{
+                                width: `${
+                                  (data.selfReferrals / maxBarValue) * 100
+                                }%`,
+                              }}
+                              transition={{
+                                delay: index * 0.05 + 0.2,
+                                duration: 0.6,
+                                ease: "easeOut",
+                              }}
+                            />
+                            <span className="text-[11px] font-bold text-alloro-navy tabular-nums">
+                              {data.selfReferrals}
+                            </span>
+                          </div>
+                          {data.doctorReferrals > 0 && (
+                            <div className="relative h-2.5 flex items-center gap-4">
+                              <motion.div
+                                className="h-full bg-alloro-navy rounded-lg opacity-80"
+                                initial={{ width: 0 }}
+                                animate={{
+                                  width: `${
+                                    (data.doctorReferrals / maxBarValue) * 100
+                                  }%`,
+                                }}
+                                transition={{
+                                  delay: index * 0.05 + 0.3,
+                                  duration: 0.6,
+                                  ease: "easeOut",
+                                }}
+                              />
+                              <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                                {data.doctorReferrals}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {monthlyData.length === 0 && (
+                      <div className="text-center py-12 text-slate-400">
+                        <Calendar size={32} className="mx-auto mb-3 opacity-50" />
+                        <p className="text-sm font-semibold">
+                          No monthly data available
+                        </p>
+                        <p className="text-[10px] uppercase tracking-widest mt-1">
+                          Upload PMS data to see trends
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </section>
@@ -1604,7 +1608,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
               <>
                 <ReferralMatrices
                   referralData={effectiveReferralData}
-                  isLoading={referralLoading && !isWizardActive}
+                  isLoading={(isLoading || referralLoading) && !isWizardActive}
                   isPending={(referralPending || showClientApprovalBanner) && !isWizardActive}
                   automationStatus={isWizardActive ? null : automationStatus}
                   onConfirmationClick={scrollToApprovalBanner}

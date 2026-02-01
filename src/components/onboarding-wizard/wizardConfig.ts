@@ -111,7 +111,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     id: "pms-attribution",
     page: "pmsStatistics",
     targetSelector: "[data-wizard-target='pms-attribution']",
-    title: "Attribution Vitals",
+    title: "Referral Analysis",
     description:
       "See your year-to-date production split between marketing (self-referrals) and doctor referrals. Track total referrals synced from your PMS.",
     scrollToElement: true,
@@ -342,7 +342,8 @@ export const WIZARD_DEMO_DATA = {
       {
         id: "demo-alloro-1",
         title: "Monitoring review sentiment",
-        description: "Automatically tracking patient sentiment across platforms.",
+        description:
+          "Automatically tracking patient sentiment across platforms.",
         status: "in_progress",
         category: "Automation",
       },
@@ -375,7 +376,8 @@ export const WIZARD_DEMO_DATA = {
 
   // Wins and risks
   prooflineData: {
-    trajectory: "Your practice is showing <hl>strong momentum</hl> this month. New patient starts are up 12% and your local visibility continues to improve.",
+    trajectory:
+      "Your practice is showing <hl>strong momentum</hl> this month. New patient starts are up 12% and your local visibility continues to improve.",
     wins: [
       "Google reviews up 23% this quarter",
       "Website traffic increased by 15%",

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
 import NewAccountOnboarding from "./pages/NewAccountOnboarding";
@@ -30,6 +30,7 @@ function AuthOnlyProviders({ children }: { children: ReactNode }) {
   return <GoogleAuthProvider>{children}</GoogleAuthProvider>;
 }
 
+// AppProviders wrapper - now used as a layout route to avoid remounting on navigation
 function AppProviders({ children }: { children: ReactNode }) {
   return (
     <GoogleAuthProvider>
@@ -44,6 +45,29 @@ function AppProviders({ children }: { children: ReactNode }) {
   );
 }
 
+// Layout component for protected routes with AppProviders
+// This keeps providers mounted across route changes, preventing duplicate API calls
+function ProtectedLayout() {
+  return (
+    <ProtectedRoute>
+      <AppProviders>
+        <PageWrapper>
+          <Outlet />
+        </PageWrapper>
+      </AppProviders>
+    </ProtectedRoute>
+  );
+}
+
+// Layout for admin routes (no PageWrapper)
+function AdminLayout() {
+  return (
+    <AppProviders>
+      <Outlet />
+    </AppProviders>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -55,132 +79,45 @@ function App() {
             <WizardController />
             <SetupProgressWizard />
             <Routes>
-            <Route path="/" element={<Navigate to="/signin" replace />} />
-            <Route
-              path="/signin"
-              element={
-                <PublicRoute>
-                  <AuthOnlyProviders>
-                    <SignIn />
-                  </AuthOnlyProviders>
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/new-account-onboarding"
-              element={
-                <PublicRoute>
-                  <AuthOnlyProviders>
-                    <NewAccountOnboarding />
-                  </AuthOnlyProviders>
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Dashboard />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/patientJourneyInsights"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Dashboard />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pmsStatistics"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Dashboard />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Dashboard />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/rankings"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Dashboard />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/*"
-              element={
-                <AppProviders>
-                  <Admin />
-                </AppProviders>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Settings />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Notifications />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/help"
-              element={
-                <ProtectedRoute>
-                  <AppProviders>
-                    <PageWrapper>
-                      <Help />
-                    </PageWrapper>
-                  </AppProviders>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              <Route path="/" element={<Navigate to="/signin" replace />} />
+              <Route
+                path="/signin"
+                element={
+                  <PublicRoute>
+                    <AuthOnlyProviders>
+                      <SignIn />
+                    </AuthOnlyProviders>
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/new-account-onboarding"
+                element={
+                  <PublicRoute>
+                    <AuthOnlyProviders>
+                      <NewAccountOnboarding />
+                    </AuthOnlyProviders>
+                  </PublicRoute>
+                }
+              />
+
+              {/* Protected routes with shared AppProviders - prevents remounting on navigation */}
+              <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/patientJourneyInsights" element={<Dashboard />} />
+                <Route path="/pmsStatistics" element={<Dashboard />} />
+                <Route path="/tasks" element={<Dashboard />} />
+                <Route path="/rankings" element={<Dashboard />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/help" element={<Help />} />
+              </Route>
+
+              {/* Admin routes with AppProviders but no PageWrapper */}
+              <Route element={<AdminLayout />}>
+                <Route path="/admin/*" element={<Admin />} />
+              </Route>
+            </Routes>
             <PilotBanner />
           </SetupProgressProvider>
         </OnboardingWizardProvider>

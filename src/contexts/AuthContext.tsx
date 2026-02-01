@@ -21,6 +21,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoadingUserProperties, setIsLoadingUserProperties] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  // Centralized onboarding state - avoids duplicate API calls from Dashboard
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(() => {
+    const cached = localStorage.getItem("onboardingCompleted");
+    return cached === "true" ? true : cached === "false" ? false : null;
+  });
+  const [hasProperties, setHasProperties] = useState<boolean>(() => {
+    const cached = localStorage.getItem("hasProperties");
+    return cached !== "false"; // Default to true unless explicitly false
+  });
+
   // Function to load user properties (can be called on mount or manually)
   const loadUserProperties = async () => {
     setIsLoadingUserProperties(true);
@@ -33,6 +43,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : null;
 
       const status = await onboarding.getOnboardingStatus();
+
+      // Update centralized onboarding state
+      const isCompleted = status.success && status.onboardingCompleted === true;
+      setOnboardingCompleted(isCompleted);
+      localStorage.setItem("onboardingCompleted", String(isCompleted));
 
       if (status.success && status.onboardingCompleted && status.propertyIds) {
         // Get googleAccountId: prefer backend, then localStorage
@@ -67,6 +82,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
         };
         setSelectedDomain(userMapping);
+
+        // Check if properties are actually connected
+        const hasProps = !!(
+          status.propertyIds.ga4 ||
+          status.propertyIds.gsc ||
+          (status.propertyIds.gbp && status.propertyIds.gbp.length > 0)
+        );
+        setHasProperties(hasProps);
+        localStorage.setItem("hasProperties", String(hasProps));
       } else if (googleAccountIdFromStorage) {
         // Even if onboarding status fails, if we have googleAccountId in localStorage,
         // set a minimal userProfile so dashboard can fetch data
@@ -128,6 +152,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoadingUserProperties,
     userProfile,
     refreshUserProperties: loadUserProperties,
+    // Centralized onboarding state
+    onboardingCompleted,
+    hasProperties,
+    setOnboardingCompleted,
+    setHasProperties,
   };
 
   return (

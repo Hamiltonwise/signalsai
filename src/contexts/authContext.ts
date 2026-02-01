@@ -32,10 +32,16 @@ export interface AuthContextType {
   // Profile State
   userProfile: UserProfile | null;
 
+  // Onboarding State (centralized to avoid duplicate API calls)
+  onboardingCompleted: boolean | null;
+  hasProperties: boolean;
+
   // Functions
   handleDomainChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   setSelectedDomain: (domain: DomainMapping | null) => void;
   refreshUserProperties: () => Promise<void>;
+  setOnboardingCompleted: (value: boolean | null) => void;
+  setHasProperties: (value: boolean) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(

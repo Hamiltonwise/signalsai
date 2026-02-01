@@ -434,39 +434,7 @@ export default function Dashboard() {
             />
           </div>
         )
-      ) : (
-        // Loading state while preparing dashboard after onboarding
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-[#86b4ef] via-[#a8c9f1] to-[#c0d5f4]">
-          <div className="text-center space-y-8">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="space-y-6"
-            >
-              <div className="w-32 h-32 mx-auto overflow-visible">
-                <motion.img
-                  src="/alloro-running.png"
-                  alt="Alloro Running"
-                  className="w-full h-full object-contain drop-shadow-2xl"
-                  animate={{ x: [0, 20, 0] }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-              </div>
-              <h1 className="text-4xl md:text-5xl font-thin text-gray-800">
-                Alloro is preparing your dashboard
-              </h1>
-              <p className="text-gray-800 font-light text-lg">
-                Please wait while we fetch your initial data...
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

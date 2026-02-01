@@ -4,12 +4,14 @@ import { CheckCircle2, Circle, X, Info } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSetupProgressSafe } from "./SetupProgressContext";
 import { useIsWizardActive } from "../../contexts/OnboardingWizardContext";
+import { useAuth } from "../../hooks/useAuth";
 
 export function SetupProgressWizard() {
   const context = useSetupProgressSafe();
   const navigate = useNavigate();
   const location = useLocation();
   const isOnboardingWizardActive = useIsWizardActive();
+  const { onboardingCompleted } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Clear the justCompletedStep after confetti fires (confetti is now handled in context)
@@ -49,6 +51,9 @@ export function SetupProgressWizard() {
 
   // Don't show while the 22-step onboarding wizard is active
   if (isOnboardingWizardActive) return null;
+
+  // Don't show during the 3-step onboarding flow (when user hasn't completed initial onboarding)
+  if (onboardingCompleted === false) return null;
 
   // Don't show on sign in or onboarding pages
   const hiddenPaths = ["/signin", "/new-account-onboarding", "/admin"];

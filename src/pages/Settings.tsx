@@ -581,9 +581,12 @@ export const Settings: React.FC = () => {
                 </span>
               </div>
               <div className="text-left">
-                <h1 className="text-3xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-none mb-4">
+                <h1 className="text-3xl lg:text-5xl font-black font-heading text-alloro-navy tracking-tighter leading-none mb-2">
                   {userProfile?.practiceName || "Your Practice"}
                 </h1>
+                <p className="text-slate-500 text-sm font-medium">
+                  Manage your practice details and connect your Google integrations
+                </p>
               </div>
             </div>
           </div>
@@ -675,6 +678,14 @@ export const Settings: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12">
               {/* Left Column - Practice Identity */}
               <section className="xl:col-span-5 space-y-6">
+                <div className="px-1">
+                  <h2 className="text-lg font-black text-alloro-navy tracking-tight mb-1">
+                    Practice Details
+                  </h2>
+                  <p className="text-slate-500 text-sm">
+                    Your practice information and contact details
+                  </p>
+                </div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -762,183 +773,189 @@ export const Settings: React.FC = () => {
               {/* Right Column - Integrations */}
               <section
                 data-wizard-target="settings-integrations"
-                className="xl:col-span-7 space-y-10"
+                className="xl:col-span-7 space-y-6"
               >
-                <div className="space-y-8">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-4">
-                    <button
-                      onClick={handleFullSync}
-                      disabled={isSyncing}
-                      className="flex items-center gap-3 text-[11px] font-black text-alloro-orange uppercase tracking-[0.25em] hover:gap-5 transition-all group disabled:opacity-50 ml-auto"
-                    >
-                      <RefreshCw
-                        size={16}
-                        className={`group-hover:rotate-180 transition-transform duration-700 ${
-                          isSyncing ? "animate-spin" : ""
-                        }`}
-                      />
-                      Refresh Page
-                    </button>
+                <div className="flex items-end justify-between px-1">
+                  <div>
+                    <h2 className="text-lg font-black text-alloro-navy tracking-tight mb-1">
+                      Google Integrations
+                    </h2>
+                    <p className="text-slate-500 text-sm">
+                      Connect your Google services to unlock analytics and insights
+                    </p>
                   </div>
-
-                  {/* Missing Scopes Banner */}
-                  {missingScopeCount > 0 && (
-                    <MissingScopeBanner
-                      missingCount={missingScopeCount}
-                      missingScopes={missingScopes}
-                      onGrantAccess={handleGrantAccessComplete}
+                  <button
+                    onClick={handleFullSync}
+                    disabled={isSyncing}
+                    className="flex items-center gap-3 text-[11px] font-black text-alloro-orange uppercase tracking-[0.25em] hover:gap-5 transition-all group disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      size={16}
+                      className={`group-hover:rotate-180 transition-transform duration-700 ${
+                        isSyncing ? "animate-spin" : ""
+                      }`}
                     />
+                    Refresh Page
+                  </button>
+                </div>
+
+                {/* Missing Scopes Banner */}
+                {missingScopeCount > 0 && (
+                  <MissingScopeBanner
+                    missingCount={missingScopeCount}
+                    missingScopes={missingScopes}
+                    onGrantAccess={handleGrantAccessComplete}
+                  />
+                )}
+
+                {/* Disconnected Services Banner - show when scopes granted but services not connected */}
+                {missingScopeCount === 0 && (() => {
+                  const disconnected: string[] = [];
+                  if (!properties.ga4) disconnected.push("ga4");
+                  if (!properties.gsc) disconnected.push("gsc");
+                  if (!properties.gbp || properties.gbp.length === 0) disconnected.push("gbp");
+
+                  if (disconnected.length > 0) {
+                    return <DisconnectedServicesBanner disconnectedServices={disconnected} />;
+                  }
+                  return null;
+                })()}
+
+                {/* PMS Upload Banner - show when all services connected but no PMS data */}
+                {missingScopeCount === 0 &&
+                  properties.ga4 &&
+                  properties.gsc &&
+                  properties.gbp &&
+                  properties.gbp.length > 0 &&
+                  hasPmsData === false && (
+                    <PMSUploadBanner />
                   )}
 
-                  {/* Disconnected Services Banner - show when scopes granted but services not connected */}
-                  {missingScopeCount === 0 && (() => {
-                    const disconnected: string[] = [];
-                    if (!properties.ga4) disconnected.push("ga4");
-                    if (!properties.gsc) disconnected.push("gsc");
-                    if (!properties.gbp || properties.gbp.length === 0) disconnected.push("gbp");
-
-                    if (disconnected.length > 0) {
-                      return <DisconnectedServicesBanner disconnectedServices={disconnected} />;
-                    }
-                    return null;
-                  })()}
-
-                  {/* PMS Upload Banner - show when all services connected but no PMS data */}
-                  {missingScopeCount === 0 &&
-                    properties.ga4 &&
-                    properties.gsc &&
-                    properties.gbp &&
-                    properties.gbp.length > 0 &&
-                    hasPmsData === false && (
-                      <PMSUploadBanner />
-                    )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {integrations.map((app, index) => (
-                      <motion.div
-                        key={app.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className={`rounded-[2rem] border p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
-                          !app.scopeGranted && app.id !== "clarity"
-                            ? "bg-red-50/60 border-red-200 hover:border-red-300"
-                            : app.connected
-                              ? "bg-white border-black/5 hover:border-alloro-orange/20"
-                              : "bg-white border-black/5 hover:border-alloro-orange/20"
-                        }`}
-                      >
-                        {/* Loading Overlay */}
-                        {loadingCards[app.id] && (
-                          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                            <div className="flex flex-col items-center gap-3">
-                              <Loader2
-                                size={32}
-                                className="animate-spin text-alloro-orange"
-                              />
-                              <span className="text-sm font-medium text-alloro-navy">
-                                Updating...
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Missing Scope Warning Banner on Card */}
-                        {!app.scopeGranted && app.id !== "clarity" && (
-                          <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">
-                            <AlertTriangle size={12} />
-                            API Access Not Granted
-                          </div>
-                        )}
-
-                        <div
-                          className={`flex items-center justify-between mb-10 ${!app.scopeGranted && app.id !== "clarity" ? "mt-6" : ""}`}
-                        >
-                          <div
-                            className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted && app.id !== "clarity" ? "border-red-200 opacity-60" : "border-black/5"}`}
-                          >
-                            <img
-                              src={app.icon}
-                              alt={app.name}
-                              className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {integrations.map((app, index) => (
+                    <motion.div
+                      key={app.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`rounded-[2rem] border p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
+                        !app.scopeGranted && app.id !== "clarity"
+                          ? "bg-red-50/60 border-red-200 hover:border-red-300"
+                          : app.connected
+                            ? "bg-white border-black/5 hover:border-alloro-orange/20"
+                            : "bg-white border-black/5 hover:border-alloro-orange/20"
+                      }`}
+                    >
+                      {/* Loading Overlay */}
+                      {loadingCards[app.id] && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                          <div className="flex flex-col items-center gap-3">
+                            <Loader2
+                              size={32}
+                              className="animate-spin text-alloro-orange"
                             />
+                            <span className="text-sm font-medium text-alloro-navy">
+                              Updating...
+                            </span>
                           </div>
-                          {!app.scopeGranted && app.id !== "clarity" ? (
-                            <span className="px-4 py-1.5 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 flex items-center gap-2 shadow-sm">
-                              <AlertTriangle size={12} />
-                              No Access
-                            </span>
-                          ) : app.connected ? (
-                            <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
-                              Connected
-                            </span>
-                          ) : (
-                            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 shadow-sm">
-                              Disconnected
-                            </span>
-                          )}
                         </div>
-                        <h3
-                          className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted && app.id !== "clarity" ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
-                        >
-                          {app.name}
-                        </h3>
-                        <p
-                          className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted && app.id !== "clarity" ? "text-red-500" : "text-slate-400"}`}
-                        >
-                          {!app.scopeGranted && app.id !== "clarity"
-                            ? "Requires API permission"
-                            : app.connected
-                              ? "Active"
-                              : "Not connected"}
-                        </p>
+                      )}
 
-                        {canManageConnections && app.id !== "clarity" ? (
-                          <div className="flex flex-col gap-3">
-                            {app.scopeGranted ? (
-                              <>
+                      {/* Missing Scope Warning Banner on Card */}
+                      {!app.scopeGranted && app.id !== "clarity" && (
+                        <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">
+                          <AlertTriangle size={12} />
+                          API Access Not Granted
+                        </div>
+                      )}
+
+                      <div
+                        className={`flex items-center justify-between mb-10 ${!app.scopeGranted && app.id !== "clarity" ? "mt-6" : ""}`}
+                      >
+                        <div
+                          className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted && app.id !== "clarity" ? "border-red-200 opacity-60" : "border-black/5"}`}
+                        >
+                          <img
+                            src={app.icon}
+                            alt={app.name}
+                            className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
+                          />
+                        </div>
+                        {!app.scopeGranted && app.id !== "clarity" ? (
+                          <span className="px-4 py-1.5 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 flex items-center gap-2 shadow-sm">
+                            <AlertTriangle size={12} />
+                            No Access
+                          </span>
+                        ) : app.connected ? (
+                          <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
+                            Connected
+                          </span>
+                        ) : (
+                          <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 shadow-sm">
+                            Disconnected
+                          </span>
+                        )}
+                      </div>
+                      <h3
+                        className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted && app.id !== "clarity" ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
+                      >
+                        {app.name}
+                      </h3>
+                      <p
+                        className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted && app.id !== "clarity" ? "text-red-500" : "text-slate-400"}`}
+                      >
+                        {!app.scopeGranted && app.id !== "clarity"
+                          ? "Requires API permission"
+                          : app.connected
+                            ? "Active"
+                            : "Not connected"}
+                      </p>
+
+                      {canManageConnections && app.id !== "clarity" ? (
+                        <div className="flex flex-col gap-3">
+                          {app.scopeGranted ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleConnect(
+                                    app.id as "ga4" | "gsc" | "gbp",
+                                  )
+                                }
+                                className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
+                              >
+                                {app.connected
+                                  ? "Update Connection"
+                                  : "Connect Property"}
+                                <ChevronRight
+                                  size={16}
+                                  className="group-hover/btn:translate-x-1 transition-transform"
+                                />
+                              </button>
+
+                              {app.connected && (
                                 <button
                                   onClick={() =>
-                                    handleConnect(
+                                    initiateDisconnect(
                                       app.id as "ga4" | "gsc" | "gbp",
                                     )
                                   }
-                                  className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
+                                  className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
                                 >
-                                  {app.connected
-                                    ? "Update Connection"
-                                    : "Connect Property"}
-                                  <ChevronRight
-                                    size={16}
-                                    className="group-hover/btn:translate-x-1 transition-transform"
-                                  />
+                                  Disconnect
                                 </button>
-
-                                {app.connected && (
-                                  <button
-                                    onClick={() =>
-                                      initiateDisconnect(
-                                        app.id as "ga4" | "gsc" | "gbp",
-                                      )
-                                    }
-                                    className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
-                                  >
-                                    Disconnect
-                                  </button>
-                                )}
-                              </>
-                            ) : (
-                              <p className="text-red-600 text-xs">
-                                Grant API access using the banner above to
-                                enable this integration.
-                              </p>
-                            )}
-                          </div>
-                        ) : null}
-                      </motion.div>
-                    ))}
-                  </div>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-red-600 text-xs">
+                              Grant API access using the banner above to
+                              enable this integration.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+                    </motion.div>
+                  ))}
                 </div>
 
                 <div className="space-y-8">

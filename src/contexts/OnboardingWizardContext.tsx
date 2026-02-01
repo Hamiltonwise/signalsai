@@ -187,13 +187,34 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
 
   // Re-check wizard status from API and auto-start if not completed
   const recheckWizardStatus = useCallback(async () => {
+    console.log("[WizardContext] recheckWizardStatus called");
+
+    // Verify google_account_id exists before making API call
+    const googleAccountId = getPriorityItem("google_account_id");
+    console.log("[WizardContext] google_account_id:", googleAccountId);
+
+    if (!googleAccountId) {
+      console.log("[WizardContext] No google_account_id found, skipping wizard check");
+      setIsLoadingWizardStatus(false);
+      return;
+    }
+
     setIsLoadingWizardStatus(true);
     try {
       const response = await onboarding.getWizardStatus();
-      if (response && typeof response.onboarding_wizard_completed === "boolean") {
+      console.log("[WizardContext] API response:", response);
+
+      // Check for API errors
+      if (!response || response.error) {
+        console.error("[WizardContext] API error:", response?.error);
+        return;
+      }
+
+      if (typeof response.onboarding_wizard_completed === "boolean") {
         setWizardCompleted(response.onboarding_wizard_completed);
         // Auto-start wizard if not completed
         if (!response.onboarding_wizard_completed) {
+          console.log("[WizardContext] Starting wizard - completed flag was:", response.onboarding_wizard_completed);
           setCurrentStepIndex(0);
           setShowWelcomeModal(true);
           setIsWizardActive(true);
@@ -202,7 +223,11 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
           if (firstStep) {
             navigate(getPageRoute(firstStep.page));
           }
+        } else {
+          console.log("[WizardContext] Wizard already completed, not starting");
         }
+      } else {
+        console.log("[WizardContext] Unexpected response format - onboarding_wizard_completed not a boolean");
       }
     } catch (error) {
       console.error("Failed to recheck wizard status:", error);

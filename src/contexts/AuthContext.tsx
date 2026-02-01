@@ -49,12 +49,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setOnboardingCompleted(isCompleted);
       localStorage.setItem("onboardingCompleted", String(isCompleted));
 
-      if (status.success && status.onboardingCompleted && status.propertyIds) {
+      if (status.success && status.onboardingCompleted) {
         // Get googleAccountId: prefer backend, then localStorage
         const googleAccountId =
           status.profile?.googleAccountId || googleAccountIdFromStorage;
 
-        // Load user profile - always set it if we have any data
+        // Load user profile - always set it if onboarding is complete (even without propertyIds)
         setUserProfile({
           firstName: status.profile?.firstName || null,
           lastName: status.profile?.lastName || null,
@@ -64,33 +64,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           googleAccountId,
         });
 
-        // Transform onboarding data to DomainMapping format
-        const userMapping: DomainMapping = {
-          domain:
-            status.profile?.domainName ||
-            status.propertyIds.ga4?.displayName ||
-            "Your Practice",
-          displayName:
-            status.profile?.practiceName ||
-            status.propertyIds.ga4?.displayName ||
-            "Your Practice",
-          ga4_propertyId:
-            status.propertyIds.ga4?.propertyId?.replace("properties/", "") ||
-            "",
-          gsc_domainkey: status.propertyIds.gsc?.siteUrl || "",
-          gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
-          gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
-        };
-        setSelectedDomain(userMapping);
+        // Only set selectedDomain and hasProperties if propertyIds exist
+        if (status.propertyIds) {
+          // Transform onboarding data to DomainMapping format
+          const userMapping: DomainMapping = {
+            domain:
+              status.profile?.domainName ||
+              status.propertyIds.ga4?.displayName ||
+              "Your Practice",
+            displayName:
+              status.profile?.practiceName ||
+              status.propertyIds.ga4?.displayName ||
+              "Your Practice",
+            ga4_propertyId:
+              status.propertyIds.ga4?.propertyId?.replace("properties/", "") ||
+              "",
+            gsc_domainkey: status.propertyIds.gsc?.siteUrl || "",
+            gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
+            gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
+          };
+          setSelectedDomain(userMapping);
 
-        // Check if properties are actually connected
-        const hasProps = !!(
-          status.propertyIds.ga4 ||
-          status.propertyIds.gsc ||
-          (status.propertyIds.gbp && status.propertyIds.gbp.length > 0)
-        );
-        setHasProperties(hasProps);
-        localStorage.setItem("hasProperties", String(hasProps));
+          // Check if properties are actually connected
+          const hasProps = !!(
+            status.propertyIds.ga4 ||
+            status.propertyIds.gsc ||
+            (status.propertyIds.gbp && status.propertyIds.gbp.length > 0)
+          );
+          setHasProperties(hasProps);
+          localStorage.setItem("hasProperties", String(hasProps));
+        } else {
+          // No properties connected yet - set hasProperties to false
+          setHasProperties(false);
+          localStorage.setItem("hasProperties", "false");
+        }
       } else if (googleAccountIdFromStorage) {
         // Even if onboarding status fails, if we have googleAccountId in localStorage,
         // set a minimal userProfile so dashboard can fetch data

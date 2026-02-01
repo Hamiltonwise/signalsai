@@ -44,7 +44,9 @@ async function saveProperties(data: {
   profile: {
     firstName: string;
     lastName: string;
+    phone: string;
     practiceName: string;
+    operationalJurisdiction: string;
     domainName: string;
   };
 }) {

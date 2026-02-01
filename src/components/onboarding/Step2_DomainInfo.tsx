@@ -109,7 +109,7 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="px-5 py-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all font-medium flex items-center gap-2"
+          className="px-5 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-alloro-orange/30 transition-all font-medium flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
           Back
@@ -121,7 +121,7 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
             flex-1 px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2
             ${
               domainName.trim()
-                ? "bg-alloro-orange text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20"
+                ? "bg-gradient-to-r from-alloro-orange to-[#c45a47] text-white hover:shadow-lg hover:shadow-alloro-orange/30 hover:-translate-y-0.5"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }
           `}

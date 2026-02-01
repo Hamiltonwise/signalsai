@@ -9,7 +9,12 @@ export const useOnboarding = () => {
   // Profile state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [businessPhone, setBusinessPhone] = useState("");
   const [practiceName, setPracticeName] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
   const [domainName, setDomainName] = useState("");
 
   const [availableProperties] = useState<AvailableProperties | null>(null);
@@ -58,12 +63,17 @@ export const useOnboarding = () => {
     setError(null);
 
     try {
+      // Format address as a single string
+      const formattedAddress = `${street}, ${city}, ${state} ${zip}`;
+
       // Build selections with profile info
       const finalSelections = {
         profile: {
           firstName,
           lastName,
+          phone: businessPhone,
           practiceName,
+          operationalJurisdiction: formattedAddress,
           domainName,
         },
       };
@@ -87,7 +97,7 @@ export const useOnboarding = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [firstName, lastName, practiceName, domainName]);
+  }, [firstName, lastName, businessPhone, practiceName, street, city, state, zip, domainName]);
 
   /**
    * Reset onboarding state
@@ -96,7 +106,12 @@ export const useOnboarding = () => {
     setCurrentStep(1);
     setFirstName("");
     setLastName("");
+    setBusinessPhone("");
     setPracticeName("");
+    setStreet("");
+    setCity("");
+    setState("");
+    setZip("");
     setDomainName("");
     setError(null);
     console.log("[Onboarding] Reset");
@@ -112,11 +127,21 @@ export const useOnboarding = () => {
     // Profile state
     firstName,
     lastName,
+    businessPhone,
     practiceName,
+    street,
+    city,
+    state,
+    zip,
     domainName,
     setFirstName,
     setLastName,
+    setBusinessPhone,
     setPracticeName,
+    setStreet,
+    setCity,
+    setState,
+    setZip,
     setDomainName,
 
     fetchAvailableProperties,

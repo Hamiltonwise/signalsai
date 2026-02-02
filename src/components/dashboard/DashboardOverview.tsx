@@ -1088,7 +1088,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
                 <div className="flex flex-wrap items-center gap-10 shrink-0">
                   <div className="flex flex-col items-center group/stat">
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-3">
+                    <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] mb-3">
                       Visibility Score
                     </span>
                     <div className="relative">
@@ -1103,6 +1103,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
                         <LoadingSkeleton className="h-16 w-24" />
                       )}
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/rankings");
+                      }}
+                      className="mt-4 px-5 py-2.5 bg-alloro-orange text-white rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer flex items-center gap-2"
+                    >
+                      See why <ArrowRight size={14} />
+                    </button>
                   </div>
                 </div>
               </div>

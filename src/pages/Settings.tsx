@@ -185,7 +185,7 @@ const EditableInfoRow = ({
 };
 
 export const Settings: React.FC = () => {
-  const { userProfile, selectedDomain } = useAuth();
+  const { userProfile, selectedDomain, setHasProperties } = useAuth();
   const setupProgress = useSetupProgressSafe();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
   const [properties, setProperties] = useState<PropertiesState>({
@@ -250,7 +250,11 @@ export const Settings: React.FC = () => {
       }
 
       const response = await fetchPmsKeyData(domain);
-      if (response?.success && response.data?.months && response.data.months.length > 0) {
+      if (
+        response?.success &&
+        response.data?.months &&
+        response.data.months.length > 0
+      ) {
         setHasPmsData(true);
       } else {
         setHasPmsData(false);
@@ -417,9 +421,15 @@ export const Settings: React.FC = () => {
         });
 
         // Check if all services are now connected
-        const allConnected = !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+        const allConnected =
+          !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
         if (allConnected && missingScopeCount === 0) {
           setupProgress?.markStep1Complete();
+        }
+        // Update AuthContext hasProperties so Dashboard shows content instead of empty state
+        if (allConnected) {
+          setHasProperties(true);
+          localStorage.setItem("hasProperties", "true");
         }
       }
     } catch (err) {
@@ -461,9 +471,15 @@ export const Settings: React.FC = () => {
         });
 
         // Check if all services are now connected
-        const allConnected = !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+        const allConnected =
+          !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
         if (allConnected && missingScopeCount === 0) {
           setupProgress?.markStep1Complete();
+        }
+        // Update AuthContext hasProperties so Dashboard shows content instead of empty state
+        if (allConnected) {
+          setHasProperties(true);
+          localStorage.setItem("hasProperties", "true");
         }
       }
     } catch (err) {
@@ -585,7 +601,8 @@ export const Settings: React.FC = () => {
                   {userProfile?.practiceName || "Your Practice"}
                 </h1>
                 <p className="text-slate-500 text-sm font-medium">
-                  Manage your practice details and connect your Google integrations
+                  Manage your practice details and connect your Google
+                  integrations
                 </p>
               </div>
             </div>
@@ -693,15 +710,6 @@ export const Settings: React.FC = () => {
                 >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-alloro-orange/[0.03] rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-alloro-orange/[0.06] transition-all duration-700"></div>
 
-                  <div className="flex items-center justify-between mb-8 relative z-10">
-                    <div className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100 flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-green-500"></div>{" "}
-                      Active Account
-                    </div>
-                    <button className="text-[9px] font-black uppercase tracking-[0.2em] text-alloro-orange/40 hover:text-alloro-orange transition-colors">
-                      Edit Details
-                    </button>
-                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-x-8 gap-y-5 relative z-10">
                     <EditableInfoRow
                       icon={<MapPin size={18} />}
@@ -781,22 +789,10 @@ export const Settings: React.FC = () => {
                       Google Integrations
                     </h2>
                     <p className="text-slate-500 text-sm">
-                      Connect your Google services to unlock analytics and insights
+                      Connect your Google services to unlock analytics and
+                      insights
                     </p>
                   </div>
-                  <button
-                    onClick={handleFullSync}
-                    disabled={isSyncing}
-                    className="flex items-center gap-3 text-[11px] font-black text-alloro-orange uppercase tracking-[0.25em] hover:gap-5 transition-all group disabled:opacity-50"
-                  >
-                    <RefreshCw
-                      size={16}
-                      className={`group-hover:rotate-180 transition-transform duration-700 ${
-                        isSyncing ? "animate-spin" : ""
-                      }`}
-                    />
-                    Refresh Page
-                  </button>
                 </div>
 
                 {/* Missing Scopes Banner */}
@@ -809,17 +805,23 @@ export const Settings: React.FC = () => {
                 )}
 
                 {/* Disconnected Services Banner - show when scopes granted but services not connected */}
-                {missingScopeCount === 0 && (() => {
-                  const disconnected: string[] = [];
-                  if (!properties.ga4) disconnected.push("ga4");
-                  if (!properties.gsc) disconnected.push("gsc");
-                  if (!properties.gbp || properties.gbp.length === 0) disconnected.push("gbp");
+                {missingScopeCount === 0 &&
+                  (() => {
+                    const disconnected: string[] = [];
+                    if (!properties.ga4) disconnected.push("ga4");
+                    if (!properties.gsc) disconnected.push("gsc");
+                    if (!properties.gbp || properties.gbp.length === 0)
+                      disconnected.push("gbp");
 
-                  if (disconnected.length > 0) {
-                    return <DisconnectedServicesBanner disconnectedServices={disconnected} />;
-                  }
-                  return null;
-                })()}
+                    if (disconnected.length > 0) {
+                      return (
+                        <DisconnectedServicesBanner
+                          disconnectedServices={disconnected}
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
 
                 {/* PMS Upload Banner - show when all services connected but no PMS data */}
                 {missingScopeCount === 0 &&
@@ -827,9 +829,7 @@ export const Settings: React.FC = () => {
                   properties.gsc &&
                   properties.gbp &&
                   properties.gbp.length > 0 &&
-                  hasPmsData === false && (
-                    <PMSUploadBanner />
-                  )}
+                  hasPmsData === false && <PMSUploadBanner />}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {integrations.map((app, index) => (
@@ -838,7 +838,7 @@ export const Settings: React.FC = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`rounded-[2rem] border p-10 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
+                      className={`rounded-[2rem] border p-5 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
                         !app.scopeGranted && app.id !== "clarity"
                           ? "bg-red-50/60 border-red-200 hover:border-red-300"
                           : app.connected
@@ -918,9 +918,7 @@ export const Settings: React.FC = () => {
                             <>
                               <button
                                 onClick={() =>
-                                  handleConnect(
-                                    app.id as "ga4" | "gsc" | "gbp",
-                                  )
+                                  handleConnect(app.id as "ga4" | "gsc" | "gbp")
                                 }
                                 className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
                               >
@@ -948,8 +946,8 @@ export const Settings: React.FC = () => {
                             </>
                           ) : (
                             <p className="text-red-600 text-xs">
-                              Grant API access using the banner above to
-                              enable this integration.
+                              Grant API access using the banner above to enable
+                              this integration.
                             </p>
                           )}
                         </div>
@@ -959,7 +957,11 @@ export const Settings: React.FC = () => {
                 </div>
 
                 <div className="space-y-8">
-                  <div className="p-12 lg:p-16 bg-white/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
+                  <div className="relative p-12 lg:p-16 bg-white/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
+                    {/* Coming Soon Badge */}
+                    <span className="absolute top-4 right-4 px-3 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-widest rounded-full border border-alloro-orange/20">
+                      Coming Soon
+                    </span>
                     <div className="w-20 h-20 rounded-[1.5rem] bg-white shadow-premium flex items-center justify-center mb-8 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
                       <LayoutGrid size={36} />
                     </div>

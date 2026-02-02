@@ -18,6 +18,12 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Zap,
+  Lightbulb,
+  X,
+  ChevronLeft,
 } from "lucide-react";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
 import {
@@ -140,6 +146,7 @@ interface RankingResult {
       factor: string;
       weight: string | number;
       direction: string;
+      insight?: string;
     }>;
     render_text: string;
     client_summary?: string | null;
@@ -689,6 +696,17 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
           </p>
         </section>
 
+        {/* CLIENT SUMMARY CARD */}
+        {selectedRanking?.llmAnalysis?.client_summary && (
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
+            <div className="bg-gradient-to-r from-alloro-orange/90 to-alloro-orange rounded-3xl p-6 lg:p-8 shadow-lg">
+              <p className="text-white text-base lg:text-lg font-medium leading-relaxed">
+                {selectedRanking.llmAnalysis.client_summary}
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* 1. LOCATION SELECTION - GRID */}
         {effectiveRankings.length > 1 && (
           <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -850,6 +868,23 @@ function PerformanceDashboard({
 
   const rankTrend = getRankTrend();
   const scoreTrend = getScoreTrend();
+
+  // Modal state for driver insights carousel
+  const [selectedDriverIndex, setSelectedDriverIndex] = useState<number | null>(null);
+  const drivers = result.llmAnalysis?.drivers || [];
+  const selectedDriver = selectedDriverIndex !== null ? drivers[selectedDriverIndex] : null;
+
+  const goToPrevDriver = () => {
+    if (selectedDriverIndex !== null && selectedDriverIndex > 0) {
+      setSelectedDriverIndex(selectedDriverIndex - 1);
+    }
+  };
+
+  const goToNextDriver = () => {
+    if (selectedDriverIndex !== null && selectedDriverIndex < drivers.length - 1) {
+      setSelectedDriverIndex(selectedDriverIndex + 1);
+    }
+  };
 
   return (
     <div className="space-y-12 lg:space-y-20">
@@ -1039,6 +1074,310 @@ function PerformanceDashboard({
 
       {/* 4. VISIBILITY PROTOCOL (Action Plan) - Only approved tasks */}
       <VisibilityProtocol tasks={tasks} />
+
+      {/* 5. RANK DRIVERS */}
+      {result.llmAnalysis?.drivers && result.llmAnalysis.drivers.length > 0 && (
+        <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left">
+          <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                What's Driving Your Rank
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Key factors influencing your position
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center shadow-inner">
+              <Zap size={24} />
+            </div>
+          </div>
+          <div className="p-8 lg:p-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {result.llmAnalysis.drivers.map((driver, idx) => (
+                <div
+                  key={idx}
+                  className={`p-6 rounded-2xl border ${
+                    driver.direction === "positive"
+                      ? "bg-green-50/50 border-green-100"
+                      : "bg-red-50/50 border-red-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    {driver.direction === "positive" ? (
+                      <TrendingUp size={20} className="text-green-600 shrink-0" />
+                    ) : (
+                      <TrendingDown size={20} className="text-red-600 shrink-0" />
+                    )}
+                    <p
+                      className={`font-black text-lg tracking-tight ${
+                        driver.direction === "positive"
+                          ? "text-green-700"
+                          : "text-red-700"
+                      }`}
+                    >
+                      {driver.factor
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedDriverIndex(idx)}
+                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer ${
+                      driver.direction === "positive"
+                        ? "text-green-600 hover:text-green-700"
+                        : "text-red-600 hover:text-red-700"
+                    }`}
+                  >
+                    See details <ChevronRight size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Driver Insight Modal Carousel */}
+      {selectedDriverIndex !== null && selectedDriver && (
+        <div
+          className="fixed top-0 left-0 right-0 bottom-0 bg-black/60 z-50 flex flex-col items-center justify-center p-4"
+          style={{ margin: 0 }}
+          onClick={() => setSelectedDriverIndex(null)}
+        >
+          <div className="relative flex items-center justify-center w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            {/* Previous Card Preview - Behind and to the left */}
+            {selectedDriverIndex > 0 && (
+              <motion.div
+                key={`prev-${selectedDriverIndex}`}
+                initial={{ opacity: 0, x: 50, scale: 0.8 }}
+                animate={{ opacity: 1, x: 0, scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={`absolute left-0 z-0 w-80 bg-white rounded-3xl p-6 shadow-lg border hidden lg:block ${
+                  drivers[selectedDriverIndex - 1].direction === "positive"
+                    ? "border-green-200"
+                    : "border-red-200"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  {drivers[selectedDriverIndex - 1].direction === "positive" ? (
+                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                      <TrendingUp size={20} className="text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                      <TrendingDown size={20} className="text-red-600" />
+                    </div>
+                  )}
+                  <p className={`font-black text-base tracking-tight ${
+                    drivers[selectedDriverIndex - 1].direction === "positive"
+                      ? "text-green-700"
+                      : "text-red-700"
+                  }`}>
+                    {drivers[selectedDriverIndex - 1].factor
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-sm text-slate-500 line-clamp-2">
+                    {drivers[selectedDriverIndex - 1].insight || "No insight available"}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Next Card Preview - Behind and to the right */}
+            {selectedDriverIndex < drivers.length - 1 && (
+              <motion.div
+                key={`next-${selectedDriverIndex}`}
+                initial={{ opacity: 0, x: -50, scale: 0.8 }}
+                animate={{ opacity: 1, x: 0, scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={`absolute right-0 z-0 w-80 bg-white rounded-3xl p-6 shadow-lg border hidden lg:block ${
+                  drivers[selectedDriverIndex + 1].direction === "positive"
+                    ? "border-green-200"
+                    : "border-red-200"
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  {drivers[selectedDriverIndex + 1].direction === "positive" ? (
+                    <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                      <TrendingUp size={20} className="text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                      <TrendingDown size={20} className="text-red-600" />
+                    </div>
+                  )}
+                  <p className={`font-black text-base tracking-tight ${
+                    drivers[selectedDriverIndex + 1].direction === "positive"
+                      ? "text-green-700"
+                      : "text-red-700"
+                  }`}>
+                    {drivers[selectedDriverIndex + 1].factor
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-sm text-slate-500 line-clamp-2">
+                    {drivers[selectedDriverIndex + 1].insight || "No insight available"}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Active Card - Front and center */}
+            <motion.div
+              key={selectedDriverIndex}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className={`relative z-10 bg-white rounded-3xl w-full max-w-xl p-10 shadow-2xl border-2 mx-auto ${
+                selectedDriver.direction === "positive"
+                  ? "border-green-300"
+                  : "border-red-300"
+              }`}
+            >
+              <div className="flex items-start justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  {selectedDriver.direction === "positive" ? (
+                    <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                      <TrendingUp size={28} className="text-green-600" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center">
+                      <TrendingDown size={28} className="text-red-600" />
+                    </div>
+                  )}
+                  <h3
+                    className={`text-2xl font-black tracking-tight ${
+                      selectedDriver.direction === "positive"
+                        ? "text-green-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    {selectedDriver.factor
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setSelectedDriverIndex(null)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <X size={24} className="text-slate-400" />
+                </button>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-8">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                  Insight
+                </p>
+                <p className="text-slate-700 font-medium leading-relaxed text-lg">
+                  {selectedDriver.insight || "No additional insight available for this factor."}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Navigation and pagination - Outside the card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex items-center justify-center gap-6 mt-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Previous button */}
+            <button
+              onClick={goToPrevDriver}
+              disabled={selectedDriverIndex === 0}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                selectedDriverIndex === 0
+                  ? "bg-white/20 text-white/40 cursor-not-allowed"
+                  : "bg-white text-alloro-navy shadow-lg hover:scale-110 cursor-pointer"
+              }`}
+            >
+              <ChevronLeft size={24} />
+            </button>
+
+            {/* Pagination dots */}
+            <div className="flex items-center justify-center gap-3">
+              {drivers.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDriverIndex(idx)}
+                  className={`h-3 rounded-full transition-all cursor-pointer ${
+                    idx === selectedDriverIndex
+                      ? "bg-white w-8"
+                      : "bg-white/40 hover:bg-white/60 w-3"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Next button */}
+            <button
+              onClick={goToNextDriver}
+              disabled={selectedDriverIndex === drivers.length - 1}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                selectedDriverIndex === drivers.length - 1
+                  ? "bg-white/20 text-white/40 cursor-not-allowed"
+                  : "bg-white text-alloro-navy shadow-lg hover:scale-110 cursor-pointer"
+              }`}
+            >
+              <ChevronRight size={24} />
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* 6. GAPS / OPPORTUNITIES */}
+      {result.llmAnalysis?.gaps && result.llmAnalysis.gaps.length > 0 && (
+        <section className="bg-white rounded-3xl border border-black/5 shadow-premium overflow-hidden text-left">
+          <div className="px-10 py-8 border-b border-black/5 flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-xl font-black font-heading text-alloro-navy tracking-tight leading-none">
+                Opportunities to Improve
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Areas where you can gain ground
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shadow-inner">
+              <Lightbulb size={24} />
+            </div>
+          </div>
+          <div className="p-8 lg:p-10 space-y-4">
+            {result.llmAnalysis.gaps.map((gap, idx) => (
+              <div
+                key={idx}
+                className="p-6 bg-slate-50/50 rounded-2xl border border-black/5"
+              >
+                <span
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border inline-block mb-3 ${
+                    gap.impact === "high"
+                      ? "bg-red-50 text-red-600 border-red-100"
+                      : gap.impact === "medium"
+                      ? "bg-amber-50 text-amber-600 border-amber-100"
+                      : "bg-blue-50 text-blue-600 border-blue-100"
+                  }`}
+                >
+                  {gap.impact} impact
+                </span>
+                <p className="font-black text-alloro-navy tracking-tight">
+                  {gap.type
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </p>
+                <p className="text-sm text-slate-500 font-medium mt-1">
+                  {gap.reason}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

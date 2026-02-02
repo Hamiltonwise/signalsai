@@ -1532,9 +1532,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                           <div className="text-[12px] font-bold text-alloro-navy uppercase">
                             {data.month}
                           </div>
-                          <div className="text-[9px] text-slate-300 font-bold">
-                            2025
-                          </div>
                         </div>
                         <div className="flex-1 space-y-2.5">
                           <div className="relative h-4 flex items-center gap-4">

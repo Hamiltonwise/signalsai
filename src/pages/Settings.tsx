@@ -4,7 +4,6 @@ import {
   Globe,
   MapPin,
   Mail,
-  RefreshCw,
   LayoutGrid,
   Users,
   Link2,
@@ -195,7 +194,6 @@ export const Settings: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   // Scopes State
   const [scopesStatus, setScopesStatus] = useState<ScopesState | null>(null);
@@ -333,14 +331,6 @@ export const Settings: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleFullSync = async () => {
-    setIsSyncing(true);
-    // Simulate sync delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    await fetchProperties();
-    setIsSyncing(false);
   };
 
   const handleConnect = async (type: "ga4" | "gsc" | "gbp") => {

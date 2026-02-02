@@ -183,7 +183,7 @@ export const ClientProgressTimeline: React.FC<ClientProgressTimelineProps> = ({
                 ${isClickable ? "cursor-pointer hover:scale-115" : ""}
               `}>
                 {state === "completed" ? (
-                  <Check className={state === "current" ? "h-5 w-5" : "h-4 w-4"} />
+                  <Check className="h-4 w-4" />
                 ) : (
                   <Icon className={state === "current" ? "h-5 w-5" : "h-4 w-4"} />
                 )}

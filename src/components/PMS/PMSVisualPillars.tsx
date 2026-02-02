@@ -18,7 +18,6 @@ import {
   Clock,
   FileText,
   HelpCircle,
-  Loader2,
   Lock,
   PenLine,
   Plus,

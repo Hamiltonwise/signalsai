@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { motion } from "framer-motion";
-import { showSparkleToast, showUploadToast } from "../../lib/toast";
+import { showSparkleToast } from "../../lib/toast";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -16,6 +16,8 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  FileText,
+  HelpCircle,
   Loader2,
   Lock,
   PenLine,
@@ -33,11 +35,13 @@ import {
   fetchActiveAutomationJobs,
   fetchAutomationStatus,
   updatePmsJobClientApproval,
-  uploadPMSData,
   type PmsKeyDataResponse,
   type AutomationStatusDetail,
 } from "../../api/pms";
 import { PMSLatestJobEditor } from "./PMSLatestJobEditor";
+import { PMSUploadWizardModal } from "./PMSUploadWizardModal";
+import { TemplateUploadModal } from "./TemplateUploadModal";
+import { DirectUploadModal } from "./DirectUploadModal";
 import { PMSManualEntryModal } from "./PMSManualEntryModal";
 import { ReferralMatrices, type ReferralEngineData } from "./ReferralMatrices";
 import {
@@ -172,14 +176,10 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     connectionStatus.gscConnected &&
     connectionStatus.gbpConnected;
 
-  const [inlineFile, setInlineFile] = useState<File | null>(null);
-  const [inlineIsUploading, setInlineIsUploading] = useState(false);
-  const [inlineMessage, setInlineMessage] = useState<string>("");
-  const [inlineStatus, setInlineStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
-  const inlineInputRef = useRef<HTMLInputElement>(null);
-  const [inlineIsDragOver, setInlineIsDragOver] = useState(false);
+  const [showUploadWizard, setShowUploadWizard] = useState(false);
+  const [showTemplateUpload, setShowTemplateUpload] = useState(false);
+  const [showDirectUpload, setShowDirectUpload] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   // Start with loading false if wizard is active (we'll show demo data immediately)
   const [isLoading, setIsLoading] = useState(!isWizardActive);
   const [error, setError] = useState<string | null>(null);
@@ -190,7 +190,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [, setIsConfirming] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isIngestionHighlighted, setIsIngestionHighlighted] = useState(false);
   const [isApprovalBannerHighlighted, setIsApprovalBannerHighlighted] =
     useState(false);
@@ -1067,72 +1066,15 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     await loadKeyData();
   }, [loadKeyData]);
 
-  const handleInlineFile = (file: File | null) => {
-    setInlineFile(file);
-    setInlineStatus("idle");
-    setInlineMessage("");
-    if (file) {
-      void doInlineUpload(file);
-    }
-  };
-
-  const doInlineUpload = async (fileOverride?: File) => {
-    const fileToUpload = fileOverride ?? inlineFile;
-    if (!fileToUpload) return;
-    setInlineIsUploading(true);
-    setInlineStatus("idle");
-    try {
-      const json = await uploadPMSData({
-        domain: domain || "",
-        file: fileToUpload,
-      });
-      if (json?.success) {
-        showUploadToast(
-          "PMS export received!",
-          "We'll notify when ready for checking",
-        );
-
-        setInlineStatus("idle");
-        setInlineMessage("");
-        setInlineFile(null);
-        try {
-          if (inlineInputRef.current) inlineInputRef.current.value = "";
-        } catch {
-          // Ignore errors clearing file input
-        }
-        try {
-          window.localStorage.setItem(
-            `pmsProcessing:${domain}`,
-            String(Date.now()),
-          );
-          window.dispatchEvent(
-            new CustomEvent("pms:job-uploaded", {
-              detail: { clientId: domain },
-            }),
-          );
-        } catch {
-          // Ignore localStorage errors
-        }
-
-        // Set pending state to show processing timeline
-        setReferralPending(true);
-        setReferralData(null);
-
-        await loadKeyData({ silent: true });
-
-        // Fetch automation status to show timeline progress
-        await loadAutomationStatus();
-      } else {
-        setInlineStatus("error");
-        setInlineMessage(json?.error || "Upload failed");
-      }
-    } catch (e) {
-      setInlineStatus("error");
-      setInlineMessage(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setInlineIsUploading(false);
-    }
-  };
+  const handleUploadWizardSuccess = useCallback(async () => {
+    setShowUploadWizard(false);
+    // Set pending state to show processing timeline
+    setReferralPending(true);
+    setReferralData(null);
+    await loadKeyData({ silent: true });
+    // Fetch automation status to show timeline progress
+    await loadAutomationStatus();
+  }, [loadKeyData, loadAutomationStatus]);
 
   // Get max value for bar chart scaling
   const maxBarValue = useMemo(() => {
@@ -1634,18 +1576,11 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-bold font-heading text-alloro-navy tracking-tight leading-tight">
-                    Refresh statistics.
+                    Enter your latest data.
                   </h3>
                   <p className="text-base sm:text-lg text-slate-500 font-medium tracking-tight leading-relaxed max-w-lg mx-auto md:mx-0">
-                    Upload latest PMS data, (Referrals and Production value).
-                    Please{" "}
-                    <a
-                      href="/help"
-                      className="text-alloro-orange hover:text-alloro-navy underline underline-offset-2 transition-colors"
-                    >
-                      contact us
-                    </a>{" "}
-                    if you have any questions.
+                    We recommend updating your referral data monthly for accurate analysis.
+                    You'll receive a reminder notification each month.
                   </p>
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
                     <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
@@ -1658,77 +1593,63 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex-col">
-                  <label
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setInlineIsDragOver(true);
-                    }}
-                    onDragLeave={() => setInlineIsDragOver(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setInlineIsDragOver(false);
-                      const f = e.dataTransfer?.files?.[0];
-                      if (f) handleInlineFile(f);
-                    }}
-                    className={`w-full md:w-80 h-48 sm:h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group shrink-0 ${
-                      inlineIsDragOver
-                        ? "border-alloro-orange bg-alloro-orange/5"
-                        : "border-slate-200 bg-slate-50 hover:border-alloro-orange hover:bg-white"
-                    }`}
+                <div className="flex flex-col gap-3 w-full md:w-80">
+                  {/* Upload from Template */}
+                  <button
+                    onClick={() => setShowTemplateUpload(true)}
+                    className="group flex items-center gap-4 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 hover:border-slate-300 transition-all text-left"
                   >
-                    <div
-                      className={`w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mb-4 transition-transform ${
-                        inlineIsDragOver ? "scale-110" : "group-hover:scale-110"
-                      }`}
-                    >
-                      {inlineIsUploading ? (
-                        <Loader2
-                          size={24}
-                          className="text-alloro-orange animate-spin"
-                        />
-                      ) : (
-                        <Upload size={24} className="text-alloro-orange" />
-                      )}
+                    <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <FileText size={20} className="text-emerald-600" />
                     </div>
-                    <span className="text-sm font-bold text-alloro-navy">
-                      {inlineIsDragOver
-                        ? "Drop to upload"
-                        : inlineFile
-                          ? inlineFile.name
-                          : "Drop CSV Export"}
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-                      {inlineIsUploading ? "Uploading..." : "Max 50MB"}
-                    </span>
-                    <input
-                      ref={inlineInputRef}
-                      type="file"
-                      accept=".csv,.txt,.xlsx,.xls"
-                      onChange={(e) =>
-                        handleInlineFile(e.target.files?.[0] || null)
-                      }
-                      className="hidden"
-                    />
-                  </label>
-
-                  {/* OR Separator and Manual Entry Button */}
-                  <div className="w-full md:w-80 shrink-0 space-y-4">
-                    <div className="flex items-center gap-4 my-5">
-                      <div className="flex-1 h-px bg-slate-200"></div>
-                      <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                        OR
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm block">Upload from Template</span>
+                      <span className="text-[11px] text-slate-500 leading-tight">
+                        Disorganized or unsupported export types
                       </span>
-                      <div className="flex-1 h-px bg-slate-200"></div>
                     </div>
+                  </button>
 
+                  {/* Enter Manual Data */}
+                  <button
+                    onClick={() => setShowManualEntry(true)}
+                    className="group flex items-center gap-4 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 hover:border-slate-300 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 bg-alloro-orange/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <PenLine size={20} className="text-alloro-orange" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm block">Enter Manual Data</span>
+                      <span className="text-[11px] text-slate-500 leading-tight">
+                        Enter via interactive UI
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Direct Upload */}
+                  <button
+                    onClick={() => setShowDirectUpload(true)}
+                    className="group flex items-center gap-4 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 hover:border-slate-300 transition-all text-left"
+                  >
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <Upload size={20} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm block">Direct Upload</span>
+                      <span className="text-[11px] text-slate-500 leading-tight">
+                        Data is clean with required fields
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Not sure? link - aligned right */}
+                  <div className="text-right pt-1">
                     <button
-                      onClick={() => setIsManualEntryOpen(true)}
-                      className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-alloro-orange hover:brightness-110 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-alloro-orange/20 active:scale-[0.98]"
+                      onClick={() => setShowUploadWizard(true)}
+                      className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-alloro-orange transition-colors"
                     >
-                      <PenLine size={18} />
-                      Manually Enter Referral Data
+                      <HelpCircle size={14} />
+                      <span>Not sure? Let us help</span>
                     </button>
                   </div>
                 </div>
@@ -1766,12 +1687,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                   </div>
                 </div>
               </section>
-            )}
-
-            {inlineStatus === "error" && (
-              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                {inlineMessage}
-              </div>
             )}
 
             {/* Practice Diagnosis Card - Temporarily hidden
@@ -1828,20 +1743,36 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         />
       )}
 
+      {/* Upload Wizard Modal - for "Not sure?" flow */}
+      <PMSUploadWizardModal
+        isOpen={showUploadWizard}
+        onClose={() => setShowUploadWizard(false)}
+        clientId={domain || ""}
+        onSuccess={handleUploadWizardSuccess}
+      />
+
+      {/* Template Upload Modal */}
+      <TemplateUploadModal
+        isOpen={showTemplateUpload}
+        onClose={() => setShowTemplateUpload(false)}
+        clientId={domain || ""}
+        onSuccess={handleUploadWizardSuccess}
+      />
+
+      {/* Direct Upload Modal */}
+      <DirectUploadModal
+        isOpen={showDirectUpload}
+        onClose={() => setShowDirectUpload(false)}
+        clientId={domain || ""}
+        onSuccess={handleUploadWizardSuccess}
+      />
+
       {/* Manual Entry Modal */}
       <PMSManualEntryModal
-        isOpen={isManualEntryOpen}
-        onClose={() => setIsManualEntryOpen(false)}
+        isOpen={showManualEntry}
+        onClose={() => setShowManualEntry(false)}
         clientId={domain || ""}
-        onSuccess={async () => {
-          setIsManualEntryOpen(false);
-          // Set pending state to show processing indicator for referral matrices
-          setReferralPending(true);
-          setReferralData(null);
-          await loadKeyData();
-          // Fetch automation status to show timeline progress
-          await loadAutomationStatus();
-        }}
+        onSuccess={handleUploadWizardSuccess}
       />
     </div>
   );

@@ -1,15 +1,37 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LineChart,
+  Play,
+  Trash2,
+  ArrowRight,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Bot,
+} from "lucide-react";
 import type {
   AgentInsightSummary,
   AgentInsightsSummaryResponse,
 } from "../../types/agentInsights";
 import { MonthSelector } from "../../components/Admin";
+import {
+  AdminPageHeader,
+  ActionButton,
+  CardGrid,
+  HorizontalProgressBar,
+  EmptyState,
+  Badge,
+} from "../../components/ui/DesignSystem";
+import { staggerContainer, cardVariants, fadeInUp, getScoreColor } from "../../lib/animations";
+import { getAgentIcon } from "../../lib/adminIcons";
 
 /**
  * AI Data Insights List Page
- * Shows table of all agents with summary metrics
- * Clicking a row navigates to detail page
+ * Shows card grid of all agents with summary metrics
+ * Clicking a card navigates to detail page
  */
 export default function AIDataInsightsList() {
   const navigate = useNavigate();
@@ -72,7 +94,7 @@ export default function AIDataInsightsList() {
       .join(" ");
   };
 
-  const handleRowClick = (agentType: string) => {
+  const handleCardClick = (agentType: string) => {
     navigate(`/admin/ai-data-insights/${agentType}?month=${selectedMonth}`);
   };
 
@@ -223,28 +245,19 @@ export default function AIDataInsightsList() {
     if (!isRunning) return null;
 
     return (
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+      <motion.div
+        className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <svg
-            className="animate-spin h-5 w-5 text-blue-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
+            <Loader2 className="h-5 w-5 text-blue-600" />
+          </motion.div>
           <div>
             <p className="font-medium text-blue-900">
               Running Guardian & Governance Agents
@@ -256,320 +269,282 @@ export default function AIDataInsightsList() {
         </div>
         {/* Indeterminate progress bar */}
         <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-600 rounded-full animate-pulse"
-            style={{
-              width: "40%",
-              animation: "indeterminate 1.5s ease-in-out infinite",
-            }}
+          <motion.div
+            className="h-full bg-blue-600 rounded-full"
+            initial={{ x: "-100%" }}
+            animate={{ x: "200%" }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            style={{ width: "40%" }}
           />
         </div>
-        <style>{`
-          @keyframes indeterminate {
-            0% {
-              transform: translateX(-100%);
-            }
-            50% {
-              transform: translateX(150%);
-            }
-            100% {
-              transform: translateX(-100%);
-            }
-          }
-        `}</style>
-      </div>
+      </motion.div>
     );
   };
 
-  // Render action buttons (used in multiple states)
+  // Render action buttons
   const renderActionButtons = () => (
-    <div className="flex gap-2">
-      <button
+    <div className="flex items-center gap-3">
+      <MonthSelector
+        value={selectedMonth}
+        onChange={(month) => {
+          setSelectedMonth(month);
+          setCurrentPage(1);
+        }}
+      />
+      <ActionButton
+        label={isRunning ? "Running..." : "Run Guardian & Governance"}
+        icon={isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
         onClick={handleRunAgents}
+        variant="primary"
         disabled={isRunning || isClearing}
-        className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isRunning ? (
-          <>
-            <svg
-              className="animate-spin h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            Running...
-          </>
-        ) : (
-          <>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Run Guardian & Governance
-          </>
-        )}
-      </button>
-      <button
+        loading={isRunning}
+      />
+      <ActionButton
+        label={isClearing ? "Clearing..." : "Clear Month Data"}
+        icon={<Trash2 className="w-4 h-4" />}
         onClick={handleClearData}
+        variant="danger"
         disabled={isRunning || isClearing}
-        className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isClearing ? (
-          <>
-            <svg
-              className="animate-spin h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            Clearing...
-          </>
-        ) : (
-          <>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-            Clear Month Data
-          </>
-        )}
-      </button>
+        loading={isClearing}
+      />
     </div>
   );
 
+  // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Loading agent insights...</div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<LineChart className="w-6 h-6" />}
+          title="AI Data Insights"
+          description="Monitor agent performance and review recommendations"
+          actionButtons={renderActionButtons()}
+        />
+        <div className="flex items-center justify-center h-64">
+          <motion.div
+            className="flex items-center gap-3 text-gray-500"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Loading agent insights...
+          </motion.div>
+        </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">
-          <p className="font-semibold mb-2">Error loading data</p>
-          <p className="text-sm">{error}</p>
-        </div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<LineChart className="w-6 h-6" />}
+          title="AI Data Insights"
+          description="Monitor agent performance and review recommendations"
+          actionButtons={renderActionButtons()}
+        />
+        <motion.div
+          className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-900">Error loading data</p>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
+  // Empty state
   if (summaryData.length === 0) {
     return (
-      <div className="space-y-4">
-        {/* Header with buttons even in empty state */}
-        <div className="mb-6 flex justify-between items-start">
-          <div>
-            <MonthSelector
-              value={selectedMonth}
-              onChange={(month) => {
-                setSelectedMonth(month);
-                setCurrentPage(1); // Reset to page 1 when month changes
-              }}
-            />
-          </div>
-          {renderActionButtons()}
-        </div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<LineChart className="w-6 h-6" />}
+          title="AI Data Insights"
+          description="Monitor agent performance and review recommendations"
+          actionButtons={renderActionButtons()}
+        />
 
-        {/* Progress bar */}
-        {renderProgressBar()}
+        <AnimatePresence>{renderProgressBar()}</AnimatePresence>
 
-        {/* Empty state message */}
-        <div className="flex items-center justify-center h-64 rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="text-gray-600 text-center">
-            <p className="text-lg mb-2">No agent data available</p>
-            <p className="text-sm">
-              Guardian and Governance agents haven't run yet for this month.
-              <br />
-              Click "Run Guardian & Governance" above to start.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          icon={<Bot className="w-12 h-12" />}
+          title="No agent data available"
+          description="Guardian and Governance agents haven't run yet for this month. Click 'Run Guardian & Governance' above to start."
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="mb-6 flex justify-between items-start">
-        <div>
-          <MonthSelector
-            value={selectedMonth}
-            onChange={(month) => {
-              setSelectedMonth(month);
-              setCurrentPage(1); // Reset to page 1 when month changes
-            }}
-          />
-        </div>
-        {renderActionButtons()}
-      </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<LineChart className="w-6 h-6" />}
+        title="AI Data Insights"
+        description="Monitor agent performance and review recommendations"
+        actionButtons={renderActionButtons()}
+      />
 
       {/* Progress bar */}
-      {renderProgressBar()}
+      <AnimatePresence>{renderProgressBar()}</AnimatePresence>
 
-      {/* Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 bg-white border-b border-gray-100">
-              <th className="py-3 px-4">Agent</th>
-              <th className="py-3 px-4">Confidence Rate</th>
-              <th className="py-3 px-4">Pass Rate</th>
-              <th className="py-3 px-4"># of Recommendations</th>
-              <th className="py-3 px-4">Fixed</th>
-              <th className="py-3 px-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaryData.map((agent, index) => (
-              <tr
+      {/* Agent Cards Grid */}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <CardGrid columns={2}>
+          {summaryData.map((agent) => {
+            const AgentIcon = getAgentIcon(agent.agent_type);
+            const passRatePercent = agent.pass_rate * 100;
+
+            return (
+              <motion.div
                 key={agent.agent_type}
-                className={`
-                  cursor-pointer transition-colors hover:bg-gray-50
-                  ${
-                    index < summaryData.length - 1
-                      ? "border-b border-gray-100"
-                      : ""
-                  }
-                `}
-                onClick={() => handleRowClick(agent.agent_type)}
+                variants={cardVariants}
+                className="group relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-gray-300 cursor-pointer"
+                onClick={() => handleCardClick(agent.agent_type)}
+                whileHover={{ y: -2 }}
               >
-                <td className="py-4 px-4 font-medium text-gray-900">
-                  {formatAgentName(agent.agent_type)}
-                </td>
-                <td className="py-4 px-4 text-sm text-gray-700">
-                  {agent.confidence_rate.toFixed(2)}
-                </td>
-                <td className="py-4 px-4 text-sm text-gray-700">
-                  {(agent.pass_rate * 100).toFixed(0)}%
-                </td>
-                <td className="py-4 px-4 text-sm text-gray-700">
-                  {agent.total_recommendations}
-                </td>
-                <td className="py-4 px-4 text-sm text-gray-700">
-                  {agent.fixed_count}
-                </td>
-                <td className="py-4 px-4">
+                {/* Card Header */}
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <button
-                      className="text-purple-600 hover:text-purple-700 text-sm font-medium whitespace-nowrap"
-                      onClick={(e) => handleGenerateLogRef(agent.agent_type, e)}
-                      title="Generate governance log reference"
-                    >
-                      Governance Log IDs
-                    </button>
-                    <button
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick(agent.agent_type);
-                      }}
-                    >
-                      View more
-                    </button>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-alloro-navy/10 text-alloro-navy">
+                      <AgentIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {formatAgentName(agent.agent_type)}
+                      </h3>
+                      <p className="text-xs text-gray-500">AI Agent</p>
+                    </div>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <motion.div
+                    className="text-gray-400 group-hover:text-alloro-orange transition-colors"
+                    whileHover={{ x: 4 }}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.div>
+                </div>
+
+                {/* Metrics Row */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Confidence Rate */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">AI Confidence</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {agent.confidence_rate.toFixed(1)}<span className="text-sm font-normal text-gray-500">/10</span>
+                    </p>
+                  </div>
+
+                  {/* Pass Rate - Horizontal Bar */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-gray-500">Pass Rate</p>
+                      <p className={`text-sm font-semibold ${getScoreColor(passRatePercent)}`}>
+                        {passRatePercent.toFixed(0)}%
+                      </p>
+                    </div>
+                    <HorizontalProgressBar
+                      value={passRatePercent}
+                      height={6}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats Pills */}
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                  <Badge variant="default">
+                    <FileText className="w-3 h-3 mr-1" />
+                    {agent.total_recommendations} recommendations
+                  </Badge>
+                  <Badge variant="success">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    {agent.fixed_count} fixed
+                  </Badge>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <motion.button
+                    className="text-xs font-medium text-purple-600 hover:text-purple-700 px-2 py-1 rounded-lg hover:bg-purple-50 transition-colors"
+                    onClick={(e) => handleGenerateLogRef(agent.agent_type, e)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Governance Log IDs
+                  </motion.button>
+                  <motion.button
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCardClick(agent.agent_type);
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    View Details
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </CardGrid>
+      </motion.div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <button
+        <motion.div
+          className="flex items-center justify-between pt-4"
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <ActionButton
+            label="Previous"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            variant="secondary"
             disabled={currentPage === 1}
-            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
+          />
           <span className="text-sm text-gray-600">
             Page {currentPage} of {totalPages}
           </span>
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-            }
+          <ActionButton
+            label="Next"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            variant="secondary"
             disabled={currentPage === totalPages}
-            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
+          />
+        </motion.div>
       )}
 
       {/* Legend */}
-      <div className="text-sm text-gray-600">
-        <p className="mb-1">
-          <strong className="text-gray-900">Pass Rate:</strong> Percentage of
-          checks with PASS verdict
-        </p>
-        <p className="mb-1">
-          <strong className="text-gray-900">Confidence Rate:</strong> Average
-          confidence score from agent analysis
-        </p>
-        <p>
-          <strong className="text-gray-900">Fixed:</strong> Number of
-          recommendations marked as completed
-        </p>
-      </div>
+      <motion.div
+        className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-100 text-xs text-gray-500"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span>High (&gt;70%)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+          <span>Medium (40-70%)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span>Low (&lt;40%)</span>
+        </div>
+      </motion.div>
     </div>
   );
 }

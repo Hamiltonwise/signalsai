@@ -1,6 +1,31 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Trash2,
+  Shield,
+  Eye,
+  Loader2,
+  AlertCircle,
+  ClipboardCheck,
+  Circle,
+  CheckCircle,
+  Lightbulb,
+  FileText,
+  BarChart3,
+} from "lucide-react";
 import RecommendationCard from "../../components/Admin/RecommendationCard";
+import {
+  AdminPageHeader,
+  ActionButton,
+  BulkActionBar,
+  EmptyState,
+  ExpandableSection,
+} from "../../components/ui/DesignSystem";
+import { staggerContainer, cardVariants, fadeInUp } from "../../lib/animations";
+import { getAgentIcon } from "../../lib/adminIcons";
 import type {
   AgentRecommendation,
   AgentRecommendationsResponse,
@@ -167,312 +192,337 @@ export default function AIDataInsightsDetail() {
       .join(" ");
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Loading recommendations...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">
-          <p className="font-semibold mb-2">Error</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   // Build back URL with month param preserved
   const backUrl = month
     ? `/admin/ai-data-insights?month=${month}`
     : "/admin/ai-data-insights";
 
-  if (recommendations.length === 0) {
-    return (
-      <div className="space-y-4">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(backUrl)}
-          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-        >
-          ← Back to All Agents
-        </button>
+  const AgentIcon = getAgentIcon(agentType || "");
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<AgentIcon className="w-6 h-6" />}
+          title={`${agentType ? formatAgentName(agentType) : "Agent"} Insights`}
+          description="Review and manage AI-generated recommendations"
+          actionButtons={
+            <ActionButton
+              label="Back to Agents"
+              icon={<ArrowLeft className="w-4 h-4" />}
+              onClick={() => navigate(backUrl)}
+              variant="secondary"
+            />
+          }
+        />
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-600 text-center">
-            <p className="text-lg mb-2">No recommendations</p>
-            <p className="text-sm">
-              No Guardian or Governance recommendations for{" "}
-              {agentType ? formatAgentName(agentType) : "this agent"}
-            </p>
-          </div>
+          <motion.div
+            className="flex items-center gap-3 text-gray-500"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Loading recommendations...
+          </motion.div>
         </div>
       </div>
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<AgentIcon className="w-6 h-6" />}
+          title={`${agentType ? formatAgentName(agentType) : "Agent"} Insights`}
+          description="Review and manage AI-generated recommendations"
+          actionButtons={
+            <ActionButton
+              label="Back to Agents"
+              icon={<ArrowLeft className="w-4 h-4" />}
+              onClick={() => navigate(backUrl)}
+              variant="secondary"
+            />
+          }
+        />
+        <motion.div
+          className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-red-900">Error loading data</p>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (recommendations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<AgentIcon className="w-6 h-6" />}
+          title={`${agentType ? formatAgentName(agentType) : "Agent"} Insights`}
+          description="Review and manage AI-generated recommendations"
+          actionButtons={
+            <ActionButton
+              label="Back to Agents"
+              icon={<ArrowLeft className="w-4 h-4" />}
+              onClick={() => navigate(backUrl)}
+              variant="secondary"
+            />
+          }
+        />
+        <EmptyState
+          icon={<Lightbulb className="w-12 h-12" />}
+          title="No recommendations"
+          description={`No Guardian or Governance recommendations for ${agentType ? formatAgentName(agentType) : "this agent"}`}
+        />
+      </div>
+    );
+  }
+
+  // Summary stats
+  const passedCount = recommendations.filter((r) => r.status === "PASS").length;
+  const rejectedCount = recommendations.filter((r) => r.status === "REJECT").length;
+  const pendingCount = recommendations.filter((r) => !r.status || r.status === "IGNORE").length;
+
   return (
-    <div className="space-y-4">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(backUrl)}
-        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<AgentIcon className="w-6 h-6" />}
+        title={`${agentType ? formatAgentName(agentType) : "Agent"} Insights`}
+        description="Review and manage AI-generated recommendations"
+        actionButtons={
+          <div className="flex items-center gap-3">
+            <ActionButton
+              label="Back to Agents"
+              icon={<ArrowLeft className="w-4 h-4" />}
+              onClick={() => navigate(backUrl)}
+              variant="secondary"
+            />
+            <ActionButton
+              label={
+                selectedIds.size === recommendations.length
+                  ? "Deselect All"
+                  : "Select All"
+              }
+              icon={<ClipboardCheck className="w-4 h-4" />}
+              onClick={toggleSelectAll}
+              variant="secondary"
+            />
+            <ActionButton
+              label="Fix All"
+              icon={<CheckCircle2 className="w-4 h-4" />}
+              onClick={handleFixAll}
+              variant="primary"
+            />
+          </div>
+        }
+      />
+
+      {/* Summary Stats Bar */}
+      <motion.div
+        className="grid grid-cols-4 gap-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
       >
-        ← Back to All Agents
-      </button>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+            <FileText className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{recommendations.length}</p>
+            <p className="text-xs text-gray-500">Total</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-600">{passedCount}</p>
+            <p className="text-xs text-gray-500">Passed</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-red-600">{rejectedCount}</p>
+            <p className="text-xs text-gray-500">Rejected</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+            <BarChart3 className="w-5 h-5 text-gray-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-600">{pendingCount}</p>
+            <p className="text-xs text-gray-500">Pending</p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-            <span>
-              {selectedIds.size} recommendation
-              {selectedIds.size !== 1 ? "s" : ""} selected
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleBulkDelete}
-              disabled={bulkOperationLoading}
-              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {bulkOperationLoading ? (
-                <>
-                  <svg
-                    className="animate-spin h-3.5 w-3.5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Delete
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              disabled={bulkOperationLoading}
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-gray-900">
-            {agentType ? formatAgentName(agentType) : "Agent"} Insights
-          </h2>
-          {recommendations.length > 0 && (
-            <button
-              onClick={toggleSelectAll}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {selectedIds.size === recommendations.length
-                ? "Deselect All"
-                : "Select All"}
-            </button>
-          )}
-        </div>
-        <button
-          onClick={handleFixAll}
-          className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-        >
-          Fix all
-        </button>
-      </div>
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            onClear={() => setSelectedIds(new Set())}
+            actions={[
+              {
+                label: bulkOperationLoading ? "Deleting..." : "Delete Selected",
+                icon: bulkOperationLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                ),
+                onClick: handleBulkDelete,
+                variant: "danger",
+                disabled: bulkOperationLoading,
+              },
+            ]}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Governance Agent Recommendations */}
       {governanceRecs.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Governance Agent
-            <span className="ml-2 text-sm text-gray-600 font-normal">
-              ({governanceRecs.length} recommendation
-              {governanceRecs.length !== 1 ? "s" : ""})
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {governanceRecs.map((rec) => (
-              <div key={rec.id} className="flex items-start gap-3">
-                <button
-                  onClick={() => toggleSelect(rec.id)}
-                  className="mt-4 flex-shrink-0"
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <ExpandableSection
+            title="Governance Agent"
+            icon={<Shield className="w-5 h-5" />}
+            badge={`${governanceRecs.length} recommendation${governanceRecs.length !== 1 ? "s" : ""}`}
+            defaultExpanded={true}
+          >
+            <motion.div
+              className="space-y-3"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {governanceRecs.map((rec) => (
+                <motion.div
+                  key={rec.id}
+                  className="flex items-start gap-3"
+                  variants={cardVariants}
                 >
-                  {selectedIds.has(rec.id) ? (
-                    <svg
-                      className="h-5 w-5 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="h-5 w-5 text-gray-400 hover:text-gray-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                      />
-                    </svg>
-                  )}
-                </button>
-                <div className="flex-1">
-                  <RecommendationCard
-                    recommendation={rec}
-                    onUpdate={() => fetchRecommendations({ silent: true })}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  <motion.button
+                    onClick={() => toggleSelect(rec.id)}
+                    className="mt-4 flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    {selectedIds.has(rec.id) ? (
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </motion.button>
+                  <div className="flex-1">
+                    <RecommendationCard
+                      recommendation={rec}
+                      onUpdate={() => fetchRecommendations({ silent: true })}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </ExpandableSection>
+        </motion.div>
       )}
 
       {/* Guardian Agent Recommendations */}
       {guardianRecs.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Guardian Agent
-            <span className="ml-2 text-sm text-gray-600 font-normal">
-              ({guardianRecs.length} recommendation
-              {guardianRecs.length !== 1 ? "s" : ""})
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {guardianRecs.map((rec) => (
-              <div key={rec.id} className="flex items-start gap-3">
-                <button
-                  onClick={() => toggleSelect(rec.id)}
-                  className="mt-4 flex-shrink-0"
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.1 }}
+        >
+          <ExpandableSection
+            title="Guardian Agent"
+            icon={<Eye className="w-5 h-5" />}
+            badge={`${guardianRecs.length} recommendation${guardianRecs.length !== 1 ? "s" : ""}`}
+            defaultExpanded={true}
+          >
+            <motion.div
+              className="space-y-3"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {guardianRecs.map((rec) => (
+                <motion.div
+                  key={rec.id}
+                  className="flex items-start gap-3"
+                  variants={cardVariants}
                 >
-                  {selectedIds.has(rec.id) ? (
-                    <svg
-                      className="h-5 w-5 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="h-5 w-5 text-gray-400 hover:text-gray-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                      />
-                    </svg>
-                  )}
-                </button>
-                <div className="flex-1">
-                  <RecommendationCard
-                    recommendation={rec}
-                    onUpdate={() => fetchRecommendations({ silent: true })}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  <motion.button
+                    onClick={() => toggleSelect(rec.id)}
+                    className="mt-4 flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    {selectedIds.has(rec.id) ? (
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </motion.button>
+                  <div className="flex-1">
+                    <RecommendationCard
+                      recommendation={rec}
+                      onUpdate={() => fetchRecommendations({ silent: true })}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </ExpandableSection>
+        </motion.div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <button
+        <motion.div
+          className="flex items-center justify-between pt-4"
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <ActionButton
+            label="Previous"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            variant="secondary"
             disabled={currentPage === 1}
-            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
+          />
           <span className="text-sm text-gray-600">
             Page {currentPage} of {totalPages}
           </span>
-          <button
+          <ActionButton
+            label="Next"
             onClick={() =>
               setCurrentPage((prev) => Math.min(totalPages, prev + 1))
             }
+            variant="secondary"
             disabled={currentPage === totalPages}
-            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
+          />
+        </motion.div>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import {
   AdminLayout,
   PMSAutomationCards,
@@ -12,19 +12,6 @@ import AppLogs from "./admin/AppLogs";
 import { OrganizationManagement } from "./admin/OrganizationManagement";
 import AgentOutputsList from "./admin/AgentOutputsList";
 import { PracticeRanking } from "./admin/PracticeRanking";
-
-// Map route paths to titles
-const ROUTE_TITLES: Record<string, string> = {
-  "ai-pms-automation": "AI PMS Automation",
-  "action-items": "Action Items Hub",
-  "agent-outputs": "Agent Outputs",
-  "ai-data-insight": "AI Data Insight",
-  "ai-data-insights": "AI Data Insights Dashboard",
-  "webdev-engine": "Alloro WebDev Engine",
-  "app-logs": "App Logs",
-  "organization-management": "Organization Management",
-  "practice-ranking": "Practice Ranking",
-};
 
 function WebDevEngine() {
   return (
@@ -41,28 +28,9 @@ function WebDevEngine() {
 }
 
 export default function Admin() {
-  const location = useLocation();
-
-  // Extract the current page from the pathname
-  const currentPath = location.pathname.split("/").pop() || "action-items";
-  const pageTitle = ROUTE_TITLES[currentPath] || "Control Center";
-
   return (
     <AdminGuard>
-      <AdminLayout
-        actionBar={
-          <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] px-8 py-6 w-full">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold uppercase tracking-wider text-alloro-orange">
-                Control Center
-              </span>
-              <h1 className="text-2xl font-bold font-heading text-alloro-navy tracking-tight mt-1">
-                {pageTitle}
-              </h1>
-            </div>
-          </header>
-        }
-      >
+      <AdminLayout>
         <Routes>
           <Route path="/" element={<Navigate to="action-items" replace />} />
           <Route path="ai-pms-automation" element={<PMSAutomationCards />} />

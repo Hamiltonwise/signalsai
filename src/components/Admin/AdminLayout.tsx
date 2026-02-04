@@ -1,28 +1,36 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren } from "react";
+import { motion } from "framer-motion";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminTopBar } from "./AdminTopBar";
+import { LoadingIndicator } from "./LoadingIndicator";
 
-export interface AdminLayoutProps extends PropsWithChildren {
-  actionBar?: ReactNode;
-}
+export interface AdminLayoutProps extends PropsWithChildren {}
 
-export function AdminLayout({ children, actionBar }: AdminLayoutProps) {
+export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-alloro-bg font-body text-alloro-navy">
-      {/* Fixed Sidebar */}
-      <AdminSidebar />
+    <div className="min-h-screen bg-gray-50 font-body text-gray-900">
+      {/* Page transition loading indicator */}
+      <LoadingIndicator />
 
-      {/* Main Content Area - shifted right to accommodate fixed sidebar */}
-      <div className="flex flex-1 flex-col ml-72 w-[calc(100%-18rem)]">
-        <AdminTopBar />
-        <div className="flex flex-1 flex-col gap-6 px-8 py-8 max-w-[1400px] mx-auto w-full">
-          {actionBar ? (
-            <div className="flex items-center justify-between">{actionBar}</div>
-          ) : null}
-          <div className="flex-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      {/* Full-width sticky header */}
+      <AdminTopBar />
+
+      {/* Content area below header */}
+      <div className="flex">
+        {/* Sticky sidebar below header */}
+        <AdminSidebar />
+
+        {/* Main content - shifted right to accommodate sidebar */}
+        <main className="flex-1 ml-72 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-[1400px] mx-auto"
+          >
             {children}
-          </div>
-        </div>
+          </motion.div>
+        </main>
       </div>
     </div>
   );

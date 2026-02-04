@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { Trash2, AlertCircle, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, AlertCircle, RefreshCw, FileText, Terminal, Mail, Globe } from "lucide-react";
+import {
+  AdminPageHeader,
+  TabBar,
+  EmptyState,
+  ActionButton,
+} from "../../components/ui/DesignSystem";
+import { fadeInUp } from "../../lib/animations";
 
 interface LogsData {
   logs: string[];
@@ -20,12 +28,19 @@ const LOG_TABS = [
     id: "agent-run",
     label: "Agent Run",
     description: "AI agent execution logs",
+    icon: <Terminal className="w-4 h-4" />,
   },
-  { id: "email", label: "Email", description: "Email service logs" },
+  {
+    id: "email",
+    label: "Email",
+    description: "Email service logs",
+    icon: <Mail className="w-4 h-4" />,
+  },
   {
     id: "scraping-tool",
     label: "Scraping Tool",
     description: "Web scraping logs",
+    icon: <Globe className="w-4 h-4" />,
   },
 ] as const;
 
@@ -134,112 +149,188 @@ export default function AppLogs() {
 
   const activeTabInfo = LOG_TABS.find((t) => t.id === activeTab);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Loading logs...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {LOG_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<FileText className="w-6 h-6" />}
+        title="Application Logs"
+        description="Monitor real-time system events and agent activities"
+        actionButtons={
+          <div className="flex items-center gap-2">
+            {/* Auto-refresh toggle */}
+            <motion.button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                autoRefresh
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200"
               }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+              <motion.div
+                animate={autoRefresh ? { rotate: 360 } : { rotate: 0 }}
+                transition={autoRefresh ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </motion.div>
+              {autoRefresh ? "Live" : "Paused"}
+            </motion.button>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">{activeTabInfo?.description}</span>
-            {" • "}
-            Showing latest 500 lines • Total: {totalLines} lines
-            {autoRefresh && " • Auto-refreshing every 2s"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Auto-refresh toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-              autoRefresh
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "bg-gray-50 text-gray-700 border border-gray-200"
-            }`}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${autoRefresh ? "animate-spin" : ""}`}
+            {/* Manual refresh */}
+            <ActionButton
+              label="Refresh"
+              icon={<RefreshCw className="w-4 h-4" />}
+              onClick={fetchLogs}
+              variant="secondary"
+              disabled={autoRefresh}
             />
-            {autoRefresh ? "Auto-refresh ON" : "Auto-refresh OFF"}
-          </button>
 
-          {/* Manual refresh */}
-          <button
-            onClick={fetchLogs}
-            disabled={autoRefresh}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Refresh Now
-          </button>
+            {/* Clear logs */}
+            <ActionButton
+              label={clearing ? "Clearing..." : "Clear"}
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={handleClearLogs}
+              variant="danger"
+              disabled={clearing || logs.length === 0}
+              loading={clearing}
+            />
+          </div>
+        }
+      />
 
-          {/* Clear logs */}
-          <button
-            onClick={handleClearLogs}
-            disabled={clearing || logs.length === 0}
-            className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="h-4 w-4" />
-            {clearing ? "Clearing..." : "Clear Logs"}
-          </button>
+      {/* Tabs */}
+      <TabBar
+        tabs={LOG_TABS.map(tab => ({
+          id: tab.id,
+          label: tab.label,
+          icon: tab.icon,
+        }))}
+        activeTab={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as LogType)}
+      />
+
+      {/* Status Bar */}
+      <motion.div
+        className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl border border-gray-100"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Source:</span>
+            <span className="text-sm font-medium text-gray-800">
+              {activeTabInfo?.description}
+            </span>
+          </div>
+          <span className="text-gray-300">|</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Lines:</span>
+            <span className="text-sm font-medium text-gray-800">
+              {logs.length} / {totalLines}
+            </span>
+          </div>
+          {autoRefresh && (
+            <>
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-2">
+                <motion.span
+                  className="w-2 h-2 rounded-full bg-green-500"
+                  animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                />
+                <span className="text-sm text-green-600 font-medium">
+                  Live updating
+                </span>
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Error message */}
-      {error && (
-        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-900">Error</p>
-            <p className="text-sm text-red-700 mt-1">{error}</p>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-900">Error</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Logs container */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <motion.div
+        className="rounded-2xl border border-gray-200 bg-gray-900 shadow-lg overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Terminal header */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-gray-800 border-b border-gray-700">
+          <div className="flex gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-red-500" />
+            <span className="w-3 h-3 rounded-full bg-yellow-500" />
+            <span className="w-3 h-3 rounded-full bg-green-500" />
+          </div>
+          <span className="text-xs text-gray-400 ml-2 font-mono">
+            {activeTabInfo?.label}.log
+          </span>
+        </div>
+
+        {/* Logs content */}
         <div
           ref={logsContainerRef}
-          className="bg-gray-900 text-gray-100 font-mono text-xs p-4 overflow-auto"
-          style={{ height: "600px" }}
+          className="text-gray-100 font-mono text-xs p-4 overflow-auto"
+          style={{ height: "500px" }}
         >
-          {logs.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              No logs available for {activeTabInfo?.label}
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <motion.div
+                className="flex items-center gap-3 text-gray-400"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                Loading logs...
+              </motion.div>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <EmptyState
+                icon={<Terminal className="w-8 h-8" />}
+                title="No logs available"
+                description={`No logs found for ${activeTabInfo?.label}`}
+              />
             </div>
           ) : (
-            <div className="space-y-0.5">
+            <div className="space-y-0">
               {logs.map((line, index) => (
-                <div
+                <motion.div
                   key={index}
-                  className="hover:bg-gray-800 px-2 py-0.5 rounded"
+                  className={`flex hover:bg-gray-800/50 px-2 py-0.5 rounded transition-colors ${
+                    line.includes("ERROR") || line.includes("Failed")
+                      ? "border-l-2 border-red-500 bg-red-900/10"
+                      : line.includes("SUCCESS") || line.includes("✓")
+                      ? "border-l-2 border-green-500 bg-green-900/10"
+                      : line.includes("WARNING")
+                      ? "border-l-2 border-yellow-500 bg-yellow-900/10"
+                      : "border-l-2 border-transparent"
+                  }`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.1, delay: index * 0.001 }}
                 >
-                  <span className="text-gray-500 select-none mr-2">
+                  <span className="text-gray-600 select-none w-12 text-right mr-4 shrink-0">
                     {index + 1}
                   </span>
                   <span
@@ -250,27 +341,39 @@ export default function AppLogs() {
                         ? "text-green-400"
                         : line.includes("WARNING")
                         ? "text-yellow-400"
-                        : "text-gray-200"
+                        : "text-gray-300"
                     }
                   >
                     {line}
                   </span>
-                </div>
+                </motion.div>
               ))}
               <div ref={logsEndRef} />
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Info */}
-      <div className="text-sm text-gray-600">
-        <p>
-          <strong className="text-gray-900">Note:</strong> Logs are
-          automatically fetched every 2 seconds when auto-refresh is enabled.
-          You can toggle auto-refresh or manually refresh as needed.
-        </p>
-      </div>
+      {/* Legend */}
+      <motion.div
+        className="flex items-center gap-6 text-xs text-gray-500"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-0.5 bg-red-500 rounded" />
+          <span>Error</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-0.5 bg-yellow-500 rounded" />
+          <span>Warning</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-0.5 bg-green-500 rounded" />
+          <span>Success</span>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   RefreshCw,
@@ -6,11 +7,15 @@ import {
   Check,
   X,
   Loader2,
-  CheckSquare,
-  Square,
   Eye,
   Archive,
   ArchiveRestore,
+  ListTodo,
+  Calendar,
+  Building2,
+  CheckCircle,
+  Circle,
+  ChevronDown,
 } from "lucide-react";
 import {
   fetchAllTasks,
@@ -34,6 +39,337 @@ import { CreateTaskModal } from "./CreateTaskModal";
 import { TaskDetailsModal } from "../tasks/TaskDetailsModal";
 import { AgentTypePill } from "../tasks/AgentTypePill";
 import { parseHighlightTags } from "../../utils/textFormatting";
+import {
+  AdminPageHeader,
+  ActionButton,
+  BulkActionBar,
+  FilterBar,
+  EmptyState,
+} from "../ui/DesignSystem";
+
+// Approval Switch Component
+interface ApprovalSwitchProps {
+  isApproved: boolean;
+  isLoading: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}
+
+const ApprovalSwitch: React.FC<ApprovalSwitchProps> = ({
+  isApproved,
+  isLoading,
+  disabled,
+  onToggle,
+}) => {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      disabled={disabled || isLoading}
+      className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span
+        className={`text-xs font-medium w-16 text-right ${
+          isApproved ? "text-green-600" : "text-gray-500"
+        }`}
+      >
+        {isLoading ? "Updating..." : isApproved ? "Approved" : "Pending"}
+      </span>
+      <motion.div
+        className={`relative w-10 h-5 rounded-full transition-colors ${
+          isApproved ? "bg-green-500" : "bg-gray-300"
+        }`}
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.div
+          className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm flex items-center justify-center"
+          initial={false}
+          animate={{ x: isApproved ? 22 : 2 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
+          {isLoading && (
+            <Loader2 className="w-2.5 h-2.5 text-gray-400 animate-spin" />
+          )}
+        </motion.div>
+      </motion.div>
+    </button>
+  );
+};
+
+// Animated Dropdown Component
+interface DropdownOption {
+  value: string;
+  label: string;
+  color?: string;
+}
+
+interface AnimatedDropdownProps {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  isLoading?: boolean;
+  variant?: "category" | "status";
+}
+
+const AnimatedDropdown: React.FC<AnimatedDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  isLoading = false,
+  variant = "status",
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((opt) => opt.value === value);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const getOptionStyles = (option: DropdownOption, isSelected: boolean) => {
+    const baseStyles =
+      "w-full px-3 py-2 text-left text-xs font-semibold transition-colors";
+    if (isSelected) {
+      return `${baseStyles} ${option.color || "bg-gray-100 text-gray-900"}`;
+    }
+    return `${baseStyles} hover:bg-gray-50 text-gray-700`;
+  };
+
+  const getTriggerStyles = () => {
+    if (variant === "category") {
+      return value === "ALLORO"
+        ? "border-purple-200 bg-purple-50 text-purple-700"
+        : "border-blue-200 bg-blue-50 text-blue-700";
+    }
+    // Status variant
+    switch (value) {
+      case "pending":
+        return "border-yellow-200 bg-yellow-50 text-yellow-700";
+      case "in_progress":
+        return "border-blue-200 bg-blue-50 text-blue-700";
+      case "complete":
+        return "border-green-200 bg-green-50 text-green-700";
+      case "archived":
+        return "border-gray-200 bg-gray-100 text-gray-500";
+      default:
+        return "border-gray-200 bg-gray-100 text-gray-700";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Updating...
+      </span>
+    );
+  }
+
+  return (
+    <div
+      ref={dropdownRef}
+      className="relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <motion.button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${getTriggerStyles()}`}
+        whileHover={{ scale: disabled ? 1 : 1.02 }}
+        whileTap={{ scale: disabled ? 1 : 0.98 }}
+      >
+        {currentOption?.label || value}
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="h-3 w-3" />
+        </motion.div>
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 mt-1 z-50 min-w-[120px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg"
+          >
+            {options.map((option) => (
+              <motion.button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={getOptionStyles(option, option.value === value)}
+                whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
+              >
+                <div className="flex items-center gap-2">
+                  {option.value === value && (
+                    <Check className="h-3 w-3 text-alloro-orange" />
+                  )}
+                  <span className={option.value === value ? "ml-0" : "ml-5"}>
+                    {option.label}
+                  </span>
+                </div>
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// Category and Status options
+const CATEGORY_OPTIONS: DropdownOption[] = [
+  { value: "ALLORO", label: "ALLORO" },
+  { value: "USER", label: "USER" },
+];
+
+const STATUS_OPTIONS: DropdownOption[] = [
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "complete", label: "Complete" },
+  { value: "archived", label: "Archived" },
+];
+
+// Filter Dropdown Component (larger, for filter bar)
+interface FilterDropdownOption {
+  value: string;
+  label: string;
+}
+
+interface FilterDropdownProps {
+  value: string;
+  options: FilterDropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  label?: string;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = "Select...",
+  icon,
+  label,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((opt) => opt.value === value);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {label && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 flex items-center gap-1">
+          {icon}
+          {label}
+        </span>
+      )}
+      <div ref={dropdownRef} className="relative">
+        <motion.button
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-all hover:border-gray-300 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px] justify-between"
+          whileHover={{ scale: disabled ? 1 : 1.01 }}
+          whileTap={{ scale: disabled ? 1 : 0.99 }}
+        >
+          <span className="truncate">{currentOption?.label || placeholder}</span>
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </motion.div>
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 mt-1 z-50 min-w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg max-h-60 overflow-y-auto"
+            >
+              {options.map((option) => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    option.value === value
+                      ? "bg-alloro-orange/10 text-alloro-orange"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  whileHover={{ backgroundColor: option.value === value ? undefined : "rgba(0,0,0,0.03)" }}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.value === value && (
+                      <Check className="h-3.5 w-3.5 text-alloro-orange" />
+                    )}
+                    <span className={option.value === value ? "ml-0" : "ml-5"}>
+                      {option.label}
+                    </span>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
 
 export function ActionItemsHub() {
   const [tasks, setTasks] = useState<ActionItem[]>([]);
@@ -377,457 +713,458 @@ export function ActionItemsHub() {
       return task?.status !== "archived";
     });
 
+  // Build bulk actions for BulkActionBar
+  const bulkActions = [];
+
+  bulkActions.push({
+    label: "Approve",
+    icon: <Check className="w-4 h-4" />,
+    onClick: () => handleBulkApprove(true),
+    variant: "primary" as const,
+    disabled: bulkOperationLoading,
+  });
+
+  bulkActions.push({
+    label: "Unapprove",
+    icon: <X className="w-4 h-4" />,
+    onClick: () => handleBulkApprove(false),
+    variant: "secondary" as const,
+    disabled: bulkOperationLoading,
+  });
+
+  if (anySelectedNotArchived) {
+    bulkActions.push({
+      label: bulkOperationLoading ? "Archiving..." : "Archive",
+      icon: bulkOperationLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Archive className="w-4 h-4" />
+      ),
+      onClick: handleBulkArchive,
+      variant: "danger" as const,
+      disabled: bulkOperationLoading,
+    });
+  }
+
+  if (allSelectedAreArchived) {
+    bulkActions.push({
+      label: bulkOperationLoading ? "Restoring..." : "Restore",
+      icon: bulkOperationLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <ArchiveRestore className="w-4 h-4" />
+      ),
+      onClick: handleBulkUnarchive,
+      variant: "primary" as const,
+      disabled: bulkOperationLoading,
+    });
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<ListTodo className="w-6 h-6" />}
+        title="Action Items Hub"
+        description="Manage and track all tasks across clients"
+        actionButtons={
+          <div className="flex items-center gap-3">
+            <ActionButton
+              label={loading ? "Loading" : "Refresh"}
+              icon={
+                loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )
+              }
+              onClick={() => loadTasks()}
+              variant="secondary"
+              disabled={loading}
+            />
+            <ActionButton
+              label="Create Task"
+              icon={<Plus className="w-4 h-4" />}
+              onClick={() => setShowCreateModal(true)}
+              variant="primary"
+            />
+          </div>
+        }
+      />
+
       {/* Bulk Actions Bar */}
-      {selectedTaskIds.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-            <CheckSquare className="h-4 w-4" />
-            <span>
-              {selectedTaskIds.size} task{selectedTaskIds.size !== 1 ? "s" : ""}{" "}
-              selected
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleBulkStatusChange(e.target.value);
-                  e.target.value = "";
-                }
-              }}
-              disabled={bulkOperationLoading}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-xs font-semibold uppercase text-gray-700 transition hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">Change Status...</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="complete">Complete</option>
-            </select>
-            <button
-              onClick={() => handleBulkApprove(true)}
-              disabled={bulkOperationLoading}
-              className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Check className="h-3.5 w-3.5" />
-              Approve
-            </button>
-            <button
-              onClick={() => handleBulkApprove(false)}
-              disabled={bulkOperationLoading}
-              className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold uppercase text-yellow-700 transition hover:border-yellow-300 hover:bg-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <X className="h-3.5 w-3.5" />
-              Unapprove
-            </button>
-            {anySelectedNotArchived && (
-              <button
-                onClick={handleBulkArchive}
+      <AnimatePresence>
+        {selectedTaskIds.size > 0 && (
+          <BulkActionBar
+            selectedCount={selectedTaskIds.size}
+            onClear={() => setSelectedTaskIds(new Set())}
+            actions={bulkActions}
+            extraContent={
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleBulkStatusChange(e.target.value);
+                    e.target.value = "";
+                  }
+                }}
                 disabled={bulkOperationLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase text-orange-600 transition hover:border-orange-300 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {bulkOperationLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Archive className="h-3.5 w-3.5" />
-                )}
-                Archive
-              </button>
-            )}
-            {allSelectedAreArchived && (
-              <button
-                onClick={handleBulkUnarchive}
-                disabled={bulkOperationLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bulkOperationLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <ArchiveRestore className="h-3.5 w-3.5" />
-                )}
-                Restore
-              </button>
-            )}
-            <button
-              onClick={() => setSelectedTaskIds(new Set())}
-              disabled={bulkOperationLoading}
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
+                <option value="">Change Status...</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="complete">Complete</option>
+              </select>
+            }
+          />
+        )}
+      </AnimatePresence>
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+      <FilterBar>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Client
-            <select
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Clients</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.domain_name}>
-                  {client.domain_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Status
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="complete">Complete</option>
-              <option value="archived">Archived</option>
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Category
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Categories</option>
-              <option value="ALLORO">ALLORO</option>
-              <option value="USER">USER</option>
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Agent Type
-            <select
-              value={selectedAgentType}
-              onChange={(e) => setSelectedAgentType(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Types</option>
-              <option value="GBP_OPTIMIZATION">GBP Copy</option>
-              <option value="OPPORTUNITY">Opportunity</option>
-              <option value="CRO_OPTIMIZER">CRO</option>
-              <option value="REFERRAL_ENGINE_ANALYSIS">Referral Engine</option>
-              <option value="MANUAL">Manual</option>
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Approval
-            <select
-              value={selectedApproval}
-              onChange={(e) => setSelectedApproval(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All</option>
-              <option value="true">Approved</option>
-              <option value="false">Pending</option>
-            </select>
-          </label>
-          <button
-            onClick={applyFilters}
-            className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-          >
-            Apply
-          </button>
-          <button
-            onClick={resetFilters}
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800"
-          >
-            Reset
-          </button>
+          <FilterDropdown
+            value={selectedClient}
+            onChange={(value) => setSelectedClient(value)}
+            label="Client"
+            placeholder="All Clients"
+            options={[
+              { value: "all", label: "All Clients" },
+              ...clients.map((client) => ({
+                value: client.domain_name,
+                label: client.domain_name,
+              })),
+            ]}
+          />
+          <FilterDropdown
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            label="Status"
+            placeholder="All Statuses"
+            options={[
+              { value: "all", label: "All Statuses" },
+              { value: "pending", label: "Pending" },
+              { value: "in_progress", label: "In Progress" },
+              { value: "complete", label: "Complete" },
+              { value: "archived", label: "Archived" },
+            ]}
+          />
+          <FilterDropdown
+            value={selectedCategory}
+            onChange={(value) => setSelectedCategory(value)}
+            label="Category"
+            placeholder="All Categories"
+            options={[
+              { value: "all", label: "All Categories" },
+              { value: "ALLORO", label: "ALLORO" },
+              { value: "USER", label: "USER" },
+            ]}
+          />
+          <FilterDropdown
+            value={selectedAgentType}
+            onChange={(value) => setSelectedAgentType(value)}
+            label="Agent Type"
+            placeholder="All Types"
+            options={[
+              { value: "all", label: "All Types" },
+              { value: "GBP_OPTIMIZATION", label: "GBP Copy" },
+              { value: "OPPORTUNITY", label: "Opportunity" },
+              { value: "CRO_OPTIMIZER", label: "CRO" },
+              { value: "REFERRAL_ENGINE_ANALYSIS", label: "Referral Engine" },
+              { value: "MANUAL", label: "Manual" },
+            ]}
+          />
+          <FilterDropdown
+            value={selectedApproval}
+            onChange={(value) => setSelectedApproval(value)}
+            label="Approval"
+            placeholder="All"
+            options={[
+              { value: "all", label: "All" },
+              { value: "true", label: "Approved" },
+              { value: "false", label: "Pending" },
+            ]}
+          />
+          <div className="flex items-center gap-2 self-end">
+            <ActionButton
+              label="Apply"
+              onClick={applyFilters}
+              variant="primary"
+            />
+            <ActionButton
+              label="Reset"
+              onClick={resetFilters}
+              variant="secondary"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Create Task
-          </button>
-          <button
-            type="button"
-            onClick={() => loadTasks()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
-          >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {loading ? "Loading" : "Refresh"}
-          </button>
-        </div>
-      </div>
-
-      {/* Tasks Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[auto_1fr_1.5fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleSelectAll}
             disabled={tasks.length === 0}
-            className="flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            title={
-              selectedTaskIds.size === tasks.length
-                ? "Deselect all"
-                : "Select all"
-            }
+            className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {selectedTaskIds.size === tasks.length && tasks.length > 0 ? (
-              <CheckSquare className="h-4 w-4 text-blue-600" />
+              <CheckCircle className="h-4 w-4 text-blue-600" />
             ) : (
-              <Square className="h-4 w-4 text-gray-400" />
+              <Circle className="h-4 w-4 text-gray-400" />
             )}
+            {selectedTaskIds.size === tasks.length && tasks.length > 0
+              ? "Deselect All"
+              : "Select All"}
           </button>
-          <span>Client</span>
-          <span>Task</span>
-          <span>Category</span>
-          <span>Agent Type</span>
-          <span>Status</span>
-          <span>Approval</span>
-          <span>Created</span>
-          <span className="text-right">Actions</span>
         </div>
-        {loading && tasks.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-gray-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading tasks...</span>
+      </FilterBar>
+
+      {/* Task Cards */}
+      {loading && tasks.length === 0 ? (
+        <motion.div
+          className="flex items-center justify-center h-64"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="flex items-center gap-3 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Loading tasks...
           </div>
-        ) : error ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => loadTasks()}
-              className="rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : tasks.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
-            No tasks found for the selected filters.
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <div
+        </motion.div>
+      ) : error ? (
+        <motion.div
+          className="flex flex-col items-center justify-center gap-4 rounded-xl border border-red-200 bg-red-50 p-8"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <AlertCircle className="w-12 h-12 text-red-500" />
+          <p className="text-red-600 font-medium">{error}</p>
+          <ActionButton
+            label="Retry"
+            onClick={() => loadTasks()}
+            variant="primary"
+          />
+        </motion.div>
+      ) : tasks.length === 0 ? (
+        <EmptyState
+          icon={<ListTodo className="w-12 h-12" />}
+          title="No tasks found"
+          description="No tasks match the selected filters. Try adjusting your filters or create a new task."
+        />
+      ) : (
+        <div className="space-y-3">
+          {tasks.map((task, index) => (
+            <motion.div
               key={task.id}
-              className={`grid grid-cols-[auto_1fr_1.5fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
-                selectedTaskIds.has(task.id) ? "bg-blue-50" : ""
-              }`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              onClick={() => toggleSelectTask(task.id)}
+              className={`rounded-xl border bg-white shadow-sm transition-all hover:shadow-md cursor-pointer ${
+                selectedTaskIds.has(task.id)
+                  ? "border-blue-300 ring-2 ring-blue-100"
+                  : "border-gray-200"
+              } ${task.status === "archived" ? "opacity-60" : ""}`}
             >
-              <button
-                onClick={() => toggleSelectTask(task.id)}
-                className="flex items-center justify-center"
-                title={
-                  selectedTaskIds.has(task.id) ? "Deselect task" : "Select task"
-                }
-              >
-                {selectedTaskIds.has(task.id) ? (
-                  <CheckSquare className="h-4 w-4 text-blue-600" />
-                ) : (
-                  <Square className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                )}
-              </button>
-              <div className="text-sm text-gray-700">{task.domain_name}</div>
-              <div>
-                <div className="text-sm text-gray-900 font-medium">
-                  {parseHighlightTags(task.title, "underline")}
-                </div>
-                {task.description && (
-                  <div className="text-xs text-gray-500 line-clamp-1">
-                    {parseHighlightTags(task.description, "underline")}
-                  </div>
-                )}
-              </div>
-              <div>
-                {updatingCategoryId === task.id ? (
-                  <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Updating...
-                  </div>
-                ) : (
-                  <select
-                    value={task.category}
-                    onChange={(e) =>
-                      handleCategoryChange(task.id, e.target.value)
-                    }
-                    disabled={updatingCategoryId !== null}
-                    className={`rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      task.category === "ALLORO"
-                        ? "text-purple-700"
-                        : "text-blue-700"
-                    }`}
+              <div className="p-4">
+                <div className="flex items-start gap-4">
+                  {/* Selection checkbox */}
+                  <motion.div
+                    className="mt-1 flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                   >
-                    <option value="ALLORO">ALLORO</option>
-                    <option value="USER">USER</option>
-                  </select>
-                )}
-              </div>
-              <div>
-                <AgentTypePill agentType={task.agent_type ?? null} />
-              </div>
-              <div>
-                {updatingStatusId === task.id ? (
-                  <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Updating...
-                  </div>
-                ) : (
-                  <select
-                    value={task.status}
-                    onChange={(e) =>
-                      handleStatusChange(task.id, e.target.value)
-                    }
-                    disabled={updatingStatusId !== null}
-                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="complete">Complete</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                )}
-              </div>
-              <div>
-                {updatingApprovalId === task.id ? (
-                  <div className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold uppercase text-blue-700">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Updating...
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleApprove(task.id, task.is_approved)}
-                    disabled={updatingApprovalId !== null}
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold uppercase transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                      task.is_approved
-                        ? "border border-green-200 bg-green-100 text-green-700 hover:border-green-300"
-                        : "border border-yellow-200 bg-yellow-100 text-yellow-700 hover:border-yellow-300"
-                    }`}
-                  >
-                    {task.is_approved ? (
-                      <Check className="h-3 w-3" />
+                    {selectedTaskIds.has(task.id) ? (
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
                     ) : (
-                      <X className="h-3 w-3" />
+                      <Circle className="h-5 w-5 text-gray-300" />
                     )}
-                    {task.is_approved ? "Approved" : "Pending"}
-                  </button>
-                )}
-              </div>
-              <div className="text-sm text-gray-500">
-                {formatDate(task.created_at)}
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  onClick={() => handleViewDetails(task)}
-                  className="inline-flex items-center gap-1 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-                  title="View task details"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  View
-                </button>
-                {task.status === "archived" ? (
-                  deletingId === task.id ? (
-                    <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Restoring...
+                  </motion.div>
+
+                  {/* Main content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Top row: Title and badges */}
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
+                          {parseHighlightTags(task.title, "underline")}
+                        </h3>
+                        {task.description && (
+                          <p className="text-sm text-gray-500 line-clamp-2 mt-1">
+                            {parseHighlightTags(task.description, "underline")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Approval Switch */}
+                        <ApprovalSwitch
+                          isApproved={task.is_approved}
+                          isLoading={updatingApprovalId === task.id}
+                          disabled={updatingApprovalId !== null}
+                          onToggle={() => handleApprove(task.id, task.is_approved)}
+                        />
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => handleUnarchive(task.id)}
-                      disabled={deletingId !== null}
-                      className="inline-flex items-center gap-1 rounded-full border border-green-200 px-3 py-1 text-xs font-semibold uppercase text-green-600 transition hover:border-green-300 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Restore task"
-                    >
-                      <ArchiveRestore className="h-3.5 w-3.5" />
-                      Restore
-                    </button>
-                  )
-                ) : deletingId === task.id ? (
-                  <div className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase text-orange-700">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Archiving...
+
+                    {/* Metadata row */}
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      {/* Client */}
+                      <div className="flex items-center gap-1.5 text-gray-600">
+                        <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="font-medium">{task.domain_name}</span>
+                      </div>
+
+                      {/* Date */}
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                        <span>{formatDate(task.created_at)}</span>
+                      </div>
+
+                      {/* Agent Type */}
+                      <AgentTypePill agentType={task.agent_type ?? null} />
+
+                      {/* Category */}
+                      <AnimatedDropdown
+                        value={task.category}
+                        options={CATEGORY_OPTIONS}
+                        onChange={(value) =>
+                          handleCategoryChange(task.id, value)
+                        }
+                        disabled={updatingCategoryId !== null}
+                        isLoading={updatingCategoryId === task.id}
+                        variant="category"
+                      />
+
+                      {/* Status */}
+                      <AnimatedDropdown
+                        value={task.status}
+                        options={STATUS_OPTIONS}
+                        onChange={(value) =>
+                          handleStatusChange(task.id, value)
+                        }
+                        disabled={updatingStatusId !== null}
+                        isLoading={updatingStatusId === task.id}
+                        variant="status"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => handleArchive(task.id)}
-                    disabled={deletingId !== null}
-                    className="inline-flex items-center gap-1 rounded-full border border-orange-200 px-3 py-1 text-xs font-semibold uppercase text-orange-600 transition hover:border-orange-300 hover:text-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Archive task"
-                  >
-                    <Archive className="h-3.5 w-3.5" />
-                    Archive
-                  </button>
-                )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <motion.button
+                      onClick={() => handleViewDetails(task)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </motion.button>
+                    {task.status === "archived" ? (
+                      deletingId === task.id ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Restoring...
+                        </span>
+                      ) : (
+                        <motion.button
+                          onClick={() => handleUnarchive(task.id)}
+                          disabled={deletingId !== null}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-600 transition hover:border-green-300 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5" />
+                          Restore
+                        </motion.button>
+                      )
+                    ) : deletingId === task.id ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Archiving...
+                      </span>
+                    ) : (
+                      <motion.button
+                        onClick={() => handleArchive(task.id)}
+                        disabled={deletingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        Archive
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1 || loading}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      {totalPages > 1 && (
+        <motion.div
+          className="flex items-center justify-between pt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
         >
-          Previous
-        </button>
-        <span className="text-sm text-gray-600">
-          Page {currentPage} of {totalPages || 1} ({total} total)
-        </span>
-        <button
-          onClick={() =>
-            handlePageChange(Math.min(totalPages, currentPage + 1))
-          }
-          disabled={currentPage === totalPages || totalPages === 0 || loading}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
+          <ActionButton
+            label="Previous"
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            variant="secondary"
+            disabled={currentPage === 1 || loading}
+          />
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages} ({total} total)
+          </span>
+          <ActionButton
+            label="Next"
+            onClick={() =>
+              handlePageChange(Math.min(totalPages, currentPage + 1))
+            }
+            variant="secondary"
+            disabled={currentPage === totalPages || loading}
+          />
+        </motion.div>
+      )}
 
-      {/* Summary */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-        <div>
-          {tasks.length > 0 ? (
-            <span>
-              Showing {tasks.length} of {total} task{total !== 1 ? "s" : ""}
-            </span>
-          ) : (
-            <span>0 tasks</span>
-          )}
-        </div>
-        {!loading && !error && tasks.length > 0 && (
-          <div className="flex items-center gap-6 text-xs text-gray-500">
-            <span>
-              <strong className="text-gray-900">
-                {tasks.filter((t) => !t.is_approved).length}
-              </strong>{" "}
-              pending approval
-            </span>
-            <span>
-              <strong className="text-gray-900">
-                {
-                  tasks.filter(
-                    (t) => t.status !== "complete" && t.status !== "archived"
-                  ).length
-                }
-              </strong>{" "}
-              active
-            </span>
+      {/* Summary Stats */}
+      {!loading && !error && tasks.length > 0 && (
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <span className="text-sm text-gray-600">
+            Showing {tasks.length} of {total} task{total !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-yellow-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {tasks.filter((t) => !t.is_approved).length}
+                </strong>{" "}
+                pending approval
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-blue-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {
+                    tasks.filter(
+                      (t) => t.status !== "complete" && t.status !== "archived"
+                    ).length
+                  }
+                </strong>{" "}
+                active
+              </span>
+            </div>
           </div>
-        )}
-      </div>
+        </motion.div>
+      )}
 
       {/* Create Task Modal */}
       <CreateTaskModal

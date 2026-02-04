@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   Play,
@@ -9,8 +10,8 @@ import {
   MapPin,
   Star,
   AlertCircle,
-  ChevronDown,
   ChevronRight,
+  ChevronDown,
   Trophy,
   Zap,
   Sparkles,
@@ -18,8 +19,28 @@ import {
   Users,
   Layers,
   Info,
+  Loader2,
+  BarChart3,
+  Check,
+  Building,
+  Target,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import {
+  AdminPageHeader,
+  ActionButton,
+  EmptyState,
+  Badge,
+  HorizontalProgressBar,
+  FilterBar,
+} from "../../components/ui/DesignSystem";
+import {
+  staggerContainer,
+  cardVariants,
+  fadeInUp,
+  expandCollapse,
+  chevronVariants,
+} from "../../lib/animations";
 
 // GBP Location from the API
 interface GbpLocation {
@@ -290,6 +311,133 @@ interface BatchGroup {
   completedLocations: number;
 }
 
+// Filter Dropdown Component
+interface FilterDropdownOption {
+  value: string;
+  label: string;
+  subtitle?: string;
+}
+
+interface FilterDropdownProps {
+  value: string;
+  options: FilterDropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  label?: string;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = "Select...",
+  icon,
+  label,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {label && (
+        <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+          {icon}
+          {label}
+        </span>
+      )}
+      <div ref={dropdownRef} className="relative">
+        <motion.button
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className="w-full flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-all hover:border-gray-300 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          whileHover={{ scale: disabled ? 1 : 1.01 }}
+          whileTap={{ scale: disabled ? 1 : 0.99 }}
+        >
+          <span className="truncate text-left">
+            {currentOption?.label || placeholder}
+          </span>
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </motion.div>
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 right-0 mt-1 z-50 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg max-h-72 overflow-y-auto"
+            >
+              {options.map((option) => (
+                <motion.button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left text-sm transition-colors ${
+                    option.value === value
+                      ? "bg-alloro-orange/10 text-alloro-orange"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  whileHover={{
+                    backgroundColor:
+                      option.value === value ? undefined : "rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.value === value && (
+                      <Check className="h-4 w-4 text-alloro-orange flex-shrink-0" />
+                    )}
+                    <div className={option.value === value ? "" : "ml-6"}>
+                      <span className="font-medium">{option.label}</span>
+                      {option.subtitle && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          {option.subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
 export function PracticeRanking() {
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [jobs, setJobs] = useState<RankingJob[]>([]);
@@ -299,10 +447,10 @@ export function PracticeRanking() {
   const [triggering, setTriggering] = useState(false);
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [jobResults, setJobResults] = useState<Record<number, RankingResult>>(
-    {},
+    {}
   );
   const [rankingTasks, setRankingTasks] = useState<
     Record<number, RankingTask[]>
@@ -311,14 +459,14 @@ export function PracticeRanking() {
   const [pollingJobs, setPollingJobs] = useState<Set<number>>(new Set());
   const [pollingBatches, setPollingBatches] = useState<Set<string>>(new Set());
 
-  const [, setBatchStatuses] = useState<Record<string, BatchStatus>>({}); // Used for real-time batch status updates during polling
+  const [, setBatchStatuses] = useState<Record<string, BatchStatus>>({});
   const [deletingJob, setDeletingJob] = useState<number | null>(null);
   const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
   const [refreshingCompetitors, setRefreshingCompetitors] = useState(false);
 
-  // Get selected account data (use == for type coercion since API returns id as string)
+  // Get selected account data
   const selectedAccountData = accounts.find(
-    (a) => String(a.id) === String(selectedAccount),
+    (a) => String(a.id) === String(selectedAccount)
   );
 
   // Group jobs by batch - flat list sorted by date (newest first)
@@ -345,12 +493,12 @@ export function PracticeRanking() {
         batch.jobs.push(job);
         batch.totalLocations = batch.jobs.length;
         batch.completedLocations = batch.jobs.filter(
-          (j) => j.status === "completed",
+          (j) => j.status === "completed"
         ).length;
 
         // Determine batch status
         const hasProcessing = batch.jobs.some(
-          (j) => j.status === "processing" || j.status === "pending",
+          (j) => j.status === "processing" || j.status === "pending"
         );
         const hasFailed = batch.jobs.some((j) => j.status === "failed");
         const allCompleted = batch.jobs.every((j) => j.status === "completed");
@@ -367,9 +515,8 @@ export function PracticeRanking() {
       }
     });
 
-    // Convert to array and sort by date (newest first)
     return Array.from(batchMap.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     );
   }, [jobs]);
 
@@ -380,7 +527,7 @@ export function PracticeRanking() {
       .sort(
         (a, b) =>
           new Date(b.created_at || 0).getTime() -
-          new Date(a.created_at || 0).getTime(),
+          new Date(a.created_at || 0).getTime()
       );
   }, [jobs]);
 
@@ -402,7 +549,7 @@ export function PracticeRanking() {
     fetchJobs();
   }, []);
 
-  // When account is selected, initialize location forms (simplified - no specialty/location needed)
+  // When account is selected, initialize location forms
   useEffect(() => {
     if (selectedAccountData && selectedAccountData.gbpLocations.length > 0) {
       const initialForms: LocationFormData[] =
@@ -410,7 +557,6 @@ export function PracticeRanking() {
           gbpAccountId: loc.accountId,
           gbpLocationId: loc.locationId,
           gbpLocationName: loc.displayName,
-          // specialty and marketLocation are auto-detected by Identifier Agent
         }));
       setLocationForms(initialForms);
     } else {
@@ -418,16 +564,14 @@ export function PracticeRanking() {
     }
   }, [selectedAccount, selectedAccountData]);
 
-  // Poll for job status updates (every 2 seconds for more responsive UI)
+  // Poll for job status updates
   useEffect(() => {
     if (pollingJobs.size === 0 && pollingBatches.size === 0) return;
 
     const interval = setInterval(() => {
-      // Poll individual jobs
       pollingJobs.forEach((jobId) => {
         fetchJobStatus(jobId);
       });
-      // Poll batch statuses
       pollingBatches.forEach((batchId) => {
         fetchBatchStatus(batchId);
       });
@@ -462,14 +606,13 @@ export function PracticeRanking() {
       if (!response.ok) throw new Error("Failed to fetch jobs");
 
       const data = await response.json();
-      // Normalize all jobs to handle both camelCase and snake_case
       setJobs(data.rankings.map(normalizeJob));
 
       // Start polling for any in-progress jobs
       const inProgress = data.rankings
         .filter(
           (j: RankingJob) =>
-            j.status === "processing" || j.status === "pending",
+            j.status === "processing" || j.status === "pending"
         )
         .map((j: RankingJob) => j.id);
       setPollingJobs(new Set(inProgress));
@@ -497,14 +640,13 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/status/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) return;
 
       const data = await response.json();
 
-      // Map the status response to job format (handle camelCase from API)
       const statusUpdate: Partial<RankingJob> = {
         status: data.status,
         status_detail: data.statusDetail,
@@ -517,17 +659,15 @@ export function PracticeRanking() {
       };
 
       setJobs((prev) =>
-        prev.map((j) => (j.id === jobId ? { ...j, ...statusUpdate } : j)),
+        prev.map((j) => (j.id === jobId ? { ...j, ...statusUpdate } : j))
       );
 
-      // Stop polling if job is complete or failed
       if (data.status === "completed" || data.status === "failed") {
         setPollingJobs((prev) => {
           const next = new Set(prev);
           next.delete(jobId);
           return next;
         });
-        // Refresh the full job list to get final data
         fetchJobs();
       }
     } catch (error) {
@@ -542,7 +682,7 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/batch/${batchId}/status`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) return;
@@ -553,14 +693,12 @@ export function PracticeRanking() {
         [batchId]: data as BatchStatus,
       }));
 
-      // Stop polling if batch is complete or failed
       if (data.status === "completed" || data.status === "failed") {
         setPollingBatches((prev) => {
           const next = new Set(prev);
           next.delete(batchId);
           return next;
         });
-        // Refresh the full job list to get final data
         fetchJobs();
       }
     } catch (error) {
@@ -578,16 +716,14 @@ export function PracticeRanking() {
         `/api/admin/practice-ranking/results/${jobId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) throw new Error("Failed to fetch results");
 
       const data = await response.json();
-      // Extract the ranking object from the response
       setJobResults((prev) => ({ ...prev, [jobId]: data.ranking }));
 
-      // Also fetch approved ranking tasks for this ranking
       fetchRankingTasks(jobId);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
@@ -603,7 +739,7 @@ export function PracticeRanking() {
         `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -624,8 +760,6 @@ export function PracticeRanking() {
       return;
     }
 
-    // No validation needed for specialty/marketLocation - they are auto-detected
-
     setTriggering(true);
     try {
       const token = localStorage.getItem("admin_token");
@@ -641,7 +775,6 @@ export function PracticeRanking() {
             gbpAccountId: form.gbpAccountId,
             gbpLocationId: form.gbpLocationId,
             gbpLocationName: form.gbpLocationName,
-            // specialty and marketLocation are auto-detected by Identifier Agent
           })),
         }),
       });
@@ -649,24 +782,20 @@ export function PracticeRanking() {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(
-          error.message || error.error || "Failed to trigger analysis",
+          error.message || error.error || "Failed to trigger analysis"
         );
       }
 
       const data = await response.json();
       toast.success(
-        `Batch analysis started for ${data.totalLocations} location(s)!`,
+        `Batch analysis started for ${data.totalLocations} location(s)!`
       );
 
-      // Start polling for batch status
       if (data.batchId) {
         setPollingBatches((prev) => new Set([...prev, data.batchId]));
       }
 
-      // Refresh jobs list
       fetchJobs();
-
-      // Reset form
       setSelectedAccount(null);
       setLocationForms([]);
     } catch (error: unknown) {
@@ -689,11 +818,11 @@ export function PracticeRanking() {
   };
 
   const deleteJob = async (jobId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row expansion
+    e.stopPropagation();
 
     if (
       !confirm(
-        "Are you sure you want to delete this analysis? This action cannot be undone.",
+        "Are you sure you want to delete this analysis? This action cannot be undone."
       )
     ) {
       return;
@@ -714,10 +843,8 @@ export function PracticeRanking() {
 
       toast.success("Analysis deleted successfully");
 
-      // Remove from local state
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
 
-      // Clean up related state
       if (expandedJobId === jobId) {
         setExpandedJobId(null);
       }
@@ -741,7 +868,7 @@ export function PracticeRanking() {
   };
 
   const deleteBatch = async (batchId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent batch expansion
+    e.stopPropagation();
 
     const batch = groupedBatches.find((b) => b.batchId === batchId);
     const locationCount = batch?.totalLocations || 0;
@@ -750,7 +877,7 @@ export function PracticeRanking() {
       !confirm(
         `Are you sure you want to delete this entire batch? This will delete ${locationCount} analysis record${
           locationCount !== 1 ? "s" : ""
-        }. This action cannot be undone.`,
+        }. This action cannot be undone.`
       )
     ) {
       return;
@@ -764,7 +891,7 @@ export function PracticeRanking() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -775,10 +902,8 @@ export function PracticeRanking() {
       const data = await response.json();
       toast.success(`Batch deleted (${data.deletedCount} analyses removed)`);
 
-      // Remove all jobs in this batch from local state
       setJobs((prev) => prev.filter((j) => j.batch_id !== batchId));
 
-      // Clean up related state
       setExpandedBatches((prev) => {
         const next = new Set(prev);
         next.delete(batchId);
@@ -809,7 +934,7 @@ export function PracticeRanking() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ specialty, location }),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -830,36 +955,36 @@ export function PracticeRanking() {
     switch (status) {
       case "completed":
         return (
-          <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-            <CheckCircle className="h-3 w-3" />
+          <Badge variant="success">
+            <CheckCircle className="h-3 w-3 mr-1" />
             Completed
-          </span>
+          </Badge>
         );
       case "failed":
         return (
-          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-            <XCircle className="h-3 w-3" />
+          <Badge variant="danger">
+            <XCircle className="h-3 w-3 mr-1" />
             Failed
-          </span>
+          </Badge>
         );
       case "processing":
         return (
-          <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-            <RefreshCw className="h-3 w-3 animate-spin" />
+          <Badge variant="info">
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
             Processing
-          </span>
+          </Badge>
         );
       default:
         return (
-          <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-            <Clock className="h-3 w-3" />
+          <Badge variant="default">
+            <Clock className="h-3 w-3 mr-1" />
             Pending
-          </span>
+          </Badge>
         );
     }
   };
 
-  const getScoreColor = (score: number) => {
+  const getScoreColorLocal = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
     return "text-red-600";
@@ -867,144 +992,285 @@ export function PracticeRanking() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={<BarChart3 className="w-6 h-6" />}
+          title="Practice Ranking"
+          description="Analyze competitive positioning and track performance"
+        />
+        <div className="flex items-center justify-center h-64">
+          <motion.div
+            className="flex items-center gap-3 text-gray-500"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Loading practice rankings...
+          </motion.div>
+        </div>
       </div>
     );
   }
 
+  // Calculate summary stats
+  const completedJobs = jobs.filter((j) => j.status === "completed");
+  const processingJobs = jobs.filter(
+    (j) => j.status === "processing" || j.status === "pending"
+  );
+  const failedJobs = jobs.filter((j) => j.status === "failed");
+  const avgScore =
+    completedJobs.length > 0
+      ? completedJobs.reduce((sum, j) => sum + (j.rank_score ?? 0), 0) /
+        completedJobs.length
+      : 0;
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700">
-          Total Analyses: {jobs.length}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<BarChart3 className="w-6 h-6" />}
+        title="Practice Ranking"
+        description="Analyze competitive positioning and track performance"
+        actionButtons={
+          <ActionButton
+            label="Refresh"
+            icon={<RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />}
+            onClick={fetchJobs}
+            variant="secondary"
+            disabled={loading}
+          />
+        }
+      />
+
+      {/* Summary Stats Bar */}
+      <motion.div
+        className="grid grid-cols-4 gap-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{jobs.length}</p>
+            <p className="text-xs text-gray-500">Total Analyses</p>
+          </div>
         </div>
-      </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-600">{completedJobs.length}</p>
+            <p className="text-xs text-gray-500">Completed</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
+            <Loader2 className="w-5 h-5 text-yellow-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-yellow-600">{processingJobs.length}</p>
+            <p className="text-xs text-gray-500">Processing</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+            <Target className="w-5 h-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-600">
+              {avgScore > 0 ? avgScore.toFixed(1) : "—"}
+            </p>
+            <p className="text-xs text-gray-500">Avg Score</p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Trigger New Analysis Card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
-          <Zap className="h-5 w-5 text-blue-600" />
-          Run New Analysis
+      <motion.div
+        className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+      >
+        <h3 className="mb-4 flex items-center gap-3 text-base font-semibold text-gray-900">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30">
+            <Zap className="h-5 w-5" />
+          </div>
+          <div>
+            <span>Run New Analysis</span>
+            <p className="text-sm font-normal text-gray-500 mt-0.5">
+              Select a practice to analyze their competitive ranking
+            </p>
+          </div>
         </h3>
 
-        {/* Account Selector */}
-        <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Google Account *
-          </label>
-          <select
-            value={selectedAccount || ""}
-            onChange={(e) =>
-              setSelectedAccount(e.target.value ? Number(e.target.value) : null)
+        {/* Account Selector - Animated Dropdown */}
+        <div className="mb-4 max-w-lg">
+          <FilterDropdown
+            value={selectedAccount?.toString() || ""}
+            onChange={(value) =>
+              setSelectedAccount(value ? Number(value) : null)
             }
-            className="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">Select account...</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.practiceName} ({account.domain}) - {account.gbpCount}{" "}
-                location(s)
-              </option>
-            ))}
-          </select>
+            label="Google Account"
+            icon={<Building className="w-4 h-4" />}
+            placeholder="Select an account to analyze..."
+            options={[
+              { value: "", label: "Select account...", subtitle: "" },
+              ...accounts.map((account) => ({
+                value: account.id.toString(),
+                label: account.practiceName,
+                subtitle: `${account.domain} • ${account.gbpCount} location(s)`,
+              })),
+            ]}
+          />
           {selectedAccountData && (
-            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+            <div className="mt-3 flex items-center gap-2">
               {selectedAccountData.hasGbp && (
-                <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">
-                  GBP: {selectedAccountData.gbpCount}
-                </span>
+                <Badge variant="success">
+                  <MapPin className="w-3 h-3 mr-1" />
+                  {selectedAccountData.gbpCount} GBP Location{selectedAccountData.gbpCount !== 1 ? "s" : ""}
+                </Badge>
               )}
               {selectedAccountData.hasGsc && (
-                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700">
-                  GSC
-                </span>
+                <Badge variant="info">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  GSC Connected
+                </Badge>
               )}
             </div>
           )}
         </div>
 
-        {/* Location Forms - One per GBP Location */}
-        {locationForms.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Layers className="h-4 w-4 text-blue-600" />
-              Configure {locationForms.length} Location
-              {locationForms.length > 1 ? "s" : ""}
-            </div>
+        {/* Location Forms */}
+        <AnimatePresence>
+          {locationForms.length > 0 && (
+            <motion.div
+              className="space-y-4"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Layers className="h-4 w-4 text-blue-600" />
+                Configure {locationForms.length} Location
+                {locationForms.length > 1 ? "s" : ""}
+              </div>
 
-            {locationForms.map((form) => (
-              <LocationFormRow key={form.gbpLocationId} form={form} />
-            ))}
-
-            {/* Trigger Button */}
-            <div className="pt-2">
-              <button
-                onClick={triggerAnalysis}
-                disabled={triggering}
-                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              <motion.div
+                className="space-y-3"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
               >
-                {triggering ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Starting Batch...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    Run Analysis ({locationForms.length} location
-                    {locationForms.length > 1 ? "s" : ""})
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
+                {locationForms.map((form) => (
+                  <motion.div
+                    key={form.gbpLocationId}
+                    variants={cardVariants}
+                  >
+                    <LocationFormRow form={form} />
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              {/* Trigger Button */}
+              <div className="pt-2">
+                <ActionButton
+                  label={
+                    triggering
+                      ? "Starting Batch..."
+                      : `Run Analysis (${locationForms.length} location${locationForms.length > 1 ? "s" : ""})`
+                  }
+                  icon={
+                    triggering ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )
+                  }
+                  onClick={triggerAnalysis}
+                  variant="primary"
+                  disabled={triggering}
+                  loading={triggering}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {selectedAccount && locationForms.length === 0 && (
-          <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
-            <AlertCircle className="inline h-4 w-4 mr-2" />
-            This account has no GBP locations configured. Please set up GBP
-            locations first.
-          </div>
+          <motion.div
+            className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 flex items-start gap-3"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <span>
+              This account has no GBP locations configured. Please set up GBP
+              locations first.
+            </span>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {/* Jobs List - Grouped by Batch */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h3 className="text-base font-semibold text-gray-900">
-            Analysis History
-          </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            {groupedBatches.length} batch
-            {groupedBatches.length !== 1 ? "es" : ""} • {jobs.length} total
-            analyses
-          </p>
+      <motion.div
+        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+      >
+        <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-alloro-orange" />
+              Analysis History
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">
+              {groupedBatches.length} batch
+              {groupedBatches.length !== 1 ? "es" : ""} • {jobs.length} total
+              analyses
+            </p>
+          </div>
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span>Completed</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>Processing</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Failed</span>
+            </div>
+          </div>
         </div>
 
         {jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <TrendingUp className="h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-sm font-medium text-gray-900">
-              No analyses yet
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Run your first practice ranking analysis above
-            </p>
-          </div>
+          <EmptyState
+            icon={<TrendingUp className="w-12 h-12" />}
+            title="No analyses yet"
+            description="Run your first practice ranking analysis above"
+          />
         ) : (
-          <div className="divide-y divide-gray-200">
-            {/* Batches - sorted by date (newest first) */}
+          <div className="divide-y divide-gray-100">
+            {/* Batches */}
             {groupedBatches.map((batch) => (
               <div key={batch.batchId} className="bg-white">
                 {/* Batch Header */}
-                <div
+                <motion.div
                   className="flex cursor-pointer items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleBatch(batch.batchId)}
+                  whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
                     <Layers className="h-5 w-5" />
                   </div>
 
@@ -1037,60 +1303,70 @@ export function PracticeRanking() {
 
                   <div className="flex items-center gap-3">
                     {getStatusBadge(batch.status)}
-                    <button
+                    <motion.button
                       onClick={(e) => deleteBatch(batch.batchId, e)}
                       disabled={deletingBatch === batch.batchId}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                      className="p-1.5 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 rounded-lg hover:bg-red-50"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                       title="Delete entire batch"
                     >
                       {deletingBatch === batch.batchId ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                    </button>
-                    <button className="text-gray-400">
-                      {expandedBatches.has(batch.batchId) ? (
-                        <ChevronDown className="h-5 w-5" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5" />
-                      )}
-                    </button>
+                    </motion.button>
+                    <motion.div
+                      variants={chevronVariants}
+                      animate={expandedBatches.has(batch.batchId) ? "open" : "closed"}
+                      className="text-gray-400"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.div>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Expanded Batch - Individual Locations */}
-                {expandedBatches.has(batch.batchId) && (
-                  <div className="bg-gray-50/50 border-t border-gray-100">
-                    {batch.jobs.map((job) => (
-                      <JobRow
-                        key={job.id}
-                        job={job}
-                        isExpanded={expandedJobId === job.id}
-                        onToggle={() => toggleExpand(job.id)}
-                        onDelete={(e) => deleteJob(job.id, e)}
-                        deletingJob={deletingJob}
-                        loadingResults={loadingResults}
-                        jobResults={jobResults}
-                        rankingTasks={rankingTasks}
-                        refreshingCompetitors={refreshingCompetitors}
-                        onRefreshCompetitors={() =>
-                          refreshCompetitors(job.specialty, job.location || "")
-                        }
-                        getStatusBadge={getStatusBadge}
-                        getScoreColor={getScoreColor}
-                        indentLevel={1}
-                      />
-                    ))}
-                  </div>
-                )}
+                <AnimatePresence>
+                  {expandedBatches.has(batch.batchId) && (
+                    <motion.div
+                      className="bg-gray-50/50 border-t border-gray-100"
+                      variants={expandCollapse}
+                      initial="collapsed"
+                      animate="expanded"
+                      exit="collapsed"
+                    >
+                      {batch.jobs.map((job) => (
+                        <JobRow
+                          key={job.id}
+                          job={job}
+                          isExpanded={expandedJobId === job.id}
+                          onToggle={() => toggleExpand(job.id)}
+                          onDelete={(e) => deleteJob(job.id, e)}
+                          deletingJob={deletingJob}
+                          loadingResults={loadingResults}
+                          jobResults={jobResults}
+                          rankingTasks={rankingTasks}
+                          refreshingCompetitors={refreshingCompetitors}
+                          onRefreshCompetitors={() =>
+                            refreshCompetitors(job.specialty, job.location || "")
+                          }
+                          getStatusBadge={getStatusBadge}
+                          getScoreColor={getScoreColorLocal}
+                          indentLevel={1}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ))}
 
             {/* Standalone Jobs (no batch) */}
             {standaloneJobs.length > 0 && (
               <div className="bg-white">
-                <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
                   <span className="text-sm font-medium text-gray-600">
                     Individual Analyses (No Batch)
                   </span>
@@ -1111,7 +1387,7 @@ export function PracticeRanking() {
                       refreshCompetitors(job.specialty, job.location || "")
                     }
                     getStatusBadge={getStatusBadge}
-                    getScoreColor={getScoreColor}
+                    getScoreColor={getScoreColorLocal}
                     indentLevel={0}
                   />
                 ))}
@@ -1119,7 +1395,7 @@ export function PracticeRanking() {
             )}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -1158,11 +1434,12 @@ function JobRow({
     indentLevel === 2 ? "pl-20" : indentLevel === 1 ? "pl-12" : "pl-6";
 
   return (
-    <div className="transition-colors hover:bg-gray-50">
+    <div className="transition-colors hover:bg-gray-50/80">
       {/* Job Header */}
-      <div
-        className={`flex cursor-pointer items-center gap-4 p-3 ${paddingLeft}`}
+      <motion.div
+        className={`flex cursor-pointer items-center gap-4 p-3 pr-6 ${paddingLeft}`}
         onClick={onToggle}
+        whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
           <MapPin className="h-4 w-4" />
@@ -1173,9 +1450,7 @@ function JobRow({
             <h4 className="font-medium text-gray-900 text-sm">
               {job.gbp_location_name || job.domain}
             </h4>
-            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
-              {job.specialty}
-            </span>
+            <Badge variant="default">{job.specialty}</Badge>
             {job.location && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <MapPin className="h-3 w-3" />
@@ -1183,22 +1458,15 @@ function JobRow({
               </span>
             )}
           </div>
-          {/* Progress bar and status for pending/processing jobs */}
+          {/* Progress bar for pending/processing jobs */}
           {(job.status === "processing" || job.status === "pending") && (
-            <div className="mt-1 flex items-center gap-3">
-              <div className="h-1 w-32 overflow-hidden rounded-full bg-gray-200">
-                <div
-                  className="h-full bg-blue-600 transition-all duration-500 ease-out"
-                  style={{
-                    width: `${job.status_detail?.progress ?? 0}%`,
-                  }}
-                />
-              </div>
-              <span className="text-xs text-blue-600 font-medium">
-                {job.status_detail?.progress ?? 0}%
-              </span>
+            <div className="mt-2">
+              <HorizontalProgressBar
+                value={job.status_detail?.progress ?? 0}
+                height={4}
+              />
               {job.status_detail?.message && (
-                <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                <span className="text-xs text-gray-500 mt-1 block truncate">
                   {job.status_detail.message}
                 </span>
               )}
@@ -1211,7 +1479,7 @@ function JobRow({
             <div className="text-right">
               <div
                 className={`text-xl font-bold ${getScoreColor(
-                  Number(job.rank_score),
+                  Number(job.rank_score)
                 )}`}
               >
                 {Number(job.rank_score).toFixed(1)}
@@ -1222,92 +1490,107 @@ function JobRow({
             </div>
           )}
           {getStatusBadge(job.status)}
-          <button
+          <motion.button
             onClick={onDelete}
             disabled={deletingJob === job.id}
-            className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            className="p-1.5 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 rounded-lg hover:bg-red-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             title="Delete analysis"
           >
             {deletingJob === job.id ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Trash2 className="h-4 w-4" />
             )}
-          </button>
-          <button className="text-gray-400">
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
+          </motion.button>
+          <motion.div
+            variants={chevronVariants}
+            animate={isExpanded ? "open" : "closed"}
+            className="text-gray-400"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Expanded Results */}
-      {isExpanded && (
-        <div
-          className={`border-t border-gray-100 bg-gray-50/50 p-6 ${paddingLeft}`}
-        >
-          {job.status === "completed" ? (
-            loadingResults === job.id ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-              </div>
-            ) : jobResults[job.id] ? (
-              <RankingResultsView
-                result={jobResults[job.id]}
-                onRefreshCompetitors={onRefreshCompetitors}
-                refreshingCompetitors={refreshingCompetitors}
-                rankingTasks={rankingTasks}
-              />
-            ) : (
-              <div className="text-center text-gray-500">
-                Failed to load results
-              </div>
-            )
-          ) : job.status === "failed" ? (
-            <div className="flex items-center gap-3 rounded-lg bg-red-50 p-4 text-red-700">
-              <AlertCircle className="h-5 w-5" />
-              <span>Analysis failed. Please try again.</span>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                <span className="text-gray-600">
-                  {job.status_detail?.message || "Processing..."}
-                </span>
-              </div>
-              {job.status_detail && (
-                <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full bg-blue-600 transition-all duration-500"
-                    style={{
-                      width: `${job.status_detail.progress}%`,
-                    }}
-                  />
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            className={`border-t border-gray-100 bg-gray-50/50 p-6 ${paddingLeft}`}
+            variants={expandCollapse}
+            initial="collapsed"
+            animate="expanded"
+            exit="collapsed"
+          >
+            {job.status === "completed" ? (
+              loadingResults === job.id ? (
+                <div className="flex items-center justify-center py-8">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Loader2 className="h-6 w-6 text-blue-600" />
+                  </motion.div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+              ) : jobResults[job.id] ? (
+                <RankingResultsView
+                  result={jobResults[job.id]}
+                  onRefreshCompetitors={onRefreshCompetitors}
+                  refreshingCompetitors={refreshingCompetitors}
+                  rankingTasks={rankingTasks}
+                />
+              ) : (
+                <div className="text-center text-gray-500">
+                  Failed to load results
+                </div>
+              )
+            ) : job.status === "failed" ? (
+              <motion.div
+                className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4 text-red-700"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <AlertCircle className="h-5 w-5" />
+                <span>Analysis failed. Please try again.</span>
+              </motion.div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Loader2 className="h-5 w-5 text-blue-600" />
+                  </motion.div>
+                  <span className="text-gray-600">
+                    {job.status_detail?.message || "Processing..."}
+                  </span>
+                </div>
+                {job.status_detail && (
+                  <HorizontalProgressBar value={job.status_detail.progress} />
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// Location Form Row Component (simplified - specialty/location auto-detected)
+// Location Form Row Component
 function LocationFormRow({ form }: { form: LocationFormData }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
       <div className="flex items-center gap-4">
         {/* Location Name (read-only) */}
         <div className="flex-1">
           <label className="mb-1.5 block text-xs font-medium text-gray-500">
             GBP Location
           </label>
-          <div className="flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900">
+          <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-3 py-2.5 text-sm text-gray-900">
             <MapPin className="h-4 w-4 text-gray-400" />
             <span className="truncate">{form.gbpLocationName}</span>
           </div>
@@ -1318,7 +1601,7 @@ function LocationFormRow({ form }: { form: LocationFormData }) {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">
             Specialty & Location
           </label>
-          <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
+          <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-blue-700">
             <Sparkles className="h-4 w-4 text-blue-500" />
             <span>Auto-detected by AI</span>
           </div>
@@ -1352,17 +1635,25 @@ function RankingResultsView({
       primaryCategory?: string;
     }>) || [];
 
-  const getScoreColor = (score: number) => {
+  const getScoreColorLocal = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
     return "text-red-600";
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Location Info Header */}
       {result.gbpLocationName && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <motion.div
+          className="flex items-center gap-2 text-sm text-gray-600"
+          variants={cardVariants}
+        >
           <MapPin className="h-4 w-4" />
           <span className="font-medium">{result.gbpLocationName}</span>
           {result.location && (
@@ -1374,36 +1665,37 @@ function RankingResultsView({
           {result.specialty && (
             <>
               <span className="text-gray-400">•</span>
-              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize">
-                {result.specialty}
-              </span>
+              <Badge variant="default">{result.specialty}</Badge>
             </>
           )}
-        </div>
+        </motion.div>
       )}
 
       {/* Keywords Used for Ranking */}
       {result.rankKeywords && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <motion.div
+          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+          variants={cardVariants}
+        >
           <h4 className="mb-2 text-sm font-semibold text-gray-700">
             Keywords Used for Ranking
           </h4>
           <div className="flex flex-wrap gap-2">
             {result.rankKeywords.split(",").map((kw: string) => (
-              <span
-                key={kw.trim()}
-                className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700"
-              >
+              <Badge key={kw.trim()} variant="info">
                 {kw.trim()}
-              </span>
+              </Badge>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Apify Search Parameters (for debugging) */}
       {result.searchParams && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <motion.div
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+          variants={cardVariants}
+        >
           <h4 className="mb-2 text-sm font-semibold text-amber-700 flex items-center gap-2">
             <Info className="h-4 w-4" />
             Apify Search Parameters (Debug)
@@ -1434,39 +1726,52 @@ function RankingResultsView({
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Score Overview */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm font-medium text-gray-500">Rank Score</div>
-          <div
-            className={`mt-1 text-3xl font-bold ${getScoreColor(
-              Number(result.rankScore),
-            )}`}
-          >
+      <motion.div className="grid gap-4 md:grid-cols-4" variants={cardVariants}>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-500">Rank Score</span>
+            <Trophy className={`w-5 h-5 ${getScoreColorLocal(Number(result.rankScore))}`} />
+          </div>
+          <div className={`text-3xl font-bold ${getScoreColorLocal(Number(result.rankScore))}`}>
             {Number(result.rankScore).toFixed(1)}
+            <span className="text-sm font-normal text-gray-400">/100</span>
+          </div>
+          <div className="mt-2">
+            <HorizontalProgressBar value={Number(result.rankScore)} height={6} />
           </div>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm font-medium text-gray-500">Position</div>
-          <div className="mt-1 text-3xl font-bold text-gray-900">
-            #{result.rankPosition}{" "}
-            <span className="text-sm text-gray-500">
-              of {result.totalCompetitors}
-            </span>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-500">Position</span>
+            <Users className="w-5 h-5 text-blue-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">
+            #{result.rankPosition}
+          </div>
+          <p className="text-sm text-gray-500 mt-1">
+            of {result.totalCompetitors} competitors
+          </p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm font-medium text-gray-500">Reviews</div>
-          <div className="mt-1 text-3xl font-bold text-gray-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-500">Reviews</span>
+            <Star className="w-5 h-5 text-yellow-500" />
+          </div>
+          <div className="text-3xl font-bold text-gray-900">
             {result.rawData?.client_gbp?.totalReviewCount || 0}
           </div>
+          <p className="text-sm text-gray-500 mt-1">total reviews</p>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="text-sm font-medium text-gray-500">Rating</div>
-          <div className="mt-1 flex items-center gap-1">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-500">Rating</span>
+            <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+          </div>
+          <div className="flex items-center gap-1">
             <span className="text-3xl font-bold text-gray-900">
               {(
                 factors?.star_rating?.value ??
@@ -1474,26 +1779,33 @@ function RankingResultsView({
                 0
               ).toFixed(1)}
             </span>
-            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
+            <span className="text-sm text-gray-400">/5.0</span>
           </div>
+          <p className="text-sm text-gray-500 mt-1">average rating</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* LLM Analysis Summary */}
       {result.llmAnalysis?.client_summary && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <motion.div
+          className="rounded-xl border border-blue-200 bg-blue-50 p-4"
+          variants={cardVariants}
+        >
           <h4 className="mb-2 font-semibold text-blue-900">Analysis Summary</h4>
           <p className="text-sm text-blue-800 whitespace-pre-wrap">
             {result.llmAnalysis.client_summary}
           </p>
-        </div>
+        </motion.div>
       )}
 
-      {/* Action Plans Card - Shows approved tasks from the tasks table */}
+      {/* Action Plans Card */}
       {rankingTasks &&
         rankingTasks[result.id] &&
         rankingTasks[result.id].length > 0 && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <motion.div
+            className="rounded-xl border border-green-200 bg-green-50 p-4"
+            variants={cardVariants}
+          >
             <h4 className="mb-3 font-semibold text-green-900 flex items-center gap-2">
               <Zap className="h-5 w-5" />
               Action Plans ({rankingTasks[result.id].length})
@@ -1502,7 +1814,7 @@ function RankingResultsView({
               {rankingTasks[result.id].map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-start justify-between gap-4 rounded-lg border border-green-100 bg-white p-3"
+                  className="flex items-start justify-between gap-4 rounded-xl border border-green-100 bg-white p-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1510,29 +1822,22 @@ function RankingResultsView({
                         {task.title}
                       </h5>
                       {task.metadata?.priority && (
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        <Badge
+                          variant={
                             task.metadata.priority === "1" ||
                             task.metadata.priority === "high"
-                              ? "bg-red-100 text-red-700"
+                              ? "danger"
                               : task.metadata.priority === "2" ||
                                   task.metadata.priority === "medium"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-gray-100 text-gray-700"
-                          }`}
+                                ? "warning"
+                                : "default"
+                          }
                         >
                           Priority {task.metadata.priority}
-                        </span>
+                        </Badge>
                       )}
                       {task.metadata?.impact && (
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                          {task.metadata.impact} impact
-                        </span>
-                      )}
-                      {task.metadata?.effort && (
-                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
-                          {task.metadata.effort} effort
-                        </span>
+                        <Badge variant="info">{task.metadata.impact} impact</Badge>
                       )}
                     </div>
                     {task.description && (
@@ -1540,15 +1845,10 @@ function RankingResultsView({
                         {task.description}
                       </p>
                     )}
-                    {task.metadata?.timeline && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Timeline: {task.metadata.timeline}
-                      </p>
-                    )}
                   </div>
                   <a
                     href={`/admin/action-items?taskId=${task.id}`}
-                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                    className="shrink-0 flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
                   >
                     <Play className="h-3.5 w-3.5" />
                     Start Task
@@ -1556,11 +1856,14 @@ function RankingResultsView({
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
       {/* Ranking Factors Breakdown */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <motion.div
+        className="rounded-xl border border-gray-200 bg-white p-4"
+        variants={cardVariants}
+      >
         <h4 className="mb-4 font-semibold text-gray-900">
           Ranking Factors Breakdown
         </h4>
@@ -1577,19 +1880,16 @@ function RankingResultsView({
                           {key.replace(/_/g, " ")}
                         </div>
                         <div className="text-gray-300">{value.details}</div>
-                        <div className="absolute top-full left-3 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900"></div>
                       </div>
                     </div>
                   )}
                   {key.replace(/_/g, " ")}
                 </div>
                 <div className="flex-1">
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="h-full bg-blue-600"
-                      style={{ width: `${(value?.score ?? 0) * 100}%` }}
-                    />
-                  </div>
+                  <HorizontalProgressBar
+                    value={(value?.score ?? 0) * 100}
+                    height={8}
+                  />
                 </div>
                 <div className="w-16 text-right text-sm font-medium text-gray-900">
                   {((value?.score ?? 0) * 100).toFixed(0)}%
@@ -1600,33 +1900,32 @@ function RankingResultsView({
               </div>
             ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Top Competitors */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <motion.div
+        className="rounded-xl border border-gray-200 bg-white p-4"
+        variants={cardVariants}
+      >
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-gray-900 flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-600" />
             Top Competitors
           </h4>
           {onRefreshCompetitors && (
-            <button
+            <ActionButton
+              label={refreshingCompetitors ? "Refreshing..." : "Refresh"}
+              icon={
+                refreshingCompetitors ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )
+              }
               onClick={onRefreshCompetitors}
+              variant="secondary"
               disabled={refreshingCompetitors}
-              className="flex items-center gap-2 text-xs font-medium text-blue-600 hover:text-blue-700"
-            >
-              {refreshingCompetitors ? (
-                <>
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3 w-3" />
-                  Refresh
-                </>
-              )}
-            </button>
+            />
           )}
         </div>
         <div className="overflow-x-auto">
@@ -1655,7 +1954,6 @@ function RankingResultsView({
             </thead>
             <tbody>
               {(() => {
-                // Create a unified list with client included
                 const clientEntry = {
                   name: result.gbpLocationName || result.domain,
                   rankScore: Number(result.rankScore),
@@ -1672,19 +1970,20 @@ function RankingResultsView({
                   isClient: true,
                 };
 
-                // Merge client with competitors and sort by rank position
                 const allEntries = [
                   clientEntry,
                   ...competitors.map((c) => ({ ...c, isClient: false })),
                 ].sort((a, b) => a.rankPosition - b.rankPosition);
 
-                // Show top 10 entries
                 return allEntries.slice(0, 10).map((comp, idx) => (
-                  <tr
+                  <motion.tr
                     key={idx}
                     className={`border-b border-gray-100 ${
                       comp.isClient ? "bg-blue-50" : ""
                     }`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
                   >
                     <td className="py-2 px-2">
                       <span className="flex items-center gap-1">
@@ -1703,8 +2002,8 @@ function RankingResultsView({
                       )}
                     </td>
                     <td
-                      className={`py-2 px-2 text-center font-medium ${getScoreColor(
-                        comp.rankScore,
+                      className={`py-2 px-2 text-center font-medium ${getScoreColorLocal(
+                        comp.rankScore
                       )}`}
                     >
                       {comp.rankScore?.toFixed(1) || "-"}
@@ -1718,20 +2017,23 @@ function RankingResultsView({
                     <td className="py-2 px-2 text-gray-600 truncate max-w-[150px]">
                       {comp.primaryCategory || "-"}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ));
               })()}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       {/* LLM Analysis Details */}
       {result.llmAnalysis && (
         <div className="grid gap-4 md:grid-cols-2">
           {/* Gaps */}
           {result.llmAnalysis.gaps && result.llmAnalysis.gaps.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <motion.div
+              className="rounded-xl border border-gray-200 bg-white p-4"
+              variants={cardVariants}
+            >
               <h4 className="mb-3 font-semibold text-gray-900">
                 Identified Gaps
               </h4>
@@ -1739,19 +2041,19 @@ function RankingResultsView({
                 {result.llmAnalysis.gaps.map((gap, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3"
+                    className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3"
                   >
-                    <div
-                      className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
+                    <Badge
+                      variant={
                         gap.impact === "high"
-                          ? "bg-red-100 text-red-700"
+                          ? "danger"
                           : gap.impact === "medium"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-gray-100 text-gray-700"
-                      }`}
+                            ? "warning"
+                            : "default"
+                      }
                     >
                       {gap.impact}
-                    </div>
+                    </Badge>
                     <div>
                       <p className="text-sm font-medium text-gray-900">
                         {gap.type}: {gap.area || gap.query_class}
@@ -1763,13 +2065,16 @@ function RankingResultsView({
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Drivers */}
           {result.llmAnalysis.drivers &&
             result.llmAnalysis.drivers.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <motion.div
+                className="rounded-xl border border-gray-200 bg-white p-4"
+                variants={cardVariants}
+              >
                 <h4 className="mb-3 font-semibold text-gray-900">
                   Key Drivers
                 </h4>
@@ -1795,14 +2100,17 @@ function RankingResultsView({
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
         </div>
       )}
 
       {/* Data Source Info */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <motion.div
+          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+          variants={cardVariants}
+        >
           <h4 className="text-sm font-semibold text-gray-900 mb-2">
             Data Collection
           </h4>
@@ -1822,8 +2130,11 @@ function RankingResultsView({
               </span>
             </div>
           </div>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        </motion.div>
+        <motion.div
+          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+          variants={cardVariants}
+        >
           <h4 className="text-sm font-semibold text-gray-900 mb-2">
             GBP Profile
           </h4>
@@ -1841,9 +2152,9 @@ function RankingResultsView({
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

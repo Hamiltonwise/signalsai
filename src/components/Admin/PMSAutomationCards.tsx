@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye,
   Loader2,
   RefreshCw,
   Trash2,
   ChevronDown,
-  ChevronUp,
+  Cpu,
+  Globe,
+  Filter,
+  Check,
+  Clock,
+  CheckCircle,
+  Calendar,
+  AlertCircle,
 } from "lucide-react";
 import {
   fetchPmsJobs,
@@ -17,6 +25,13 @@ import {
 } from "../../api/pms";
 import { PMSAutomationProgressDropdown } from "./PMSAutomationProgressDropdown";
 import { PMSDataViewer } from "../PMS/PMSDataViewer";
+import {
+  AdminPageHeader,
+  FilterBar,
+  EmptyState,
+  ActionButton,
+  Badge,
+} from "../ui/DesignSystem";
 
 type StatusFilter =
   | "all"
@@ -75,6 +90,171 @@ const APPROVAL_TEXT: Record<"locked" | "pending", string> = {
 };
 
 const POLL_INTERVAL_MS = 2000;
+
+// Filter Dropdown Component
+interface FilterDropdownOption {
+  value: string;
+  label: string;
+}
+
+interface FilterDropdownProps {
+  value: string;
+  options: FilterDropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  label?: string;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = "Select...",
+  icon,
+  label,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((opt) => opt.value === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {label && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 flex items-center gap-1">
+          {icon}
+          {label}
+        </span>
+      )}
+      <div ref={dropdownRef} className="relative">
+        <motion.button
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-all hover:border-gray-300 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] justify-between"
+          whileHover={{ scale: disabled ? 1 : 1.01 }}
+          whileTap={{ scale: disabled ? 1 : 0.99 }}
+        >
+          <span className="truncate">{currentOption?.label || placeholder}</span>
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </motion.div>
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 mt-1 z-50 min-w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg max-h-60 overflow-y-auto"
+            >
+              {options.map((option) => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    option.value === value
+                      ? "bg-alloro-orange/10 text-alloro-orange"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  whileHover={{ backgroundColor: option.value === value ? undefined : "rgba(0,0,0,0.03)" }}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.value === value && (
+                      <Check className="h-3.5 w-3.5 text-alloro-orange" />
+                    )}
+                    <span className={option.value === value ? "ml-0" : "ml-5"}>
+                      {option.label}
+                    </span>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
+// Approval Switch Component
+interface ApprovalSwitchProps {
+  isApproved: boolean;
+  isLoading: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}
+
+const ApprovalSwitch: React.FC<ApprovalSwitchProps> = ({
+  isApproved,
+  isLoading,
+  disabled,
+  onToggle,
+}) => {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      disabled={disabled || isLoading || isApproved}
+      className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span
+        className={`text-xs font-medium w-20 text-right ${
+          isApproved ? "text-green-600" : "text-gray-500"
+        }`}
+      >
+        {isLoading ? "Approving..." : isApproved ? "Approved" : "Needs Review"}
+      </span>
+      <motion.div
+        className={`relative w-10 h-5 rounded-full transition-colors ${
+          isApproved ? "bg-green-500" : "bg-gray-300"
+        } ${isApproved ? "cursor-default" : "cursor-pointer"}`}
+        whileTap={{ scale: isApproved ? 1 : 0.95 }}
+      >
+        <motion.div
+          className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm flex items-center justify-center"
+          initial={false}
+          animate={{ x: isApproved ? 22 : 2 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
+          {isLoading && (
+            <Loader2 className="w-2.5 h-2.5 text-gray-400 animate-spin" />
+          )}
+        </motion.div>
+      </motion.div>
+    </button>
+  );
+};
 
 const formatTimeElapsed = (value: number | null): string => {
   if (!value && value !== 0) {
@@ -541,288 +721,357 @@ export function PMSAutomationCards() {
   }, [activeModalJobId, jobs]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Status
-            <select
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              value={statusFilter}
-              onChange={(event) =>
-                handleStatusFilterChange(event.target.value as StatusFilter)
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<Cpu className="w-6 h-6" />}
+        title="AI PMS Automation"
+        description="Monitor and manage PMS data processing jobs"
+        actionButtons={
+          <div className="flex items-center gap-2">
+            <Badge label={`${pagination.total} jobs`} color="blue" />
+            <ActionButton
+              label={isLoading ? "Loading" : "Refresh"}
+              icon={
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
               }
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {STATUS_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Domain
-            <select
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              value={domainFilter}
-              onChange={(event) => handleDomainFilterChange(event.target.value)}
-            >
-              <option value="all">All Domains</option>
-              {availableDomains.map((domain) => (
-                <option key={domain} value={domain}>
-                  {domain}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Approval
-            <select
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              value={approvalFilter}
-              onChange={(event) =>
-                handleApprovalFilterChange(event.target.value as ApprovalFilter)
-              }
-            >
-              {APPROVAL_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option === "all"
-                    ? "All"
-                    : option === "approved"
-                    ? "Approved"
-                    : "Needs Review"}
-                </option>
-              ))}
-            </select>
-          </label>
+              onClick={() => loadJobs()}
+              variant="secondary"
+              disabled={isLoading}
+              loading={isLoading}
+            />
+          </div>
+        }
+      />
+
+      {/* Filters */}
+      <FilterBar>
+        <div className="flex flex-wrap items-end gap-3">
+          <FilterDropdown
+            value={statusFilter}
+            onChange={(value) => handleStatusFilterChange(value as StatusFilter)}
+            label="Status"
+            icon={<Filter className="w-3 h-3" />}
+            placeholder="All Jobs"
+            options={STATUS_OPTIONS.map((option) => ({
+              value: option,
+              label: STATUS_LABELS[option],
+            }))}
+          />
+          <FilterDropdown
+            value={domainFilter}
+            onChange={(value) => handleDomainFilterChange(value)}
+            label="Domain"
+            icon={<Globe className="w-3 h-3" />}
+            placeholder="All Domains"
+            options={[
+              { value: "all", label: "All Domains" },
+              ...availableDomains.map((domain) => ({
+                value: domain,
+                label: domain,
+              })),
+            ]}
+          />
+          <FilterDropdown
+            value={approvalFilter}
+            onChange={(value) => handleApprovalFilterChange(value as ApprovalFilter)}
+            label="Approval"
+            icon={<CheckCircle className="w-3 h-3" />}
+            placeholder="All"
+            options={[
+              { value: "all", label: "All" },
+              { value: "approved", label: "Approved" },
+              { value: "unapproved", label: "Needs Review" },
+            ]}
+          />
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          {lastUpdated && (
-            <span className="hidden sm:inline">
-              Last updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => loadJobs()}
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
+        {lastUpdated && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Clock className="w-3.5 h-3.5" />
+            Updated {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
+      </FilterBar>
+
+      {/* Error State */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
           >
-            {isLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {isLoading ? "Refreshing" : "Refresh"}
-          </button>
-        </div>
-      </div>
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[1.6fr_1.4fr_1.1fr_1.6fr_1.4fr_1.2fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          <span>Status</span>
-          <span>Domain</span>
-          <span>Time Elapsed</span>
-          <span>Approval</span>
-          <span>Created</span>
-          <span className="text-right">Actions</span>
-        </div>
-        {isLoading && jobs.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-gray-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading jobs…</span>
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-900">Error loading jobs</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <ActionButton
+              label="Retry"
+              onClick={() => loadJobs()}
+              variant="danger"
+              size="sm"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading State */}
+      {isLoading && jobs.length === 0 ? (
+        <motion.div
+          className="flex items-center justify-center py-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="flex items-center gap-3 text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading PMS jobs...
           </div>
-        ) : jobs.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
-            {error || "No PMS jobs found for the selected filters."}
-          </div>
-        ) : (
-          jobs.map((job) => {
+        </motion.div>
+      ) : jobs.length === 0 ? (
+        <EmptyState
+          icon={<Cpu className="w-12 h-12" />}
+          title="No PMS jobs found"
+          description="No jobs match the selected filters. Try adjusting your filters or wait for new jobs to be created."
+        />
+      ) : (
+        /* Jobs List - Card-based layout */
+        <div className="space-y-3">
+          {jobs.map((job, index) => {
             const statusClass =
               STATUS_STYLES[job.status] ||
               "bg-gray-100 text-gray-700 border-gray-200";
-            const approvalLabel = job.is_approved ? "locked" : "pending";
             const isDeleting = deletingJobId === job.id;
             const hasAutomationStatus = !!job.automation_status_detail;
             const isAutomationExpanded = expandedAutomationJobIds.has(job.id);
-
             const isPending = job.status === "pending";
+
             return (
-              <div
+              <motion.div
                 key={job.id}
-                className="border-b border-gray-100 last:border-b-0"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, duration: 0.3 }}
+                className={`rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${
+                  isPending ? "opacity-70" : ""
+                } border-gray-200`}
               >
-                <div className="relative grid grid-cols-[1.6fr_1.4fr_1.1fr_1.6fr_1.4fr_1.2fr] gap-4 px-4 py-4">
-                  {isPending && (
-                    <div className="absolute inset-0 bg-white/50 pointer-events-none z-0">
-                      <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 opacity-30" />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 relative z-10">
+                {/* Pending overlay effect */}
+                {isPending && (
+                  <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                    <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 opacity-30" />
+                  </div>
+                )}
+
+                <div className="p-4 relative">
+                  <div className="flex items-start gap-4">
+                    {/* Expand button for automation status */}
                     {hasAutomationStatus && (
-                      <button
-                        type="button"
+                      <motion.button
                         onClick={() => toggleAutomationExpansion(job.id)}
-                        className="rounded p-1 hover:bg-gray-100 transition"
-                        title={
-                          isAutomationExpanded
-                            ? "Hide automation progress"
-                            : "Show automation progress"
-                        }
+                        className="mt-1 flex-shrink-0 p-1 rounded-lg hover:bg-gray-100 transition"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                       >
-                        {isAutomationExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-500" />
-                        )}
-                      </button>
+                        <motion.div
+                          animate={{ rotate: isAutomationExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        </motion.div>
+                      </motion.button>
                     )}
-                    <span
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusClass}`}
-                    >
-                      {STATUS_LABELS[job.status as StatusFilter] || job.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {job.domain || "—"}
-                  </div>
-                  <div className="text-sm font-medium text-gray-800">
-                    {formatTimeElapsed(job.time_elapsed)}
-                  </div>
-                  <div className="flex flex-col gap-2 text-sm text-gray-600 relative z-10">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={job.is_approved}
-                        disabled={
-                          job.is_approved ||
-                          approvingJobId === job.id ||
-                          isPending
-                        }
-                        onClick={() => handleApprovalToggle(job)}
-                        className={`relative inline-flex h-6 w-12 items-center rounded-full border transition ${
-                          job.is_approved
-                            ? "border-green-400 bg-green-500"
-                            : "border-gray-300 bg-gray-200"
-                        } ${
-                          job.is_approved || isPending
-                            ? "cursor-default"
-                            : "cursor-pointer"
-                        } disabled:opacity-60`}
-                      >
-                        <span
-                          className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                            job.is_approved ? "translate-x-5" : "translate-x-0"
-                          }`}
+
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Top row: Domain and status badge */}
+                      <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
+                            {job.domain || "Unknown Domain"}
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            Job #{job.id}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Status badge */}
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}
+                          >
+                            {job.status === "completed" && <Check className="h-3 w-3" />}
+                            {job.status === "pending" && <Clock className="h-3 w-3" />}
+                            {job.status === "error" && <AlertCircle className="h-3 w-3" />}
+                            {job.status === "waiting_for_approval" && <Clock className="h-3 w-3" />}
+                            {job.status === "approved" && <CheckCircle className="h-3 w-3" />}
+                            {STATUS_LABELS[job.status as StatusFilter] || job.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Metadata row */}
+                      <div className="flex flex-wrap items-center gap-4 text-sm">
+                        {/* Time Elapsed */}
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <Clock className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-medium">{formatTimeElapsed(job.time_elapsed)}</span>
+                        </div>
+
+                        {/* Created */}
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          <span>{formatTimestamp(job.timestamp)}</span>
+                        </div>
+
+                        {/* Approval Switch */}
+                        <ApprovalSwitch
+                          isApproved={job.is_approved}
+                          isLoading={approvingJobId === job.id}
+                          disabled={isPending}
+                          onToggle={() => handleApprovalToggle(job)}
                         />
-                      </button>
-                      {approvingJobId === job.id ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold uppercase text-blue-600">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Approving…
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold uppercase text-gray-500">
-                          {APPROVAL_TEXT[approvalLabel]}
-                        </span>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {formatTimestamp(job.timestamp)}
-                  </div>
-                  <div className="flex flex-col items-end gap-2 relative z-10">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <motion.button
                         onClick={() => setActiveModalJobId(job.id)}
                         disabled={isPending}
-                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteJob(job.id)}
-                        disabled={isDeleting || isPending}
-                        className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:border-red-100 disabled:text-red-300"
-                      >
-                        {isDeleting ? (
+                      </motion.button>
+                      {isDeleting ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
+                          Deleting...
+                        </span>
+                      ) : (
+                        <motion.button
+                          onClick={() => handleDeleteJob(job.id)}
+                          disabled={isPending}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                        Delete
-                      </button>
+                          Delete
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 </div>
+
                 {/* Automation Progress Dropdown */}
-                {hasAutomationStatus && isAutomationExpanded && (
-                  <div className="px-4 pb-4">
-                    <PMSAutomationProgressDropdown
-                      jobId={job.id}
-                      initialStatus={job.automation_status_detail}
-                      onStatusChange={(status) =>
-                        handleAutomationStatusChange(job.id, status)
-                      }
-                    />
-                  </div>
-                )}
-              </div>
+                <AnimatePresence>
+                  {hasAutomationStatus && isAutomationExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden border-t border-gray-100"
+                    >
+                      <div className="px-4 py-4 bg-gray-50/50">
+                        <PMSAutomationProgressDropdown
+                          jobId={job.id}
+                          initialStatus={job.automation_status_detail}
+                          onStatusChange={(status) =>
+                            handleAutomationStatusChange(job.id, status)
+                          }
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
-          })
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-        <div>
-          {jobs.length > 0 ? (
-            <span>
-              Showing {rangeStart}–{rangeEnd} of {pagination.total} jobs
-            </span>
-          ) : (
-            <span>0 jobs</span>
-          )}
-          {lastUpdated && (
-            <span className="ml-2 text-xs text-gray-400">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
+          })}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
+      )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <motion.div
+          className="flex items-center justify-between pt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <ActionButton
+            label="Previous"
             onClick={goToPreviousPage}
+            variant="secondary"
             disabled={pagination.page === 1 || isLoading}
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
-          >
-            Previous
-          </button>
-          <span className="text-xs font-semibold uppercase text-gray-500">
-            Page {Math.min(pagination.page, Math.max(pagination.totalPages, 1))}{" "}
-            of {Math.max(pagination.totalPages, 1)}
+          />
+          <span className="text-sm text-gray-600">
+            Page {Math.min(pagination.page, Math.max(pagination.totalPages, 1))} of{" "}
+            {Math.max(pagination.totalPages, 1)} ({pagination.total} total)
           </span>
-          <button
-            type="button"
+          <ActionButton
+            label="Next"
             onClick={goToNextPage}
+            variant="secondary"
             disabled={
               pagination.page >= pagination.totalPages ||
               isLoading ||
               !pagination.hasNextPage
             }
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-      {error && jobs.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+          />
+        </motion.div>
       )}
 
+      {/* Summary Stats */}
+      {!isLoading && !error && jobs.length > 0 && (
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <span className="text-sm text-gray-600">
+            Showing {rangeStart}–{rangeEnd} of {pagination.total} job{pagination.total !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {jobs.filter((j) => j.status === "completed").length}
+                </strong>{" "}
+                completed
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-yellow-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {jobs.filter((j) => j.status === "waiting_for_approval").length}
+                </strong>{" "}
+                awaiting
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-red-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {jobs.filter((j) => j.status === "error").length}
+                </strong>{" "}
+                errors
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* PMS Data Viewer Modal */}
       {activeModalJob && (
         <PMSDataViewer
           isOpen={true}
@@ -835,7 +1084,6 @@ export function PMSAutomationCards() {
           onClose={() => setActiveModalJobId(null)}
           onSave={async (transformedData) => {
             await handleSaveResponse(activeModalJob.id, transformedData);
-            // Reload jobs after save to reflect database changes
             await loadJobs({ silent: true });
           }}
           readOnly={false}

@@ -1,14 +1,23 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw,
   AlertCircle,
   Archive,
   ArchiveRestore,
   Loader2,
-  CheckSquare,
-  Square,
   Eye,
   Trash2,
+  Database,
+  Bot,
+  Globe,
+  Filter,
+  CheckCircle,
+  Circle,
+  Calendar,
+  Clock,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   fetchAgentOutputs,
@@ -28,10 +37,133 @@ import type {
   AgentOutputType,
 } from "../../types/agentOutputs";
 import { AgentOutputDetailModal } from "../../components/Admin/AgentOutputDetailModal";
+import {
+  AdminPageHeader,
+  FilterBar,
+  BulkActionBar,
+  EmptyState,
+  Badge,
+  ActionButton,
+} from "../../components/ui/DesignSystem";
+
+// Animated Dropdown Component
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+interface AnimatedDropdownProps {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  label?: string;
+}
+
+const AnimatedDropdown: React.FC<AnimatedDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = "Select...",
+  icon,
+  label,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((opt) => opt.value === value);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {label && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 flex items-center gap-1">
+          {icon}
+          {label}
+        </span>
+      )}
+      <div ref={dropdownRef} className="relative">
+        <motion.button
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:border-gray-300 focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] justify-between"
+          whileHover={{ scale: disabled ? 1 : 1.01 }}
+          whileTap={{ scale: disabled ? 1 : 0.99 }}
+        >
+          <span className="truncate">{currentOption?.label || placeholder}</span>
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </motion.div>
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 mt-1 z-50 min-w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg"
+            >
+              {options.map((option) => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    option.value === value
+                      ? "bg-alloro-orange/10 text-alloro-orange"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  whileHover={{ backgroundColor: option.value === value ? undefined : "rgba(0,0,0,0.03)" }}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.value === value && (
+                      <Check className="h-3.5 w-3.5 text-alloro-orange" />
+                    )}
+                    <span className={option.value === value ? "ml-0" : "ml-5"}>
+                      {option.label}
+                    </span>
+                  </div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Agent Outputs List Page
- * Shows table of all agent outputs with filtering and archive functionality
+ * Shows list of agent output cards with filtering and archive functionality
  */
 export default function AgentOutputsList() {
   const [outputs, setOutputs] = useState<AgentOutput[]>([]);
@@ -179,15 +311,6 @@ export default function AgentOutputsList() {
     }
   };
 
-  // Multi-select handlers
-  const toggleSelectAll = () => {
-    if (selectedIds.size === outputs.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(outputs.map((o) => o.id)));
-    }
-  };
-
   const toggleSelectOutput = (id: number) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -198,7 +321,6 @@ export default function AgentOutputsList() {
     setSelectedIds(newSelected);
   };
 
-  // Bulk operations
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
     if (
@@ -295,7 +417,7 @@ export default function AgentOutputsList() {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     const year = date.getFullYear();
-    return `${month}-${day}-${year}`;
+    return `${month}/${day}/${year}`;
   };
 
   const formatRelativeTime = (dateString: string) => {
@@ -306,25 +428,12 @@ export default function AgentOutputsList() {
     const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
 
-    if (diffSeconds < 60) {
-      return "just now";
-    } else if (diffMinutes < 60) {
-      return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
-    } else if (diffHours < 24) {
-      return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
-    } else if (diffDays < 7) {
-      return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
-    } else if (diffWeeks < 4) {
-      return diffWeeks === 1 ? "1 week ago" : `${diffWeeks} weeks ago`;
-    } else if (diffMonths < 12) {
-      return diffMonths === 1 ? "1 month ago" : `${diffMonths} months ago`;
-    } else {
-      return diffYears === 1 ? "1 year ago" : `${diffYears} years ago`;
-    }
+    if (diffSeconds < 60) return "just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatDateRange(dateString);
   };
 
   const formatAgentType = (agentType: string): string => {
@@ -334,46 +443,26 @@ export default function AgentOutputsList() {
       .join(" ");
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusStyles = (status: string): string => {
     switch (status) {
       case "success":
-        return (
-          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-            Success
-          </span>
-        );
+        return "border-green-200 bg-green-100 text-green-700";
       case "pending":
-        return (
-          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-            Pending
-          </span>
-        );
+        return "border-yellow-200 bg-yellow-100 text-yellow-700";
       case "error":
-        return (
-          <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-            Error
-          </span>
-        );
+        return "border-red-200 bg-red-100 text-red-700";
       case "archived":
-        return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-            Archived
-          </span>
-        );
+        return "border-gray-200 bg-gray-100 text-gray-500";
       default:
-        return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-            {status}
-          </span>
-        );
+        return "border-gray-200 bg-gray-100 text-gray-700";
     }
   };
 
   const handlePageChange = (newPage: number) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
+    setSelectedIds(new Set());
   };
 
-  // Check if all selected items are archived (for showing correct bulk action button)
   const allSelectedAreArchived =
     selectedIds.size > 0 &&
     Array.from(selectedIds).every((id) => {
@@ -381,7 +470,6 @@ export default function AgentOutputsList() {
       return output?.status === "archived";
     });
 
-  // Check if any selected items are not archived
   const anySelectedNotArchived =
     selectedIds.size > 0 &&
     Array.from(selectedIds).some((id) => {
@@ -390,325 +478,435 @@ export default function AgentOutputsList() {
     });
 
   return (
-    <div className="space-y-4">
-      {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-            <CheckSquare className="h-4 w-4" />
-            <span>
-              {selectedIds.size} output{selectedIds.size !== 1 ? "s" : ""}{" "}
-              selected
-            </span>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <AdminPageHeader
+        icon={<Database className="w-6 h-6" />}
+        title="Agent Outputs"
+        description="View and manage AI agent execution results"
+        actionButtons={
+          <div className="flex items-center gap-2">
+            <Badge label={`${total} total`} color="blue" />
+            <ActionButton
+              label={loading ? "Loading" : "Refresh"}
+              icon={
+                <RefreshCw
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
+              }
+              onClick={() => loadOutputs()}
+              variant="secondary"
+              disabled={loading}
+              loading={loading}
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+        }
+      />
+
+      {/* Bulk Actions Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        totalCount={outputs.length}
+        onSelectAll={() => setSelectedIds(new Set(outputs.map((o) => o.id)))}
+        onDeselectAll={() => setSelectedIds(new Set())}
+        isAllSelected={
+          selectedIds.size === outputs.length && outputs.length > 0
+        }
+        actions={
+          <>
             {anySelectedNotArchived && (
-              <button
+              <ActionButton
+                label="Archive"
+                icon={<Archive className="w-4 h-4" />}
                 onClick={handleBulkArchive}
+                variant="secondary"
+                size="sm"
                 disabled={bulkOperationLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bulkOperationLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Archive className="h-3.5 w-3.5" />
-                )}
-                Archive
-              </button>
+                loading={bulkOperationLoading}
+              />
             )}
             {allSelectedAreArchived && (
-              <button
+              <ActionButton
+                label="Restore"
+                icon={<ArchiveRestore className="w-4 h-4" />}
                 onClick={handleBulkUnarchive}
+                variant="secondary"
+                size="sm"
                 disabled={bulkOperationLoading}
-                className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bulkOperationLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <ArchiveRestore className="h-3.5 w-3.5" />
-                )}
-                Restore
-              </button>
+                loading={bulkOperationLoading}
+              />
             )}
-            <button
+            <ActionButton
+              label="Delete"
+              icon={<Trash2 className="w-4 h-4" />}
               onClick={handleBulkDelete}
+              variant="danger"
+              size="sm"
               disabled={bulkOperationLoading}
-              className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {bulkOperationLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-              Delete
-            </button>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              disabled={bulkOperationLoading}
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Clear
-            </button>
+              loading={bulkOperationLoading}
+            />
+          </>
+        }
+      />
+
+      {/* Filters */}
+      <FilterBar>
+        <div className="flex flex-wrap items-end gap-3">
+          <AnimatedDropdown
+            value={selectedDomain}
+            onChange={(value) => setSelectedDomain(value)}
+            label="Domain"
+            icon={<Globe className="w-3 h-3" />}
+            placeholder="All Domains"
+            options={[
+              { value: "all", label: "All Domains" },
+              ...domains.map((domain) => ({ value: domain, label: domain })),
+            ]}
+          />
+          <AnimatedDropdown
+            value={selectedAgentType}
+            onChange={(value) => setSelectedAgentType(value)}
+            label="Agent Type"
+            icon={<Bot className="w-3 h-3" />}
+            placeholder="All Types"
+            options={[
+              { value: "all", label: "All Types" },
+              ...agentTypes.map((type) => ({
+                value: type,
+                label: formatAgentType(type),
+              })),
+            ]}
+          />
+          <AnimatedDropdown
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            label="Status"
+            icon={<Filter className="w-3 h-3" />}
+            placeholder="All Statuses"
+            options={[
+              { value: "all", label: "All Statuses" },
+              { value: "success", label: "Success" },
+              { value: "pending", label: "Pending" },
+              { value: "error", label: "Error" },
+              { value: "archived", label: "Archived" },
+            ]}
+          />
+          <div className="flex items-center gap-2 self-end">
+            <ActionButton
+              label="Apply"
+              onClick={applyFilters}
+              variant="primary"
+            />
+            <ActionButton
+              label="Reset"
+              onClick={resetFilters}
+              variant="secondary"
+            />
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (selectedIds.size === outputs.length && outputs.length > 0) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(outputs.map((o) => o.id)));
+              }
+            }}
+            disabled={outputs.length === 0}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {selectedIds.size === outputs.length && outputs.length > 0 ? (
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+            ) : (
+              <Circle className="h-4 w-4 text-gray-400" />
+            )}
+            {selectedIds.size === outputs.length && outputs.length > 0
+              ? "Deselect All"
+              : "Select All"}
+          </button>
+        </div>
+      </FilterBar>
+
+      {/* Error State */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-900">
+                Error loading outputs
+              </p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <ActionButton
+              label="Retry"
+              onClick={() => loadOutputs()}
+              variant="danger"
+              size="sm"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading State */}
+      {loading && outputs.length === 0 ? (
+        <motion.div
+          className="flex items-center justify-center py-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="flex items-center gap-3 text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading agent outputs...
+          </div>
+        </motion.div>
+      ) : outputs.length === 0 ? (
+        <EmptyState
+          icon={<Database className="w-12 h-12" />}
+          title="No agent outputs found"
+          description="No outputs match the selected filters. Try adjusting your filters or run some agents."
+          action={{ label: "Reset Filters", onClick: resetFilters }}
+        />
+      ) : (
+        /* Outputs List - Card-based like ActionItemsHub */
+        <div className="space-y-3">
+          {outputs.map((output, index) => (
+            <motion.div
+              key={output.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              onClick={() => toggleSelectOutput(output.id)}
+              className={`rounded-xl border bg-white shadow-sm transition-all hover:shadow-md cursor-pointer ${
+                selectedIds.has(output.id)
+                  ? "border-blue-300 ring-2 ring-blue-100"
+                  : "border-gray-200"
+              } ${output.status === "archived" ? "opacity-60" : ""}`}
+            >
+              <div className="p-4">
+                <div className="flex items-start gap-4">
+                  {/* Selection checkbox */}
+                  <motion.div
+                    className="mt-1 flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    {selectedIds.has(output.id) ? (
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-300" />
+                    )}
+                  </motion.div>
+
+                  {/* Main content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Top row: Domain and status badge */}
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
+                          {output.domain}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {formatAgentType(output.agent_type)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Status badge */}
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusStyles(output.status)}`}
+                        >
+                          {output.status === "success" && (
+                            <CheckCircle className="h-3 w-3" />
+                          )}
+                          {output.status === "pending" && (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {output.status === "error" && (
+                            <AlertCircle className="h-3 w-3" />
+                          )}
+                          {output.status === "archived" && (
+                            <Archive className="h-3 w-3" />
+                          )}
+                          {output.status.charAt(0).toUpperCase() +
+                            output.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Metadata row */}
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      {/* Date Range */}
+                      <div className="flex items-center gap-1.5 text-gray-600">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                        <span>
+                          {formatDateRange(output.date_start)} -{" "}
+                          {formatDateRange(output.date_end)}
+                        </span>
+                      </div>
+
+                      {/* Created */}
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <Clock className="h-3.5 w-3.5 text-gray-400" />
+                        <span>{formatRelativeTime(output.created_at)}</span>
+                      </div>
+
+                      {/* Agent Type Pill */}
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
+                        <Bot className="h-3 w-3" />
+                        {formatAgentType(output.agent_type)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <motion.button
+                      onClick={() => handleViewDetails(output)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </motion.button>
+                    {output.status === "archived" ? (
+                      archivingId === output.id ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Restoring...
+                        </span>
+                      ) : (
+                        <motion.button
+                          onClick={() => handleUnarchive(output.id)}
+                          disabled={archivingId !== null}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-600 transition hover:border-green-300 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5" />
+                          Restore
+                        </motion.button>
+                      )
+                    ) : archivingId === output.id ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Archiving...
+                      </span>
+                    ) : (
+                      <motion.button
+                        onClick={() => handleArchive(output.id)}
+                        disabled={archivingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-semibold text-orange-600 transition hover:border-orange-300 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        Archive
+                      </motion.button>
+                    )}
+                    {deletingId === output.id ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Deleting...
+                      </span>
+                    ) : (
+                      <motion.button
+                        onClick={() => handleDelete(output.id)}
+                        disabled={deletingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       )}
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Domain
-            <select
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Domains</option>
-              {domains.map((domain) => (
-                <option key={domain} value={domain}>
-                  {domain}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Agent Type
-            <select
-              value={selectedAgentType}
-              onChange={(e) => setSelectedAgentType(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Types</option>
-              {agentTypes.map((type) => (
-                <option key={type} value={type}>
-                  {formatAgentType(type)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col items-start gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-            Status
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="all">All Statuses</option>
-              <option value="success">Success</option>
-              <option value="pending">Pending</option>
-              <option value="error">Error</option>
-              <option value="archived">Archived</option>
-            </select>
-          </label>
-          <button
-            onClick={applyFilters}
-            className="rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-          >
-            Apply
-          </button>
-          <button
-            onClick={resetFilters}
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800"
-          >
-            Reset
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => loadOutputs()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300"
-          >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {loading ? "Loading" : "Refresh"}
-          </button>
-        </div>
-      </div>
-
-      {/* Outputs Table */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[auto_1.2fr_1fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          <button
-            onClick={toggleSelectAll}
-            disabled={outputs.length === 0}
-            className="flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            title={
-              selectedIds.size === outputs.length
-                ? "Deselect all"
-                : "Select all"
-            }
-          >
-            {selectedIds.size === outputs.length && outputs.length > 0 ? (
-              <CheckSquare className="h-4 w-4 text-blue-600" />
-            ) : (
-              <Square className="h-4 w-4 text-gray-400" />
-            )}
-          </button>
-          <span>Domain</span>
-          <span>Agent Type</span>
-          <span>Date Range</span>
-          <span>Status</span>
-          <span>Created</span>
-          <span className="text-right">Actions</span>
-        </div>
-
-        {loading && outputs.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-gray-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading agent outputs...</span>
-          </div>
-        ) : error ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => loadOutputs()}
-              className="rounded-full border border-blue-200 px-4 py-2 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : outputs.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-500">
-            No agent outputs found for the selected filters.
-          </div>
-        ) : (
-          outputs.map((output) => (
-            <div
-              key={output.id}
-              className={`grid grid-cols-[auto_1.2fr_1fr_0.8fr_0.8fr_0.8fr_1fr] gap-4 border-b border-gray-100 px-4 py-4 last:border-b-0 ${
-                selectedIds.has(output.id) ? "bg-blue-50" : ""
-              }`}
-            >
-              <button
-                onClick={() => toggleSelectOutput(output.id)}
-                className="flex items-center justify-center"
-                title={
-                  selectedIds.has(output.id)
-                    ? "Deselect output"
-                    : "Select output"
-                }
-              >
-                {selectedIds.has(output.id) ? (
-                  <CheckSquare className="h-4 w-4 text-blue-600" />
-                ) : (
-                  <Square className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                )}
-              </button>
-              <div className="text-sm text-gray-700 font-medium truncate">
-                {output.domain}
-              </div>
-              <div className="text-sm text-gray-700">
-                {formatAgentType(output.agent_type)}
-              </div>
-              <div className="text-xs text-gray-500">
-                {formatDateRange(output.date_start)} →{" "}
-                {formatDateRange(output.date_end)}
-              </div>
-              <div>{getStatusBadge(output.status)}</div>
-              <div
-                className="text-xs text-gray-500"
-                title={new Date(output.created_at).toLocaleString()}
-              >
-                {formatRelativeTime(output.created_at)}
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  onClick={() => handleViewDetails(output)}
-                  className="inline-flex items-center gap-1 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold uppercase text-blue-600 transition hover:border-blue-300 hover:text-blue-700"
-                  title="View output details"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  View
-                </button>
-                {output.status === "archived" ? (
-                  <button
-                    onClick={() => handleUnarchive(output.id)}
-                    disabled={archivingId !== null}
-                    className="inline-flex items-center gap-1 rounded-full border border-green-200 px-3 py-1 text-xs font-semibold uppercase text-green-600 transition hover:border-green-300 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Restore output"
-                  >
-                    {archivingId === output.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <ArchiveRestore className="h-3.5 w-3.5" />
-                    )}
-                    Restore
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleArchive(output.id)}
-                    disabled={archivingId !== null || deletingId !== null}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Archive output"
-                  >
-                    {archivingId === output.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Archive className="h-3.5 w-3.5" />
-                    )}
-                    Archive
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDelete(output.id)}
-                  disabled={archivingId !== null || deletingId !== null}
-                  className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold uppercase text-red-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Delete output permanently"
-                >
-                  {deletingId === output.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handlePageChange(Math.max(1, (filters.page || 1) - 1))}
-          disabled={(filters.page || 1) === 1 || loading}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      {totalPages > 1 && (
+        <motion.div
+          className="flex items-center justify-between pt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
         >
-          Previous
-        </button>
-        <span className="text-sm text-gray-600">
-          Page {filters.page || 1} of {totalPages} ({total} total)
-        </span>
-        <button
-          onClick={() =>
-            handlePageChange(Math.min(totalPages, (filters.page || 1) + 1))
-          }
-          disabled={(filters.page || 1) === totalPages || loading}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase text-gray-600 transition hover:border-gray-300 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
+          <ActionButton
+            label="Previous"
+            onClick={() =>
+              handlePageChange(Math.max(1, (filters.page || 1) - 1))
+            }
+            variant="secondary"
+            disabled={(filters.page || 1) === 1 || loading}
+          />
+          <span className="text-sm text-gray-600">
+            Page {filters.page || 1} of {totalPages} ({total} total)
+          </span>
+          <ActionButton
+            label="Next"
+            onClick={() =>
+              handlePageChange(Math.min(totalPages, (filters.page || 1) + 1))
+            }
+            variant="secondary"
+            disabled={(filters.page || 1) === totalPages || loading}
+          />
+        </motion.div>
+      )}
 
-      {/* Summary */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
-        <div>
-          {outputs.length > 0 ? (
-            <span>
-              Showing {outputs.length} of {total} output{total !== 1 ? "s" : ""}
-            </span>
-          ) : (
-            <span>0 outputs</span>
-          )}
-        </div>
-      </div>
+      {/* Summary Stats */}
+      {!loading && !error && outputs.length > 0 && (
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <span className="text-sm text-gray-600">
+            Showing {outputs.length} of {total} output{total !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {outputs.filter((o) => o.status === "success").length}
+                </strong>{" "}
+                success
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-yellow-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {outputs.filter((o) => o.status === "pending").length}
+                </strong>{" "}
+                pending
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-red-400" />
+              <span className="text-gray-600">
+                <strong className="text-gray-900">
+                  {outputs.filter((o) => o.status === "error").length}
+                </strong>{" "}
+                error
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Detail Modal */}
       <AgentOutputDetailModal

@@ -215,7 +215,7 @@ export default function RecommendationCard({
             <p className="text-gray-900 font-medium leading-snug line-clamp-2">
               {recommendation.title}
             </p>
-            {recommendation.status && recommendation.status !== "IGNORE" && (
+            {recommendation.status && (
               <div className="mt-2">
                 {getStatusBadge()}
               </div>

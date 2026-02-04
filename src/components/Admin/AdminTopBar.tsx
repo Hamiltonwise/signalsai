@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ChevronDown, LogOut, User, AlertTriangle } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 
 export function AdminTopBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

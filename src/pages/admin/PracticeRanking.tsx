@@ -32,7 +32,6 @@ import {
   EmptyState,
   Badge,
   HorizontalProgressBar,
-  FilterBar,
 } from "../../components/ui/DesignSystem";
 import {
   staggerContainer,
@@ -1017,7 +1016,6 @@ export function PracticeRanking() {
   const processingJobs = jobs.filter(
     (j) => j.status === "processing" || j.status === "pending"
   );
-  const failedJobs = jobs.filter((j) => j.status === "failed");
   const avgScore =
     completedJobs.length > 0
       ? completedJobs.reduce((sum, j) => sum + (j.rank_score ?? 0), 0) /

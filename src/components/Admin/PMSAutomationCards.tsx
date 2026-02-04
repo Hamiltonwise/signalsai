@@ -82,7 +82,6 @@ const STATUS_OPTIONS: StatusFilter[] = [
   "error",
 ];
 
-const APPROVAL_OPTIONS: ApprovalFilter[] = ["all", "approved", "unapproved"];
 
 const APPROVAL_TEXT: Record<"locked" | "pending", string> = {
   locked: "Approved",

@@ -291,7 +291,7 @@ export default function AIDataInsightsDetail() {
   // Summary stats
   const passedCount = recommendations.filter((r) => r.status === "PASS").length;
   const rejectedCount = recommendations.filter((r) => r.status === "REJECT").length;
-  const pendingCount = recommendations.filter((r) => !r.status || r.status === "IGNORE").length;
+  const pendingCount = recommendations.filter((r) => !r.status).length;
 
   return (
     <div className="space-y-6">

@@ -15,7 +15,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = getItem("admin_token");
+      const token = getItem("auth_token");
       
       if (!token) {
         setIsAuthenticated(false);

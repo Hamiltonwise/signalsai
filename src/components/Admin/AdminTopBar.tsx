@@ -20,6 +20,20 @@ export function AdminTopBar() {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("google_account_id");
 
+    // Clear cookie with shared domain for cross-app auth sync
+    const isProduction = window.location.hostname.includes('getalloro.com');
+    const domain = isProduction ? '; domain=.getalloro.com' : '';
+    document.cookie = `auth_token=; path=/; max-age=0${domain}`;
+
+    // Broadcast logout event to other tabs (same-origin only, but shared cookie handles cross-domain)
+    try {
+      const channel = new BroadcastChannel("auth_channel");
+      channel.postMessage({ type: "logout" });
+      channel.close();
+    } catch (e) {
+      // BroadcastChannel not supported
+    }
+
     // Redirect to admin login
     window.location.href = "/admin";
   };

@@ -60,6 +60,21 @@ export function AdminLogin() {
             res.user.googleAccountId.toString()
           );
         }
+
+        // Set cookie for cross-app auth sync (server also sets it, but this is for redundancy)
+        const isProduction = window.location.hostname.includes('getalloro.com');
+        const domain = isProduction ? '; domain=.getalloro.com' : '';
+        document.cookie = `auth_token=${res.token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${domain}`;
+
+        // Broadcast login event to other tabs
+        try {
+          const channel = new BroadcastChannel("auth_channel");
+          channel.postMessage({ type: "login", token: res.token });
+          channel.close();
+        } catch (e) {
+          // BroadcastChannel not supported
+        }
+
         showSuccessToast("Login Successful", "Redirecting to dashboard...");
         window.location.reload();
       } else {

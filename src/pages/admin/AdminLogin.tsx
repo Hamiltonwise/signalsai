@@ -53,7 +53,7 @@ export function AdminLogin() {
       });
 
       if (res.success && res.token) {
-        localStorage.setItem("admin_token", res.token);
+        localStorage.setItem("auth_token", res.token);
         if (res.user?.googleAccountId) {
           localStorage.setItem(
             "google_account_id",

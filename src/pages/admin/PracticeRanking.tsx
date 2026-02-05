@@ -581,7 +581,7 @@ export function PracticeRanking() {
 
   const fetchAccounts = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch("/api/admin/practice-ranking/accounts", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -597,7 +597,7 @@ export function PracticeRanking() {
 
   const fetchJobs = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch("/api/admin/practice-ranking/list", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -634,7 +634,7 @@ export function PracticeRanking() {
 
   const fetchJobStatus = async (jobId: number) => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `/api/admin/practice-ranking/status/${jobId}`,
         {
@@ -676,7 +676,7 @@ export function PracticeRanking() {
 
   const fetchBatchStatus = async (batchId: string) => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `/api/admin/practice-ranking/batch/${batchId}/status`,
         {
@@ -710,7 +710,7 @@ export function PracticeRanking() {
 
     setLoadingResults(jobId);
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `/api/admin/practice-ranking/results/${jobId}`,
         {
@@ -733,7 +733,7 @@ export function PracticeRanking() {
 
   const fetchRankingTasks = async (practiceRankingId: number) => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `/api/practice-ranking/tasks?practiceRankingId=${practiceRankingId}`,
         {
@@ -761,7 +761,7 @@ export function PracticeRanking() {
 
     setTriggering(true);
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch("/api/admin/practice-ranking/trigger", {
         method: "POST",
         headers: {
@@ -829,7 +829,7 @@ export function PracticeRanking() {
 
     setDeletingJob(jobId);
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/admin/practice-ranking/${jobId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -884,7 +884,7 @@ export function PracticeRanking() {
 
     setDeletingBatch(batchId);
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `/api/admin/practice-ranking/batch/${batchId}`,
         {
@@ -923,7 +923,7 @@ export function PracticeRanking() {
   const refreshCompetitors = async (specialty: string, location: string) => {
     setRefreshingCompetitors(true);
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         "/api/admin/practice-ranking/refresh-competitors",
         {

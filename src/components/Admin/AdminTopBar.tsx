@@ -17,7 +17,7 @@ export function AdminTopBar() {
 
   const handleLogout = () => {
     // Clear admin authentication tokens
-    localStorage.removeItem("admin_token");
+    localStorage.removeItem("auth_token");
     localStorage.removeItem("google_account_id");
 
     // Redirect to admin login

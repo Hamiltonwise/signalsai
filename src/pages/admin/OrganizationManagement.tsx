@@ -79,7 +79,7 @@ export function OrganizationManagement() {
 
   const fetchOrganizations = async () => {
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch("/api/admin/organizations", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -117,7 +117,7 @@ export function OrganizationManagement() {
     if (!orgDetails[orgId]) {
       setLoadingDetails(orgId);
       try {
-        const token = localStorage.getItem("admin_token");
+        const token = localStorage.getItem("auth_token");
         const response = await fetch(`/api/admin/organizations/${orgId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -160,7 +160,7 @@ export function OrganizationManagement() {
     if (!editingOrgId || !editName.trim()) return;
 
     try {
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/admin/organizations/${editingOrgId}`, {
         method: "PATCH",
         headers: {
@@ -191,7 +191,7 @@ export function OrganizationManagement() {
   ) => {
     try {
       toast.loading(`Starting pilot session for ${userName}...`);
-      const token = localStorage.getItem("admin_token");
+      const token = localStorage.getItem("auth_token");
 
       const response = await fetch(`/api/admin/pilot/${userId}`, {
         method: "POST",

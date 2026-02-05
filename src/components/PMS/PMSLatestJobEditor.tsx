@@ -405,12 +405,6 @@ export const PMSLatestJobEditor: React.FC<PMSLatestJobEditorProps> = ({
           setActiveMonthId(month.id);
           return;
         }
-        if (!row.production || Number(row.production) === 0) {
-          setError("All production values must be greater than 0");
-          setErrorMonthId(month.id);
-          setActiveMonthId(month.id);
-          return;
-        }
       }
     }
 

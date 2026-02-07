@@ -54,7 +54,7 @@ export default function TemplateDetail() {
   // Preview state
   const [previewContent, setPreviewContent] = useState("");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | "seo">("desktop");
-  const previewDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const previewDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Settings state
   const [editingName, setEditingName] = useState(false);

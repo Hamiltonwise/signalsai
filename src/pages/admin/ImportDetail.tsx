@@ -15,10 +15,7 @@ import {
   Ban,
   Zap,
   FileCode,
-  Image,
-  Type,
   File,
-  X,
   Eye,
 } from "lucide-react";
 import {
@@ -32,7 +29,6 @@ import type { ImportVersion } from "../../api/imports";
 import {
   AdminPageHeader,
   ActionButton,
-  Badge,
   TabBar,
 } from "../../components/ui/DesignSystem";
 import { ConfirmModal } from "../../components/settings/ConfirmModal";
@@ -392,9 +388,7 @@ export default function ImportDetail() {
       <AdminPageHeader
         icon={<FileCode className="w-6 h-6" />}
         title={importData.display_name}
-        description={
-          <span className="font-mono text-xs text-gray-400">{importData.filename}</span>
-        }
+        description={importData.filename}
         backButton={{
           label: "Back to Imports",
           onClick: () => navigate("/admin/templates?tab=imports"),

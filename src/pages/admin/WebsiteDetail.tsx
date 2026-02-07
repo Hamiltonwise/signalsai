@@ -81,7 +81,7 @@ export default function WebsiteDetail() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
+  const [, setIsPolling] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -430,7 +430,7 @@ export default function WebsiteDetail() {
   // Extract GBP data
   const getGbpData = () => {
     if (website?.step_gbp_scrape && typeof website.step_gbp_scrape === "object") {
-      return website.step_gbp_scrape as Record<string, unknown>;
+      return website.step_gbp_scrape as Record<string, string | number | null>;
     }
     return null;
   };

@@ -22,6 +22,7 @@ import type {
 import { ProoflineAgentEditor } from "./ProoflineAgentEditor";
 import { SummaryAgentEditor } from "./SummaryAgentEditor";
 import { OpportunityAgentEditor } from "./OpportunityAgentEditor";
+import { ConfirmModal } from "@/components/settings/ConfirmModal";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
@@ -97,6 +98,13 @@ export function AgentInsights() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "info";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
 
   const loadResults = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -210,52 +218,54 @@ export function AgentInsights() {
     }
   };
 
-  const handleReject = async (result: AgentResult) => {
+  const handleReject = (result: AgentResult) => {
     if (processingResultId) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to reject this insight? This action cannot be undone."
-    );
+    setConfirmModal({
+      isOpen: true,
+      title: "Reject Insight",
+      message: "Are you sure you want to reject this insight? This action cannot be undone.",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
-    if (!confirmed) {
-      return;
-    }
+        setProcessingResultId(result.id);
 
-    setProcessingResultId(result.id);
+        try {
+          const response = await approveAgentResult({
+            resultId: result.id,
+            status: "rejected",
+            approvedBy: "admin", // TODO: Get from auth context
+          });
 
-    try {
-      const response = await approveAgentResult({
-        resultId: result.id,
-        status: "rejected",
-        approvedBy: "admin", // TODO: Get from auth context
-      });
-
-      if (response?.success && response.data) {
-        setResults((prev) =>
-          prev.map((item) => (item.id === result.id ? response.data! : item))
-        );
-        setError(null);
-        setLastUpdated(new Date());
-        setToast({
-          message: "Insight rejected successfully!",
-          type: "success",
-        });
-        setTimeout(() => setToast(null), 3000);
-      } else {
-        const fallbackError =
-          response?.error ||
-          response?.message ||
-          "Unable to reject the insight.";
-        setError(fallbackError);
-      }
-    } catch (err) {
-      console.error("Failed to reject agent result", err);
-      setError("Failed to reject the insight. Please try again.");
-    } finally {
-      setProcessingResultId(null);
-    }
+          if (response?.success && response.data) {
+            setResults((prev) =>
+              prev.map((item) => (item.id === result.id ? response.data! : item))
+            );
+            setError(null);
+            setLastUpdated(new Date());
+            setToast({
+              message: "Insight rejected successfully!",
+              type: "success",
+            });
+            setTimeout(() => setToast(null), 3000);
+          } else {
+            const fallbackError =
+              response?.error ||
+              response?.message ||
+              "Unable to reject the insight.";
+            setError(fallbackError);
+          }
+        } catch (err) {
+          console.error("Failed to reject agent result", err);
+          setError("Failed to reject the insight. Please try again.");
+        } finally {
+          setProcessingResultId(null);
+        }
+      },
+    });
   };
 
   const handleSaveAgentData = async (
@@ -613,6 +623,15 @@ export function AgentInsights() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
     </div>
   );
 }

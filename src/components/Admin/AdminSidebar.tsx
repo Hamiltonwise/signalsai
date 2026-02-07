@@ -10,6 +10,9 @@ import {
   Database,
   Bot,
   TrendingUp,
+  Briefcase,
+  Globe,
+  FileCode,
 } from "lucide-react";
 
 export type AdminNavKey =
@@ -19,7 +22,9 @@ export type AdminNavKey =
   | "ai-data-insights"
   | "practice-ranking"
   | "app-logs"
-  | "organization-management";
+  | "organization-management"
+  | "websites"
+  | "templates";
 
 // Top-level menu items (not in a group)
 interface NavItem {
@@ -34,6 +39,12 @@ const AGENTS_GROUP_ITEMS: NavItem[] = [
   { key: "ai-pms-automation", label: "AI PMS Automation", icon: Cpu },
   { key: "ai-data-insights", label: "Agent Enhancements", icon: LineChart },
   { key: "practice-ranking", label: "Practice Ranking", icon: TrendingUp },
+];
+
+// Items that go in the Done For You group
+const DONE_FOR_YOU_ITEMS: NavItem[] = [
+  { key: "websites", label: "Websites", icon: Globe },
+  { key: "templates", label: "Templates", icon: FileCode },
 ];
 
 // Top-level items
@@ -100,6 +111,17 @@ export function AdminSidebar() {
             </div>
             <div className="space-y-1 mt-1">
               {AGENTS_GROUP_ITEMS.map((item) => renderNavLink(item, true))}
+            </div>
+          </div>
+
+          {/* Done For You Group */}
+          <div className="pt-4">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+              <Briefcase className="h-3.5 w-3.5" />
+              <span>Done For You</span>
+            </div>
+            <div className="space-y-1 mt-1">
+              {DONE_FOR_YOU_ITEMS.map((item) => renderNavLink(item, true))}
             </div>
           </div>
 

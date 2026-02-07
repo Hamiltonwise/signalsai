@@ -32,6 +32,7 @@ import {
   ActionButton,
   Badge,
 } from "../ui/DesignSystem";
+import { ConfirmModal } from "@/components/settings/ConfirmModal";
 
 type StatusFilter =
   | "all"
@@ -347,6 +348,13 @@ export function PMSAutomationCards() {
   const [expandedAutomationJobIds, setExpandedAutomationJobIds] = useState<
     Set<number>
   >(new Set());
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "info";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
 
   const isFetchingRef = useRef(false);
 
@@ -613,67 +621,69 @@ export function PMSAutomationCards() {
     }
   };
 
-  const handleDeleteJob = async (jobId: number) => {
+  const handleDeleteJob = (jobId: number) => {
     if (deletingJobId !== null) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this PMS job? This action cannot be undone."
-    );
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete PMS Job",
+      message: "Are you sure you want to delete this PMS job? This action cannot be undone.",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
-    if (!confirmed) {
-      return;
-    }
+        setDeletingJobId(jobId);
 
-    setDeletingJobId(jobId);
+        try {
+          const response = (await deletePmsJob(jobId)) as any;
 
-    try {
-      const response = (await deletePmsJob(jobId)) as any;
+          if (response?.success) {
+            setJobs((prev) => prev.filter((job) => job.id !== jobId));
+            setEditorStates((prev) => {
+              const next = { ...prev };
+              delete next[jobId];
+              return next;
+            });
 
-      if (response?.success) {
-        setJobs((prev) => prev.filter((job) => job.id !== jobId));
-        setEditorStates((prev) => {
-          const next = { ...prev };
-          delete next[jobId];
-          return next;
-        });
+            const nextTotal = Math.max(pagination.total - 1, 0);
+            const nextTotalPages = Math.max(
+              Math.ceil(nextTotal / pagination.perPage),
+              1
+            );
+            const nextPage = Math.min(pagination.page, nextTotalPages);
+            const shouldRefetchImmediately = nextPage === pagination.page;
 
-        const nextTotal = Math.max(pagination.total - 1, 0);
-        const nextTotalPages = Math.max(
-          Math.ceil(nextTotal / pagination.perPage),
-          1
-        );
-        const nextPage = Math.min(pagination.page, nextTotalPages);
-        const shouldRefetchImmediately = nextPage === pagination.page;
+            setPagination((prev) => ({
+              ...prev,
+              total: nextTotal,
+              totalPages: nextTotalPages,
+              page: nextPage,
+              hasNextPage: nextPage < nextTotalPages,
+            }));
 
-        setPagination((prev) => ({
-          ...prev,
-          total: nextTotal,
-          totalPages: nextTotalPages,
-          page: nextPage,
-          hasNextPage: nextPage < nextTotalPages,
-        }));
+            if (shouldRefetchImmediately) {
+              void loadJobs({ silent: true });
+            }
 
-        if (shouldRefetchImmediately) {
-          void loadJobs({ silent: true });
+            setError(null);
+            setLastUpdated(new Date());
+          } else {
+            const fallbackError =
+              response?.error ||
+              response?.errorMessage ||
+              "Unable to delete the PMS job.";
+            setError(fallbackError);
+          }
+        } catch (err) {
+          console.error("Failed to delete PMS job", err);
+          setError("Failed to delete the PMS job. Please try again.");
+        } finally {
+          setDeletingJobId(null);
         }
-
-        setError(null);
-        setLastUpdated(new Date());
-      } else {
-        const fallbackError =
-          response?.error ||
-          response?.errorMessage ||
-          "Unable to delete the PMS job.";
-        setError(fallbackError);
-      }
-    } catch (err) {
-      console.error("Failed to delete PMS job", err);
-      setError("Failed to delete the PMS job. Please try again.");
-    } finally {
-      setDeletingJobId(null);
-    }
+      },
+    });
   };
 
   const toggleAutomationExpansion = (jobId: number) => {
@@ -1088,6 +1098,16 @@ export function PMSAutomationCards() {
           readOnly={false}
         />
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   Bot,
 } from "lucide-react";
 import type { AgentRecommendation } from "../../types/agentInsights";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 interface Props {
   recommendation: AgentRecommendation;
@@ -125,6 +126,12 @@ export default function RecommendationCard({
 }: Props) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: "error" | "success" | "info";
+  }>({ isOpen: false, title: "", message: "" });
 
   const handleStatusChange = async (newStatus: string) => {
     if (isUpdating) return;
@@ -146,11 +153,11 @@ export default function RecommendationCard({
       if (data.success) {
         onUpdate(); // Refresh parent data
       } else {
-        alert("Failed to update status: " + (data.message || "Unknown error"));
+        setAlertModal({ isOpen: true, title: "Status Update Failed", message: "Failed to update status: " + (data.message || "Unknown error"), type: "error" });
       }
     } catch (error) {
       console.error("Failed to update recommendation status:", error);
-      alert("Failed to update status. Please try again.");
+      setAlertModal({ isOpen: true, title: "Status Update Failed", message: "Failed to update status. Please try again.", type: "error" });
     } finally {
       setIsUpdating(false);
     }
@@ -158,7 +165,7 @@ export default function RecommendationCard({
 
   const handleFixerAgent = (e: React.MouseEvent) => {
     e.stopPropagation();
-    alert("Fixer Agent feature is coming soon!");
+    setAlertModal({ isOpen: true, title: "Coming Soon", message: "Fixer Agent feature is coming soon!", type: "info" });
   };
 
   // Get status styling
@@ -416,6 +423,14 @@ export default function RecommendationCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </motion.div>
   );
 }

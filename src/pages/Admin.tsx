@@ -12,6 +12,11 @@ import AppLogs from "./admin/AppLogs";
 import { OrganizationManagement } from "./admin/OrganizationManagement";
 import AgentOutputsList from "./admin/AgentOutputsList";
 import { PracticeRanking } from "./admin/PracticeRanking";
+import WebsitesList from "./admin/WebsitesList";
+import WebsiteDetail from "./admin/WebsiteDetail";
+import TemplatesList from "./admin/TemplatesList";
+import TemplateDetail from "./admin/TemplateDetail";
+import ImportDetail from "./admin/ImportDetail";
 
 function WebDevEngine() {
   return (
@@ -49,6 +54,11 @@ export default function Admin() {
             element={<OrganizationManagement />}
           />
           <Route path="practice-ranking" element={<PracticeRanking />} />
+          <Route path="websites" element={<WebsitesList />} />
+          <Route path="websites/:id" element={<WebsiteDetail />} />
+          <Route path="templates" element={<TemplatesList />} />
+          <Route path="templates/imports/:id" element={<ImportDetail />} />
+          <Route path="templates/:id" element={<TemplateDetail />} />
         </Routes>
       </AdminLayout>
     </AdminGuard>

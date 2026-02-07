@@ -25,6 +25,8 @@ import {
   ExpandableSection,
 } from "../../components/ui/DesignSystem";
 import { staggerContainer, cardVariants, fadeInUp } from "../../lib/animations";
+import { ConfirmModal } from "../../components/settings/ConfirmModal";
+import { AlertModal } from "../../components/ui/AlertModal";
 import { getAgentIcon } from "../../lib/adminIcons";
 import type {
   AgentRecommendation,
@@ -52,6 +54,21 @@ export default function AIDataInsightsDetail() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false);
+
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "info";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: "error" | "success" | "info";
+  }>({ isOpen: false, title: "", message: "" });
 
   useEffect(() => {
     if (agentType) {
@@ -88,74 +105,100 @@ export default function AIDataInsightsDetail() {
     }
   };
 
-  const handleFixAll = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to mark all pending recommendations as completed?"
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `/api/admin/agent-insights/${agentType}/recommendations/mark-all-completed`,
-        {
-          method: "PATCH",
+  const handleFixAll = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Fix All Recommendations",
+      message: "Are you sure you want to mark all pending recommendations as completed?",
+      type: "warning",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const response = await fetch(
+            `/api/admin/agent-insights/${agentType}/recommendations/mark-all-completed`,
+            { method: "PATCH" }
+          );
+          const data = await response.json();
+          if (data.success) {
+            setAlertModal({
+              isOpen: true,
+              title: "Success",
+              message: `Marked ${data.data.updated} recommendation(s) as completed`,
+              type: "success",
+            });
+            fetchRecommendations();
+          } else {
+            setAlertModal({
+              isOpen: true,
+              title: "Operation Failed",
+              message: "Failed to mark all as completed: " + (data.message || ""),
+              type: "error",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to mark all as completed:", error);
+          setAlertModal({
+            isOpen: true,
+            title: "Operation Failed",
+            message: "Failed to mark all as completed. Please try again.",
+            type: "error",
+          });
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert(`Marked ${data.data.updated} recommendation(s) as completed`);
-        fetchRecommendations();
-      } else {
-        alert("Failed to mark all as completed: " + (data.message || ""));
-      }
-    } catch (error) {
-      console.error("Failed to mark all as completed:", error);
-      alert("Failed to mark all as completed. Please try again.");
-    }
+      },
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedIds.size} recommendation(s)?`
-      )
-    ) {
-      return;
-    }
-
-    setBulkOperationLoading(true);
-    try {
-      const response = await fetch(
-        "/api/admin/agent-insights/recommendations/bulk-delete",
-        {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: Array.from(selectedIds) }),
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Recommendations",
+      message: `Are you sure you want to delete ${selectedIds.size} recommendation(s)?`,
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        setBulkOperationLoading(true);
+        try {
+          const response = await fetch(
+            "/api/admin/agent-insights/recommendations/bulk-delete",
+            {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ids: Array.from(selectedIds) }),
+            }
+          );
+          const data = await response.json();
+          if (data.success) {
+            setAlertModal({
+              isOpen: true,
+              title: "Success",
+              message: `Deleted ${data.data.deleted} recommendation(s)`,
+              type: "success",
+            });
+            setSelectedIds(new Set());
+            fetchRecommendations();
+          } else {
+            setAlertModal({
+              isOpen: true,
+              title: "Delete Failed",
+              message: "Failed to delete recommendations: " + (data.message || ""),
+              type: "error",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to bulk delete recommendations:", error);
+          setAlertModal({
+            isOpen: true,
+            title: "Delete Failed",
+            message: "Failed to delete recommendations. Please try again.",
+            type: "error",
+          });
+        } finally {
+          setBulkOperationLoading(false);
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert(`Deleted ${data.data.deleted} recommendation(s)`);
-        setSelectedIds(new Set());
-        fetchRecommendations();
-      } else {
-        alert("Failed to delete recommendations: " + (data.message || ""));
-      }
-    } catch (error) {
-      console.error("Failed to bulk delete recommendations:", error);
-      alert("Failed to delete recommendations. Please try again.");
-    } finally {
-      setBulkOperationLoading(false);
-    }
+      },
+    });
   };
 
   const toggleSelectAll = () => {
@@ -524,6 +567,23 @@ export default function AIDataInsightsDetail() {
           />
         </motion.div>
       )}
+
+      {/* Modals */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal((prev) => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

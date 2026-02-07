@@ -3,6 +3,8 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus, Shield, Clock, X, Users as UsersIcon } from "lucide-react";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
+import { ConfirmModal } from "@/components/settings/ConfirmModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 interface User {
   id: number;
@@ -34,6 +36,19 @@ export const UsersTab: React.FC = () => {
     null
   );
   const [newRole, setNewRole] = useState<string>("");
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "info";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: "error" | "success" | "info";
+  }>({ isOpen: false, title: "", message: "" });
 
   useEffect(() => {
     // Get current user's role
@@ -81,26 +96,33 @@ export const UsersTab: React.FC = () => {
     } catch (err) {
       console.error("Failed to invite user:", err);
       const error = err as { response?: { data?: { error?: string } } };
-      alert(error.response?.data?.error || "Failed to invite user");
+      setAlertModal({ isOpen: true, title: "Invite Failed", message: error.response?.data?.error || "Failed to invite user", type: "error" });
     }
   };
 
-  const handleRemoveUser = async (userId: number) => {
-    if (!confirm("Are you sure you want to remove this user?")) return;
-    try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
+  const handleRemoveUser = (userId: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove User",
+      message: "Are you sure you want to remove this user?",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const googleAccountId = getPriorityItem("google_account_id");
+          if (!googleAccountId) return;
 
-      await axios.delete(`/api/settings/users/${userId}`, {
-        headers: { "x-google-account-id": googleAccountId },
-      });
+          await axios.delete(`/api/settings/users/${userId}`, {
+            headers: { "x-google-account-id": googleAccountId },
+          });
 
-      fetchUsers(); // Reload
-    } catch (err) {
-      console.error("Failed to remove user:", err);
-      const error = err as { response?: { data?: { error?: string } } };
-      alert(error.response?.data?.error || "Failed to remove user");
-    }
+          fetchUsers(); // Reload
+        } catch (err) {
+          console.error("Failed to remove user:", err);
+          const error = err as { response?: { data?: { error?: string } } };
+          setAlertModal({ isOpen: true, title: "Remove Failed", message: error.response?.data?.error || "Failed to remove user", type: "error" });
+        }
+      },
+    });
   };
 
   const handleChangeRole = async (userId: number, role: string) => {
@@ -114,13 +136,13 @@ export const UsersTab: React.FC = () => {
         { headers: { "x-google-account-id": googleAccountId } }
       );
 
-      alert("Role updated successfully. The user will need to log in again.");
+      setAlertModal({ isOpen: true, title: "Role Updated", message: "Role updated successfully. The user will need to log in again.", type: "success" });
       setChangingRoleUserId(null);
       fetchUsers(); // Reload
     } catch (err) {
       console.error("Failed to change role:", err);
       const error = err as { response?: { data?: { error?: string } } };
-      alert(error.response?.data?.error || "Failed to change role");
+      setAlertModal({ isOpen: true, title: "Role Change Failed", message: error.response?.data?.error || "Failed to change role", type: "error" });
     }
   };
 
@@ -510,6 +532,23 @@ export const UsersTab: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Remove"
+      />
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 };

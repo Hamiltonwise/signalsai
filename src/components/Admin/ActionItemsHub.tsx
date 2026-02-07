@@ -46,6 +46,8 @@ import {
   FilterBar,
   EmptyState,
 } from "../ui/DesignSystem";
+import { ConfirmModal } from "@/components/settings/ConfirmModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 // Approval Switch Component
 interface ApprovalSwitchProps {
@@ -380,6 +382,21 @@ export function ActionItemsHub() {
   const [selectedTask, setSelectedTask] = useState<ActionItem | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Modal state for confirm/alert replacements
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: "danger" | "warning" | "info";
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: "error" | "success" | "info";
+  }>({ isOpen: false, title: "", message: "" });
+
   // Pagination state
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -520,7 +537,7 @@ export function ActionItemsHub() {
       await updateTask(taskId, { is_approved: !currentApproval });
       await loadTasks();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update task");
+      setAlertModal({ isOpen: true, title: "Approval Error", message: err instanceof Error ? err.message : "Failed to update task", type: "error" });
     } finally {
       setUpdatingApprovalId(null);
     }
@@ -540,7 +557,7 @@ export function ActionItemsHub() {
       });
       await loadTasks();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      setAlertModal({ isOpen: true, title: "Status Error", message: err instanceof Error ? err.message : "Failed to update status", type: "error" });
     } finally {
       setUpdatingStatusId(null);
     }
@@ -554,40 +571,56 @@ export function ActionItemsHub() {
       await updateTaskCategory(taskId, newCategory as "ALLORO" | "USER");
       await loadTasks();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update category");
+      setAlertModal({ isOpen: true, title: "Category Error", message: err instanceof Error ? err.message : "Failed to update category", type: "error" });
     } finally {
       setUpdatingCategoryId(null);
     }
   };
 
-  const handleArchive = async (taskId: number) => {
+  const handleArchive = (taskId: number) => {
     if (deletingId) return;
-    if (!confirm("Are you sure you want to archive this task?")) return;
 
-    try {
-      setDeletingId(taskId);
-      await archiveTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to archive task");
-    } finally {
-      setDeletingId(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Archive Task",
+      message: "Are you sure you want to archive this task?",
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setDeletingId(taskId);
+          await archiveTask(taskId);
+          await loadTasks();
+        } catch (err) {
+          setAlertModal({ isOpen: true, title: "Archive Error", message: err instanceof Error ? err.message : "Failed to archive task", type: "error" });
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   };
 
-  const handleUnarchive = async (taskId: number) => {
+  const handleUnarchive = (taskId: number) => {
     if (deletingId) return;
-    if (!confirm("Are you sure you want to restore this task?")) return;
 
-    try {
-      setDeletingId(taskId);
-      await unarchiveTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to restore task");
-    } finally {
-      setDeletingId(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Restore Task",
+      message: "Are you sure you want to restore this task?",
+      type: "warning",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setDeletingId(taskId);
+          await unarchiveTask(taskId);
+          await loadTasks();
+        } catch (err) {
+          setAlertModal({ isOpen: true, title: "Restore Error", message: err instanceof Error ? err.message : "Failed to restore task", type: "error" });
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   };
 
   // Multi-select handlers
@@ -610,46 +643,52 @@ export function ActionItemsHub() {
   };
 
   // Bulk operations
-  const handleBulkArchive = async () => {
+  const handleBulkArchive = () => {
     if (selectedTaskIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to archive ${selectedTaskIds.size} task(s)?`
-      )
-    )
-      return;
 
-    try {
-      setBulkOperationLoading(true);
-      await bulkArchiveTasks(Array.from(selectedTaskIds));
-      setSelectedTaskIds(new Set());
-      await loadTasks();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to archive tasks");
-    } finally {
-      setBulkOperationLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Bulk Archive",
+      message: `Are you sure you want to archive ${selectedTaskIds.size} task(s)?`,
+      type: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setBulkOperationLoading(true);
+          await bulkArchiveTasks(Array.from(selectedTaskIds));
+          setSelectedTaskIds(new Set());
+          await loadTasks();
+        } catch (err) {
+          setAlertModal({ isOpen: true, title: "Bulk Archive Error", message: err instanceof Error ? err.message : "Failed to archive tasks", type: "error" });
+        } finally {
+          setBulkOperationLoading(false);
+        }
+      },
+    });
   };
 
-  const handleBulkUnarchive = async () => {
+  const handleBulkUnarchive = () => {
     if (selectedTaskIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to restore ${selectedTaskIds.size} task(s)?`
-      )
-    )
-      return;
 
-    try {
-      setBulkOperationLoading(true);
-      await bulkUnarchiveTasks(Array.from(selectedTaskIds));
-      setSelectedTaskIds(new Set());
-      await loadTasks();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to restore tasks");
-    } finally {
-      setBulkOperationLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Bulk Restore",
+      message: `Are you sure you want to restore ${selectedTaskIds.size} task(s)?`,
+      type: "warning",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setBulkOperationLoading(true);
+          await bulkUnarchiveTasks(Array.from(selectedTaskIds));
+          setSelectedTaskIds(new Set());
+          await loadTasks();
+        } catch (err) {
+          setAlertModal({ isOpen: true, title: "Bulk Restore Error", message: err instanceof Error ? err.message : "Failed to restore tasks", type: "error" });
+        } finally {
+          setBulkOperationLoading(false);
+        }
+      },
+    });
   };
 
   const handleBulkApprove = async (approve: boolean) => {
@@ -661,9 +700,7 @@ export function ActionItemsHub() {
       setSelectedTaskIds(new Set());
       await loadTasks();
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to update task approval"
-      );
+      setAlertModal({ isOpen: true, title: "Bulk Approval Error", message: err instanceof Error ? err.message : "Failed to update task approval", type: "error" });
     } finally {
       setBulkOperationLoading(false);
     }
@@ -681,9 +718,7 @@ export function ActionItemsHub() {
       setSelectedTaskIds(new Set());
       await loadTasks();
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to update task status"
-      );
+      setAlertModal({ isOpen: true, title: "Bulk Status Error", message: err instanceof Error ? err.message : "Failed to update task status", type: "error" });
     } finally {
       setBulkOperationLoading(false);
     }
@@ -1185,6 +1220,25 @@ export function ActionItemsHub() {
           setShowDetailsModal(false);
           setSelectedTask(null);
         }}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
       />
     </div>
   );

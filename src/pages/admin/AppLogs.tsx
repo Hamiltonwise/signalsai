@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, AlertCircle, RefreshCw, FileText, Terminal, Mail, Globe } from "lucide-react";
+import { Trash2, AlertCircle, RefreshCw, FileText, Terminal, Mail, Globe, Code } from "lucide-react";
 import {
   AdminPageHeader,
   TabBar,
@@ -41,6 +41,12 @@ const LOG_TABS = [
     label: "Scraping Tool",
     description: "Web scraping logs",
     icon: <Globe className="w-4 h-4" />,
+  },
+  {
+    id: "website-scrape",
+    label: "Website Scrape",
+    description: "Website content scraping logs",
+    icon: <Code className="w-4 h-4" />,
   },
 ] as const;
 

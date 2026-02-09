@@ -174,3 +174,103 @@ export const updateWebsite = async (
 
   return response.json();
 };
+
+// =====================================================================
+// STATUS POLLING
+// =====================================================================
+
+export interface WebsiteStatusResponse {
+  id: string;
+  status: string;
+  selected_place_id: string | null;
+  selected_website_url: string | null;
+  step_gbp_scrape: Record<string, unknown> | null;
+  step_website_scrape: Record<string, unknown> | null;
+  step_image_analysis: Record<string, unknown> | null;
+  updated_at: string;
+}
+
+/**
+ * Poll website project status (lightweight endpoint)
+ */
+export const pollWebsiteStatus = async (
+  id: string
+): Promise<WebsiteStatusResponse> => {
+  const response = await fetch(`${API_BASE}/${id}/status`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch website status: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// =====================================================================
+// WEBSITE SCRAPE
+// =====================================================================
+
+export interface ScrapeResponse {
+  success: boolean;
+  baseUrl: string;
+  pages: Record<string, string>;
+  images: string[];
+  elapsedMs: number;
+  charLength: number;
+  estimatedTokens: number;
+  error?: string;
+}
+
+/**
+ * Scrape a website for multi-page HTML content + images
+ */
+export const scrapeWebsite = async (url: string): Promise<ScrapeResponse> => {
+  const response = await fetch(`${API_BASE}/scrape`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to scrape website");
+  }
+
+  return response.json();
+};
+
+// =====================================================================
+// CONTACT FORM
+// =====================================================================
+
+export interface ContactFormData {
+  name: string;
+  phone: string;
+  email: string;
+  service?: string;
+  message?: string;
+  captchaToken: string;
+}
+
+/**
+ * Submit a contact form from a rendered site
+ */
+export const submitContactForm = async (
+  data: ContactFormData
+): Promise<{ success: boolean }> => {
+  const response = await fetch("/api/websites/contact", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to submit contact form");
+  }
+
+  return response.json();
+};

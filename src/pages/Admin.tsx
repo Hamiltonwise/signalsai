@@ -17,6 +17,9 @@ import WebsiteDetail from "./admin/WebsiteDetail";
 import TemplatesList from "./admin/TemplatesList";
 import TemplateDetail from "./admin/TemplateDetail";
 import ImportDetail from "./admin/ImportDetail";
+import PageEditor from "./admin/PageEditor";
+import LayoutEditor from "./admin/LayoutEditor";
+import AdminSettings from "./admin/AdminSettings";
 
 function WebDevEngine() {
   return (
@@ -32,35 +35,56 @@ function WebDevEngine() {
   );
 }
 
+/** Admin layout wrapper for non-fullscreen routes */
+function AdminWithLayout() {
+  return (
+    <AdminLayout>
+      <Routes>
+        <Route path="/" element={<Navigate to="action-items" replace />} />
+        <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
+        <Route path="action-items" element={<ActionItemsHub />} />
+        <Route path="agent-outputs" element={<AgentOutputsList />} />
+        <Route path="ai-data-insight" element={<AgentInsights />} />
+        <Route path="ai-data-insights" element={<AIDataInsightsList />} />
+        <Route
+          path="ai-data-insights/:agentType"
+          element={<AIDataInsightsDetail />}
+        />
+        <Route path="webdev-engine" element={<WebDevEngine />} />
+        <Route path="app-logs" element={<AppLogs />} />
+        <Route
+          path="organization-management"
+          element={<OrganizationManagement />}
+        />
+        <Route path="practice-ranking" element={<PracticeRanking />} />
+        <Route path="websites" element={<WebsitesList />} />
+        <Route path="websites/:id" element={<WebsiteDetail />} />
+        <Route path="templates" element={<TemplatesList />} />
+        <Route path="templates/imports/:id" element={<ImportDetail />} />
+        <Route path="templates/:id" element={<TemplateDetail />} />
+        <Route path="settings" element={<AdminSettings />} />
+      </Routes>
+    </AdminLayout>
+  );
+}
+
 export default function Admin() {
   return (
     <AdminGuard>
-      <AdminLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="action-items" replace />} />
-          <Route path="ai-pms-automation" element={<PMSAutomationCards />} />
-          <Route path="action-items" element={<ActionItemsHub />} />
-          <Route path="agent-outputs" element={<AgentOutputsList />} />
-          <Route path="ai-data-insight" element={<AgentInsights />} />
-          <Route path="ai-data-insights" element={<AIDataInsightsList />} />
-          <Route
-            path="ai-data-insights/:agentType"
-            element={<AIDataInsightsDetail />}
-          />
-          <Route path="webdev-engine" element={<WebDevEngine />} />
-          <Route path="app-logs" element={<AppLogs />} />
-          <Route
-            path="organization-management"
-            element={<OrganizationManagement />}
-          />
-          <Route path="practice-ranking" element={<PracticeRanking />} />
-          <Route path="websites" element={<WebsitesList />} />
-          <Route path="websites/:id" element={<WebsiteDetail />} />
-          <Route path="templates" element={<TemplatesList />} />
-          <Route path="templates/imports/:id" element={<ImportDetail />} />
-          <Route path="templates/:id" element={<TemplateDetail />} />
-        </Routes>
-      </AdminLayout>
+      <Routes>
+        {/* Full-screen editors — no AdminLayout */}
+        <Route
+          path="websites/:id/pages/:pageId/edit"
+          element={<PageEditor />}
+        />
+        <Route
+          path="websites/:id/layout/:field"
+          element={<LayoutEditor />}
+        />
+
+        {/* All other admin routes — with AdminLayout */}
+        <Route path="*" element={<AdminWithLayout />} />
+      </Routes>
     </AdminGuard>
   );
 }

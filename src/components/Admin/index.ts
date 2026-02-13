@@ -3,6 +3,7 @@ export type { AdminLayoutProps } from "./AdminLayout";
 export { AdminSidebar } from "./AdminSidebar";
 export type { AdminNavKey } from "./AdminSidebar";
 export { AdminTopBar } from "./AdminTopBar";
+export { SidebarProvider, useSidebar } from "./SidebarContext";
 export { PMSAutomationCards } from "./PMSAutomationCards";
 export { AgentInsights } from "./AgentInsights";
 export { ProoflineAgentEditor } from "./ProoflineAgentEditor";

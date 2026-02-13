@@ -2,6 +2,8 @@
  * Websites API - Admin portal for website-builder data
  */
 
+import type { Section } from "./templates";
+
 export interface WebsiteProject {
   id: string;
   user_id: string;
@@ -9,10 +11,22 @@ export interface WebsiteProject {
   status: string;
   selected_place_id: string | null;
   selected_website_url: string | null;
+  template_id: string | null;
+  wrapper: string;
+  header: string;
+  footer: string;
   step_gbp_scrape: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
+
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
+export type EditChatHistory = Record<string, ChatHistoryMessage[]>;
 
 export interface WebsitePage {
   id: string;
@@ -20,7 +34,8 @@ export interface WebsitePage {
   path: string;
   version: number;
   status: string;
-  html_content: { html: string };
+  sections: Section[];
+  edit_chat_history: EditChatHistory | null;
   created_at: string;
   updated_at: string;
 }
@@ -176,6 +191,49 @@ export const updateWebsite = async (
 };
 
 // =====================================================================
+// PIPELINE
+// =====================================================================
+
+export interface StartPipelineRequest {
+  projectId: string;
+  placeId: string;
+  templateId?: string;
+  templatePageId?: string;
+  path?: string;
+  websiteUrl?: string | null;
+  pageContext?: string;
+  practiceSearchString?: string;
+  businessName?: string;
+  formattedAddress?: string;
+  city?: string;
+  state?: string;
+  phone?: string;
+  category?: string;
+  rating?: number;
+  reviewCount?: number;
+}
+
+/**
+ * Trigger the N8N pipeline to generate a website page
+ */
+export const startPipeline = async (
+  data: StartPipelineRequest
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE}/start-pipeline`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to start pipeline");
+  }
+
+  return response.json();
+};
+
+// =====================================================================
 // STATUS POLLING
 // =====================================================================
 
@@ -238,6 +296,221 @@ export const scrapeWebsite = async (url: string): Promise<ScrapeResponse> => {
   }
 
   return response.json();
+};
+
+// =====================================================================
+// PAGE EDITOR
+// =====================================================================
+
+/**
+ * Fetch a single page by ID
+ */
+export const fetchPage = async (
+  projectId: string,
+  pageId: string
+): Promise<{ success: boolean; data: WebsitePage }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/pages/${pageId}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to fetch page");
+  }
+
+  return response.json();
+};
+
+/**
+ * Create a draft from a published page (idempotent)
+ */
+export const createDraftFromPage = async (
+  projectId: string,
+  pageId: string
+): Promise<{ success: boolean; data: WebsitePage }> => {
+  const response = await fetch(
+    `${API_BASE}/${projectId}/pages/${pageId}/create-draft`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to create draft");
+  }
+
+  return response.json();
+};
+
+/**
+ * Update a draft page's sections and/or chat history
+ */
+export const updatePageSections = async (
+  projectId: string,
+  pageId: string,
+  sections: Section[],
+  editChatHistory?: EditChatHistory
+): Promise<{ success: boolean; data: WebsitePage }> => {
+  const body: Record<string, unknown> = { sections };
+  if (editChatHistory !== undefined) {
+    body.edit_chat_history = editChatHistory;
+  }
+
+  const response = await fetch(`${API_BASE}/${projectId}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update page");
+  }
+
+  return response.json();
+};
+
+/**
+ * Publish a draft page
+ */
+export const publishPage = async (
+  projectId: string,
+  pageId: string
+): Promise<{ success: boolean; data: WebsitePage }> => {
+  const response = await fetch(
+    `${API_BASE}/${projectId}/pages/${pageId}/publish`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to publish page");
+  }
+
+  return response.json();
+};
+
+/**
+ * Delete a page version
+ */
+export const deletePageVersion = async (
+  projectId: string,
+  pageId: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/pages/${pageId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to delete page version");
+  }
+
+  return response.json();
+};
+
+/**
+ * Delete ALL versions of a page at a given path
+ */
+export const deletePageByPath = async (
+  projectId: string,
+  path: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(
+    `${API_BASE}/${projectId}/pages/by-path?path=${encodeURIComponent(path)}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to delete page");
+  }
+
+  return response.json();
+};
+
+export interface EditComponentRequest {
+  alloroClass: string;
+  currentHtml: string;
+  instruction: string;
+  chatHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+export interface EditDebugInfo {
+  model: string;
+  systemPrompt: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface EditComponentResponse {
+  success: boolean;
+  editedHtml: string | null;
+  message?: string;
+  rejected?: boolean;
+  debug?: EditDebugInfo;
+}
+
+/**
+ * Send an edit instruction to Claude for a specific component
+ */
+export const editPageComponent = async (
+  projectId: string,
+  pageId: string,
+  payload: EditComponentRequest
+): Promise<EditComponentResponse> => {
+  const response = await fetch(
+    `${API_BASE}/${projectId}/pages/${pageId}/edit`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to edit component");
+  }
+
+  return response.json();
+};
+
+/**
+ * Send an edit instruction to Claude for a layout component (header/footer)
+ */
+export const editLayoutComponent = async (
+  projectId: string,
+  payload: EditComponentRequest
+): Promise<EditComponentResponse> => {
+  const response = await fetch(
+    `${API_BASE}/${projectId}/edit-layout`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to edit layout component");
+  }
+
+  return response.json();
+};
+
+/**
+ * Fetch the page editor system prompt from admin settings
+ */
+export const fetchEditorSystemPrompt = async (): Promise<string> => {
+  const response = await fetch(`${API_BASE}/editor/system-prompt`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to fetch system prompt");
+  }
+
+  const data = await response.json();
+  return data.prompt;
 };
 
 // =====================================================================

@@ -21,17 +21,22 @@ import {
   ImageIcon,
   Code,
   Trash2,
+  Pencil,
+  ChevronDown,
+  Hash,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { fetchWebsiteDetail, updateWebsite, deleteWebsite } from "../../api/websites";
-import type { WebsiteProjectWithPages } from "../../api/websites";
+import { fetchWebsiteDetail, updateWebsite, deleteWebsite, startPipeline, deletePageByPath } from "../../api/websites";
+import type { WebsiteProjectWithPages, WebsitePage } from "../../api/websites";
 import { searchPlaces, getPlaceDetails } from "../../api/places";
 import type { PlaceSuggestion, PlaceDetails } from "../../api/places";
+import { fetchTemplates, fetchTemplatePages } from "../../api/templates";
+import type { Template, TemplatePage } from "../../api/templates";
 import {
   AdminPageHeader,
-  Badge,
   ActionButton,
 } from "../../components/ui/DesignSystem";
+import CreatePageModal from "../../components/admin/CreatePageModal";
 
 // Status step type with icon
 interface StatusStep {
@@ -52,16 +57,31 @@ const STATUS_STEPS: StatusStep[] = [
   { key: "READY", label: "Ready", description: "Your website is live!", icon: Sparkles },
 ];
 
-// Get the index of the current status in the steps
 const getStatusIndex = (status: string): number => {
   const index = STATUS_STEPS.findIndex((s) => s.key === status);
   return index >= 0 ? index : 0;
 };
 
 /**
- * Website Detail Page
- * Shows detailed view of a single website project
+ * Group pages by path for the expandable list.
+ * Returns { path: string, pages: WebsitePage[] }[] sorted by path,
+ * with each group's pages sorted by version desc.
  */
+function groupPagesByPath(pages: WebsitePage[]) {
+  const map = new Map<string, WebsitePage[]>();
+  for (const page of pages) {
+    const group = map.get(page.path) || [];
+    group.push(page);
+    map.set(page.path, group);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([path, pages]) => ({
+      path,
+      pages: pages.sort((a, b) => b.version - a.version),
+    }));
+}
+
 export default function WebsiteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -69,6 +89,9 @@ export default function WebsiteDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
+  const [deletingPagePath, setDeletingPagePath] = useState<string | null>(null);
 
   // GBP Selector state
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,82 +105,118 @@ export default function WebsiteDetail() {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [, setIsPolling] = useState(false);
+
+  // Template selector state
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedTemplatePages, setSelectedTemplatePages] = useState<TemplatePage[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Create page modal state
+  const [showCreatePageModal, setShowCreatePageModal] = useState(false);
+  const [isGeneratingPage, setIsGeneratingPage] = useState(false);
+
+  // Detail tab: pages vs layouts
+  const [detailTab, setDetailTab] = useState<"pages" | "layouts">("pages");
+
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageGenPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expectedPageCountRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  // Statuses that don't need polling (terminal or waiting for user input)
   const NON_POLLING_STATUSES = ["CREATED", "READY"];
   const POLL_INTERVAL = 3000;
 
   // Initial load
   useEffect(() => {
     isMountedRef.current = true;
-    if (id) {
-      loadWebsite();
-    }
-
+    if (id) loadWebsite();
     return () => {
       isMountedRef.current = false;
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-      }
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+      if (pageGenPollRef.current) clearTimeout(pageGenPollRef.current);
     };
   }, [id]);
 
-  // Status polling - only polls when status is processing (not CREATED or READY)
+  // Load templates for selector (only when CREATED status)
   useEffect(() => {
-    // Don't poll if no website data yet
-    if (!website) return;
+    if (!website || website.status !== "CREATED") return;
+    const loadTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const response = await fetchTemplates();
+        const published = response.data.filter((t) => t.status === "published");
+        setTemplates(published);
+        // Pre-select the active template
+        const active = published.find((t) => t.is_active);
+        if (active) {
+          setSelectedTemplateId(active.id);
+          // Load its pages
+          const pagesResponse = await fetchTemplatePages(active.id);
+          setSelectedTemplatePages(pagesResponse.data);
+        } else if (published.length > 0) {
+          setSelectedTemplateId(published[0].id);
+          const pagesResponse = await fetchTemplatePages(published[0].id);
+          setSelectedTemplatePages(pagesResponse.data);
+        }
+      } catch (err) {
+        console.error("Failed to load templates:", err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, [website?.status]);
 
-    // Don't poll if status is terminal or waiting for user input
+  // Load template pages when template selection changes
+  const handleTemplateChange = async (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    try {
+      const response = await fetchTemplatePages(templateId);
+      setSelectedTemplatePages(response.data);
+    } catch (err) {
+      console.error("Failed to load template pages:", err);
+      setSelectedTemplatePages([]);
+    }
+  };
+
+  // Status polling
+  useEffect(() => {
+    if (!website) return;
     if (NON_POLLING_STATUSES.includes(website.status)) {
       setIsPolling(false);
       return;
     }
-
-    // Start polling for processing statuses
     setIsPolling(true);
 
     const pollStatus = async () => {
       if (!id || !isMountedRef.current) return;
-
       try {
         const response = await fetchWebsiteDetail(id);
         if (!isMountedRef.current) return;
-
         setWebsite(response.data);
-
-        // Check if we should stop polling
         if (NON_POLLING_STATUSES.includes(response.data.status)) {
           setIsPolling(false);
           return;
         }
-
-        // Schedule next poll AFTER current one completes
         pollTimeoutRef.current = setTimeout(pollStatus, POLL_INTERVAL);
       } catch (err) {
         if (!isMountedRef.current) return;
         console.error("Polling error:", err);
-
-        // Continue polling even on error
         pollTimeoutRef.current = setTimeout(pollStatus, POLL_INTERVAL);
       }
     };
 
-    // Start first poll after interval (initial data already loaded)
     pollTimeoutRef.current = setTimeout(pollStatus, POLL_INTERVAL);
-
     return () => {
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-      }
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
     };
   }, [website?.status, id]);
 
-  // Handle click outside to close dropdown
+  // Click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -169,26 +228,20 @@ export default function WebsiteDetail() {
         setIsDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Debounced search for places
+  // Debounced search
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSearchError(null);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (value.trim().length < 2) {
       setSuggestions([]);
       setIsDropdownOpen(false);
       return;
     }
-
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         setSearching(true);
@@ -205,28 +258,21 @@ export default function WebsiteDetail() {
     }, 300);
   }, []);
 
-  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isDropdownOpen || suggestions.length === 0) return;
-
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setHighlightedIndex((prev) =>
-          prev < suggestions.length - 1 ? prev + 1 : 0
-        );
+        setHighlightedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setHighlightedIndex((prev) =>
-          prev > 0 ? prev - 1 : suggestions.length - 1
-        );
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
         break;
       case "Enter":
         e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length)
           handleSelectPlace(suggestions[highlightedIndex]);
-        }
         break;
       case "Escape":
         setIsDropdownOpen(false);
@@ -235,22 +281,16 @@ export default function WebsiteDetail() {
     }
   };
 
-  // Handle selecting a suggestion - shows confirmation step
   const handleSelectPlace = async (suggestion: PlaceSuggestion) => {
     if (!id || isLoadingDetails) return;
-
     try {
       setIsLoadingDetails(true);
       setSearchError(null);
       setSuggestions([]);
       setIsDropdownOpen(false);
       setSearchQuery(suggestion.mainText);
-
-      // Get full place details
       const detailsResponse = await getPlaceDetails(suggestion.placeId);
       const place = detailsResponse.place;
-
-      // Show confirmation step with the place details
       setSelectedPlace(place);
       setWebsiteUrl(place.websiteUri || "");
     } catch (err) {
@@ -261,18 +301,26 @@ export default function WebsiteDetail() {
     }
   };
 
-  // Handle confirmation - saves to DB and triggers N8N webhook
   const handleConfirmSelection = async () => {
     if (!id || !selectedPlace || isConfirming) return;
+    if (!selectedTemplateId) {
+      setSearchError("Please select a template.");
+      return;
+    }
+    if (selectedTemplatePages.length === 0) {
+      setSearchError("Selected template has no pages. Please add pages to the template first.");
+      return;
+    }
+    // Use the first template page as the homepage
+    const homepageTemplatePage = selectedTemplatePages[0];
 
     try {
       setIsConfirming(true);
       setSearchError(null);
-
-      // 1. Update the website project with the selected place
       await updateWebsite(id, {
         selected_place_id: selectedPlace.placeId,
         selected_website_url: websiteUrl || null,
+        template_id: selectedTemplateId,
         status: "GBP_SELECTED",
         step_gbp_scrape: {
           name: selectedPlace.name,
@@ -285,36 +333,28 @@ export default function WebsiteDetail() {
         },
       } as any);
 
-      // 2. Trigger N8N webhook to start the pipeline
       try {
-        const webhookResponse = await fetch("/api/admin/websites/start-pipeline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            projectId: id,
-            placeId: selectedPlace.placeId,
-            websiteUrl: websiteUrl || null,
-            practiceSearchString: selectedPlace.practiceSearchString,
-            businessName: selectedPlace.name,
-            formattedAddress: selectedPlace.formattedAddress,
-            city: selectedPlace.city,
-            state: selectedPlace.state,
-            phone: selectedPlace.phone,
-            category: selectedPlace.category,
-            rating: selectedPlace.rating,
-            reviewCount: selectedPlace.reviewCount,
-          }),
+        await startPipeline({
+          projectId: id,
+          placeId: selectedPlace.placeId,
+          templateId: selectedTemplateId,
+          templatePageId: homepageTemplatePage.id,
+          path: "/",
+          websiteUrl: websiteUrl || null,
+          practiceSearchString: selectedPlace.practiceSearchString,
+          businessName: selectedPlace.name,
+          formattedAddress: selectedPlace.formattedAddress,
+          city: selectedPlace.city,
+          state: selectedPlace.state,
+          phone: selectedPlace.phone,
+          category: selectedPlace.category,
+          rating: selectedPlace.rating,
+          reviewCount: selectedPlace.reviewCount,
         });
-
-        if (!webhookResponse.ok) {
-          console.error("Failed to trigger pipeline webhook");
-        }
       } catch (webhookErr) {
         console.error("Pipeline webhook error:", webhookErr);
-        // Don't throw - GBP selection is saved even if webhook fails
       }
 
-      // 3. Refresh and reset state
       await loadWebsite();
       setSelectedPlace(null);
       setSearchQuery("");
@@ -327,23 +367,16 @@ export default function WebsiteDetail() {
     }
   };
 
-  // Clear selected place and search again
   const handleClearSelection = () => {
     setSelectedPlace(null);
     setSearchQuery("");
     setWebsiteUrl("");
   };
 
-  // Handle delete
   const handleDelete = async () => {
     if (!id || isDeleting) return;
-    if (
-      !confirm(
-        "Are you sure you want to DELETE this website project? This will also delete all its pages. This action cannot be undone."
-      )
-    )
+    if (!confirm("Are you sure you want to DELETE this website project? This will also delete all its pages. This action cannot be undone."))
       return;
-
     try {
       setIsDeleting(true);
       await deleteWebsite(id);
@@ -355,9 +388,61 @@ export default function WebsiteDetail() {
     }
   };
 
+  const handleDeletePageVersion = async (pageId: string, pageGroup: { path: string; pages: WebsitePage[] }) => {
+    const page = pageGroup.pages.find((p) => p.id === pageId);
+    if (!page || !id) return;
+
+    if (page.status === "published") {
+      alert("Cannot delete a published page version.");
+      return;
+    }
+    if (pageGroup.pages.length <= 1) {
+      alert("Cannot delete the only version of a page.");
+      return;
+    }
+    if (!confirm(`Delete version ${page.version} of "${page.path}"?`)) return;
+
+    try {
+      setDeletingPageId(pageId);
+      const response = await fetch(`/api/admin/websites/${id}/pages/${pageId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete page version");
+      }
+      await loadWebsite();
+    } catch (err) {
+      console.error("Failed to delete page version:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete page version");
+    } finally {
+      setDeletingPageId(null);
+    }
+  };
+
+  const handleDeletePage = async (path: string, versionCount: number) => {
+    if (!id) return;
+    if (
+      !confirm(
+        `Delete page "${path}" and all ${versionCount} version${versionCount !== 1 ? "s" : ""}? This cannot be undone.`
+      )
+    )
+      return;
+
+    try {
+      setDeletingPagePath(path);
+      await deletePageByPath(id, path);
+      await loadWebsite();
+    } catch (err) {
+      console.error("Failed to delete page:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete page");
+    } finally {
+      setDeletingPagePath(null);
+    }
+  };
+
   const loadWebsite = async () => {
     if (!id) return;
-
     try {
       setLoading(true);
       setError(null);
@@ -371,12 +456,57 @@ export default function WebsiteDetail() {
     }
   };
 
+  const startPageGenerationPoll = useCallback(() => {
+    if (pageGenPollRef.current) clearTimeout(pageGenPollRef.current);
+    let attempts = 0;
+    const maxAttempts = 20; // 20 × 3s = 60s
+
+    const poll = async () => {
+      if (!id || !isMountedRef.current) return;
+      attempts++;
+      try {
+        const response = await fetchWebsiteDetail(id);
+        if (!isMountedRef.current) return;
+        setWebsite(response.data);
+
+        if (response.data.pages.length > expectedPageCountRef.current) {
+          setIsGeneratingPage(false);
+          return;
+        }
+        if (attempts < maxAttempts) {
+          pageGenPollRef.current = setTimeout(poll, POLL_INTERVAL);
+        } else {
+          setIsGeneratingPage(false);
+        }
+      } catch (err) {
+        if (!isMountedRef.current) return;
+        console.error("Page generation poll error:", err);
+        if (attempts < maxAttempts) {
+          pageGenPollRef.current = setTimeout(poll, POLL_INTERVAL);
+        } else {
+          setIsGeneratingPage(false);
+        }
+      }
+    };
+
+    pageGenPollRef.current = setTimeout(poll, POLL_INTERVAL);
+  }, [id]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -384,55 +514,45 @@ export default function WebsiteDetail() {
 
   const getStatusStyles = (status: string): string => {
     switch (status) {
-      case "READY":
-        return "border-green-200 bg-green-100 text-green-700";
-      case "HTML_GENERATED":
-        return "border-blue-200 bg-blue-100 text-blue-700";
-      case "GENERATING":
-        return "border-yellow-200 bg-yellow-100 text-yellow-700";
+      case "READY": return "border-green-200 bg-green-100 text-green-700";
+      case "HTML_GENERATED": return "border-blue-200 bg-blue-100 text-blue-700";
+      case "GENERATING": return "border-yellow-200 bg-yellow-100 text-yellow-700";
       case "GBP_SELECTED":
       case "GBP_SCRAPED":
       case "WEBSITE_SCRAPED":
-      case "IMAGES_ANALYZED":
-        return "border-purple-200 bg-purple-100 text-purple-700";
-      case "CREATED":
-        return "border-gray-200 bg-gray-100 text-gray-700";
-      default:
-        return "border-gray-200 bg-gray-100 text-gray-700";
+      case "IMAGES_ANALYZED": return "border-purple-200 bg-purple-100 text-purple-700";
+      case "CREATED": return "border-gray-200 bg-gray-100 text-gray-700";
+      default: return "border-gray-200 bg-gray-100 text-gray-700";
     }
   };
 
-  const formatStatus = (status: string): string => {
-    return status
-      .split("_")
-      .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(" ");
-  };
+  const formatStatus = (status: string): string =>
+    status.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
 
   const getPageStatusStyles = (status: string): string => {
     switch (status) {
-      case "published":
-        return "border-green-200 bg-green-100 text-green-700";
-      case "draft":
-        return "border-yellow-200 bg-yellow-100 text-yellow-700";
-      case "inactive":
-        return "border-gray-200 bg-gray-100 text-gray-500";
-      default:
-        return "border-gray-200 bg-gray-100 text-gray-700";
+      case "published": return "border-green-200 bg-green-100 text-green-700";
+      case "draft": return "border-yellow-200 bg-yellow-100 text-yellow-700";
+      case "inactive": return "border-gray-200 bg-gray-100 text-gray-500";
+      default: return "border-gray-200 bg-gray-100 text-gray-700";
     }
   };
 
-  // Check if status is a processing state (should show spinner)
-  const isProcessingStatus = (status: string): boolean => {
-    return !["READY", "CREATED"].includes(status);
-  };
+  const isProcessingStatus = (status: string): boolean => !["READY", "CREATED"].includes(status);
 
-  // Extract GBP data
   const getGbpData = () => {
-    if (website?.step_gbp_scrape && typeof website.step_gbp_scrape === "object") {
+    if (website?.step_gbp_scrape && typeof website.step_gbp_scrape === "object")
       return website.step_gbp_scrape as Record<string, string | number | null>;
-    }
     return null;
+  };
+
+  const togglePath = (path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
   };
 
   if (loading) {
@@ -449,28 +569,17 @@ export default function WebsiteDetail() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Link
-          to="/admin/websites"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
+        <Link to="/admin/websites" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to Websites
         </Link>
-
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-900">
-              Error loading website
-            </p>
+            <p className="text-sm font-medium text-red-900">Error loading website</p>
             <p className="text-sm text-red-700 mt-1">{error}</p>
           </div>
-          <ActionButton
-            label="Retry"
-            onClick={loadWebsite}
-            variant="danger"
-            size="sm"
-          />
+          <ActionButton label="Retry" onClick={loadWebsite} variant="danger" size="sm" />
         </div>
       </div>
     );
@@ -479,14 +588,10 @@ export default function WebsiteDetail() {
   if (!website) {
     return (
       <div className="space-y-6">
-        <Link
-          to="/admin/websites"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
+        <Link to="/admin/websites" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
           <ArrowLeft className="h-4 w-4" />
           Back to Websites
         </Link>
-
         <div className="text-center py-16 text-gray-500">Website not found</div>
       </div>
     );
@@ -495,36 +600,49 @@ export default function WebsiteDetail() {
   const gbpData = getGbpData();
   const currentStatusIndex = getStatusIndex(website.status);
   const isCreatedStatus = website.status === "CREATED";
+  const isReady = website.status === "READY";
+  const pageGroups = groupPagesByPath(website.pages);
 
   return (
     <div className="space-y-6">
       {/* Back link */}
-      <Link
-        to="/admin/websites"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-      >
+      <Link to="/admin/websites" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Back to Websites
       </Link>
 
-      {/* Page Header */}
+      {/* Header with compact meta pills */}
       <AdminPageHeader
         icon={<Globe className="w-6 h-6" />}
-        title={website.generated_hostname}
-        description="Website project details"
-        actionButtons={
-          <div className="flex items-center gap-2">
+        title={gbpData?.name ? String(gbpData.name) : website.generated_hostname}
+        description={
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
+              <Globe className="h-3 w-3" />
+              {website.generated_hostname}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
+              <Clock className="h-3 w-3" />
+              Created {formatDate(website.created_at)}
+            </span>
+            {website.updated_at !== website.created_at && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
+                <Clock className="h-3 w-3" />
+                Updated {formatDate(website.updated_at)}
+              </span>
+            )}
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${getStatusStyles(website.status)}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusStyles(website.status)}`}
             >
-              {website.status === "READY" && <CheckCircle className="h-4 w-4" />}
-              {isProcessingStatus(website.status) && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+              {website.status === "READY" && <CheckCircle className="h-3 w-3" />}
+              {isProcessingStatus(website.status) && <Loader2 className="h-3 w-3 animate-spin" />}
               {formatStatus(website.status)}
             </span>
-            {(website.status === "READY" ||
-              website.status === "HTML_GENERATED") && (
+          </div>
+        }
+        actionButtons={
+          <div className="flex items-center gap-2">
+            {(isReady || website.status === "HTML_GENERATED") && (
               <a
                 href={`https://${website.generated_hostname}.sites.getalloro.com`}
                 target="_blank"
@@ -537,13 +655,7 @@ export default function WebsiteDetail() {
             )}
             <ActionButton
               label={isDeleting ? "Deleting..." : "Delete"}
-              icon={
-                isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )
-              }
+              icon={isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               onClick={handleDelete}
               variant="danger"
               disabled={isDeleting}
@@ -552,107 +664,37 @@ export default function WebsiteDetail() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Info Card */}
+      {/* Status Card — horizontal, hidden when READY */}
+      {!isReady && (
         <motion.div
           className="rounded-xl border border-gray-200 bg-white shadow-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <div className="border-b border-gray-100 px-5 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Project Information
-            </h3>
-          </div>
-          <div className="p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <Globe className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Hostname</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {website.generated_hostname}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Created</p>
-                <p className="text-base text-gray-900">
-                  {formatDate(website.created_at)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Last Updated</p>
-                <p className="text-base text-gray-900">
-                  {formatDate(website.updated_at)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Status Card with Progress Tracker OR GBP Selector */}
-        <motion.div
-          className="rounded-xl border border-gray-200 bg-white shadow-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="border-b border-gray-100 px-5 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Status</h3>
-          </div>
           <div className="p-5">
             {isCreatedStatus ? (
-              // Show GBP selector for CREATED status
+              // GBP Selector for CREATED status
               <div className="space-y-4">
                 <AnimatePresence mode="wait">
-                  {/* Loading Details State */}
                   {isLoadingDetails && (
-                    <motion.div
-                      key="loading"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col items-center justify-center py-8"
-                    >
+                    <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-8">
                       <Loader2 className="w-8 h-8 text-alloro-orange animate-spin mb-4" />
                       <p className="text-gray-600">Loading business details...</p>
                     </motion.div>
                   )}
 
-                  {/* Selected Place Confirmation Card */}
                   {selectedPlace && !isLoadingDetails && (
-                    <motion.div
-                      key="confirmation"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="rounded-2xl border-2 border-alloro-orange/30 overflow-hidden"
-                    >
-                      {/* Header */}
+                    <motion.div key="confirmation" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl border-2 border-alloro-orange/30 overflow-hidden">
                       <div className="bg-gradient-to-br from-alloro-orange to-orange-500 p-4 text-white">
                         <h3 className="text-lg font-bold">{selectedPlace.name}</h3>
-                        {selectedPlace.category && (
-                          <p className="text-orange-100 text-sm">{selectedPlace.category}</p>
-                        )}
+                        {selectedPlace.category && <p className="text-orange-100 text-sm">{selectedPlace.category}</p>}
                       </div>
-
-                      {/* Details */}
                       <div className="p-4 space-y-3">
-                        {/* Address */}
                         <div className="flex items-start gap-3">
                           <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
                           <p className="text-sm text-gray-700">{selectedPlace.formattedAddress}</p>
                         </div>
-
-                        {/* Rating */}
                         {selectedPlace.rating && (
                           <div className="flex items-center gap-3">
                             <Star className="w-4 h-4 text-yellow-500" />
@@ -662,182 +704,96 @@ export default function WebsiteDetail() {
                             </p>
                           </div>
                         )}
-
-                        {/* Phone */}
                         {selectedPlace.phone && (
                           <div className="flex items-center gap-3">
                             <Phone className="w-4 h-4 text-gray-400" />
                             <p className="text-sm text-gray-700">{selectedPlace.phone}</p>
                           </div>
                         )}
-
-                        {/* Website URL - Editable */}
                         <div className="pt-2 border-t border-gray-100">
-                          <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                            Website URL (we'll scrape this for content)
-                          </label>
+                          <label className="block text-xs font-medium text-gray-500 mb-1.5">Website URL to scrape (leave as-is to use the attached website)</label>
                           <div className="flex items-center gap-2">
                             <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                            <input
-                              type="url"
-                              value={websiteUrl}
-                              onChange={(e) => setWebsiteUrl(e.target.value)}
-                              placeholder="https://example.com"
-                              className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
-                            />
+                            <input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://example.com" className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none" />
                           </div>
-                          {!websiteUrl && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              Leave empty if there's no existing website
-                            </p>
+                          {!websiteUrl && <p className="text-xs text-gray-400 mt-1">Leave empty if there's no existing website</p>}
+                        </div>
+                        {/* Template selector */}
+                        <div className="pt-2 border-t border-gray-100">
+                          <label className="block text-xs font-medium text-gray-500 mb-1.5">Template</label>
+                          {loadingTemplates ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Loading templates...
+                            </div>
+                          ) : templates.length === 0 ? (
+                            <p className="text-sm text-red-500">No published templates available. Please create and publish a template first.</p>
+                          ) : (
+                            <select
+                              value={selectedTemplateId || ""}
+                              onChange={(e) => handleTemplateChange(e.target.value)}
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
+                            >
+                              {templates.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}{t.is_active ? " (Active)" : ""}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {selectedTemplatePages.length === 0 && selectedTemplateId && !loadingTemplates && (
+                            <p className="text-xs text-amber-500 mt-1">This template has no pages. Add pages to the template first.</p>
+                          )}
+                          {selectedTemplatePages.length > 0 && (
+                            <p className="text-xs text-gray-400 mt-1">{selectedTemplatePages.length} page{selectedTemplatePages.length !== 1 ? "s" : ""} in this template</p>
                           )}
                         </div>
                       </div>
-
-                      {/* Actions */}
                       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
-                        <button
-                          onClick={handleClearSelection}
-                          disabled={isConfirming}
-                          className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors disabled:opacity-50"
-                        >
-                          Search Again
-                        </button>
-                        <button
-                          onClick={handleConfirmSelection}
-                          disabled={isConfirming}
-                          className="inline-flex items-center gap-2 bg-alloro-orange hover:bg-alloro-orange/90 disabled:bg-alloro-orange/50 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed"
-                        >
-                          {isConfirming ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Starting...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4" />
-                              Confirm & Start
-                            </>
-                          )}
+                        <button onClick={handleClearSelection} disabled={isConfirming} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors disabled:opacity-50">Search Again</button>
+                        <button onClick={handleConfirmSelection} disabled={isConfirming || !selectedTemplateId || selectedTemplatePages.length === 0} className="inline-flex items-center gap-2 bg-alloro-orange hover:bg-alloro-orange/90 disabled:bg-alloro-orange/50 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed">
+                          {isConfirming ? (<><Loader2 className="w-4 h-4 animate-spin" />Starting...</>) : (<><CheckCircle className="w-4 h-4" />Confirm & Start</>)}
                         </button>
                       </div>
                     </motion.div>
                   )}
 
-                  {/* Search UI - Only show when no place selected and not loading */}
                   {!selectedPlace && !isLoadingDetails && (
-                    <motion.div
-                      key="search"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="relative"
-                    >
-                      {/* Instructions */}
+                    <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
                       <div className="flex items-start gap-2 mb-4">
                         <AlertCircle className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-600">
-                          Search for a Google Business Profile to generate the website.
-                          We'll use the business info to create your site.
-                        </p>
+                        <p className="text-sm text-gray-600">Search for a Google Business Profile to generate the website.</p>
                       </div>
-
-                      {/* Search Input */}
                       <div className="relative">
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
-                          {searching ? (
-                            <Loader2 className="h-5 w-5 text-alloro-orange animate-spin" />
-                          ) : (
-                            <Search className="h-5 w-5 text-gray-400" />
-                          )}
+                          {searching ? <Loader2 className="h-5 w-5 text-alloro-orange animate-spin" /> : <Search className="h-5 w-5 text-gray-400" />}
                         </div>
                         <input
-                          ref={inputRef}
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => {
-                            handleSearchChange(e.target.value);
-                            if (e.target.value.length >= 2) {
-                              setIsDropdownOpen(true);
-                            }
-                          }}
-                          onFocus={() => {
-                            if (suggestions.length > 0) {
-                              setIsDropdownOpen(true);
-                            }
-                          }}
-                          onKeyDown={handleKeyDown}
-                          placeholder="Search for your business..."
+                          ref={inputRef} type="text" value={searchQuery}
+                          onChange={(e) => { handleSearchChange(e.target.value); if (e.target.value.length >= 2) setIsDropdownOpen(true); }}
+                          onFocus={() => { if (suggestions.length > 0) setIsDropdownOpen(true); }}
+                          onKeyDown={handleKeyDown} placeholder="Search for your business..." autoComplete="off"
                           className="block w-full pl-12 pr-10 py-4 text-base rounded-2xl border-2 border-gray-200 bg-white focus:border-alloro-orange focus:ring-4 focus:ring-alloro-orange/20 transition-all outline-none font-medium placeholder:text-gray-400"
-                          autoComplete="off"
                         />
                         {searchQuery && (
-                          <button
-                            onClick={() => {
-                              setSearchQuery("");
-                              setSuggestions([]);
-                              setIsDropdownOpen(false);
-                              inputRef.current?.focus();
-                            }}
-                            className="absolute inset-y-0 right-4 flex items-center"
-                          >
+                          <button onClick={() => { setSearchQuery(""); setSuggestions([]); setIsDropdownOpen(false); inputRef.current?.focus(); }} className="absolute inset-y-0 right-4 flex items-center">
                             <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                           </button>
                         )}
                       </div>
-
-                      {/* Dropdown - positioned below the input */}
                       <AnimatePresence>
                         {isDropdownOpen && suggestions.length > 0 && (
-                          <motion.div
-                            ref={dropdownRef}
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
-                          >
+                          <motion.div ref={dropdownRef} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
                             <ul className="max-h-64 overflow-y-auto py-2">
                               {suggestions.map((suggestion, index) => (
                                 <li key={suggestion.placeId}>
-                                  <button
-                                    onClick={() => handleSelectPlace(suggestion)}
-                                    onMouseEnter={() => setHighlightedIndex(index)}
-                                    className={`w-full px-4 py-3 flex items-start gap-3 text-left transition-colors ${
-                                      highlightedIndex === index
-                                        ? "bg-orange-50"
-                                        : "hover:bg-gray-50"
-                                    }`}
-                                    disabled={isLoadingDetails}
-                                  >
-                                    <div
-                                      className={`p-2 rounded-lg flex-shrink-0 ${
-                                        highlightedIndex === index
-                                          ? "bg-orange-100"
-                                          : "bg-gray-100"
-                                      }`}
-                                    >
-                                      <MapPin
-                                        className={`w-4 h-4 ${
-                                          highlightedIndex === index
-                                            ? "text-alloro-orange"
-                                            : "text-gray-500"
-                                        }`}
-                                      />
+                                  <button onClick={() => handleSelectPlace(suggestion)} onMouseEnter={() => setHighlightedIndex(index)} className={`w-full px-4 py-3 flex items-start gap-3 text-left transition-colors ${highlightedIndex === index ? "bg-orange-50" : "hover:bg-gray-50"}`} disabled={isLoadingDetails}>
+                                    <div className={`p-2 rounded-lg flex-shrink-0 ${highlightedIndex === index ? "bg-orange-100" : "bg-gray-100"}`}>
+                                      <MapPin className={`w-4 h-4 ${highlightedIndex === index ? "text-alloro-orange" : "text-gray-500"}`} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p
-                                        className={`font-semibold truncate ${
-                                          highlightedIndex === index
-                                            ? "text-alloro-orange"
-                                            : "text-gray-900"
-                                        }`}
-                                      >
-                                        {suggestion.mainText}
-                                      </p>
-                                      <p className="text-sm text-gray-500 truncate">
-                                        {suggestion.secondaryText}
-                                      </p>
+                                      <p className={`font-semibold truncate ${highlightedIndex === index ? "text-alloro-orange" : "text-gray-900"}`}>{suggestion.mainText}</p>
+                                      <p className="text-sm text-gray-500 truncate">{suggestion.secondaryText}</p>
                                     </div>
                                   </button>
                                 </li>
@@ -846,47 +802,21 @@ export default function WebsiteDetail() {
                           </motion.div>
                         )}
                       </AnimatePresence>
-
-                      {/* Error message */}
                       {searchError && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mt-3 text-sm text-red-500 flex items-center gap-1.5"
-                        >
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                          {searchError}
+                        <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="mt-3 text-sm text-red-500 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />{searchError}
                         </motion.p>
                       )}
-
-                      {/* Helper text */}
-                      {!isDropdownOpen &&
-                        searchQuery.length > 0 &&
-                        searchQuery.length < 2 && (
-                          <p className="mt-3 text-sm text-gray-400">
-                            Type at least 2 characters to search...
-                          </p>
-                        )}
-
-                      {/* No results message */}
-                      {searchQuery.length >= 2 &&
-                        !searching &&
-                        !isDropdownOpen &&
-                        suggestions.length === 0 &&
-                        !searchError && (
-                          <p className="mt-3 text-sm text-gray-500">
-                            No businesses found. Try a different search.
-                          </p>
-                        )}
+                      {!isDropdownOpen && searchQuery.length > 0 && searchQuery.length < 2 && <p className="mt-3 text-sm text-gray-400">Type at least 2 characters to search...</p>}
+                      {searchQuery.length >= 2 && !searching && !isDropdownOpen && suggestions.length === 0 && !searchError && <p className="mt-3 text-sm text-gray-500">No businesses found. Try a different search.</p>}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
-              // Show progress tracker for other statuses - Timeline style
+              // Horizontal progress tracker
               <div className="space-y-4">
-                {/* Timeline */}
-                <div className="space-y-0">
+                <div className="flex items-center justify-between gap-2 overflow-x-auto">
                   {STATUS_STEPS.map((step, index) => {
                     const isCompleted = index < currentStatusIndex;
                     const isCurrent = index === currentStatusIndex;
@@ -895,173 +825,224 @@ export default function WebsiteDetail() {
                     const isProcessing = isCurrent && isProcessingStatus(website.status);
 
                     return (
-                      <motion.div
-                        key={step.key}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="relative flex gap-4"
-                      >
-                        {/* Vertical line connector */}
-                        {index < STATUS_STEPS.length - 1 && (
+                      <div key={step.key} className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="flex flex-col items-center gap-1 shrink-0">
                           <div
-                            className={`absolute left-[19px] top-10 w-0.5 h-[calc(100%-16px)] ${
-                              isCompleted ? "bg-alloro-orange" : "bg-gray-200"
+                            className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+                              isCompleted ? "bg-alloro-orange border-alloro-orange" :
+                              isCurrent ? "bg-white border-alloro-orange shadow-md shadow-alloro-orange/20" :
+                              "bg-white border-gray-200"
                             }`}
-                          />
-                        )}
-
-                        {/* Step circle */}
-                        <div className="relative z-10 shrink-0">
-                          <motion.div
-                            animate={{
-                              scale: isCurrent ? 1.1 : 1,
-                            }}
-                            className={`
-                              w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all
-                              ${isCompleted ? "bg-alloro-orange border-alloro-orange" : ""}
-                              ${isCurrent ? "bg-white border-alloro-orange shadow-lg shadow-alloro-orange/20" : ""}
-                              ${isPending ? "bg-white border-gray-200" : ""}
-                            `}
                           >
                             {isCompleted ? (
-                              <Check className="w-5 h-5 text-white stroke-[3]" />
+                              <Check className="w-4 h-4 text-white stroke-[3]" />
                             ) : isProcessing ? (
-                              <Loader2 className="w-5 h-5 text-alloro-orange animate-spin" />
+                              <Loader2 className="w-4 h-4 text-alloro-orange animate-spin" />
                             ) : (
-                              <Icon
-                                className={`w-5 h-5 ${
-                                  isCurrent ? "text-alloro-orange" : "text-gray-400"
-                                }`}
-                              />
+                              <Icon className={`w-4 h-4 ${isCurrent ? "text-alloro-orange" : "text-gray-400"}`} />
                             )}
-                          </motion.div>
-                        </div>
-
-                        {/* Step content */}
-                        <div className={`flex-1 pb-6 ${isCurrent ? "pt-1" : "pt-2"}`}>
-                          <p
-                            className={`font-semibold transition-colors ${
-                              isCompleted ? "text-alloro-orange" : ""
-                            } ${isCurrent ? "text-gray-900" : ""} ${
-                              isPending ? "text-gray-400" : ""
-                            }`}
-                          >
+                          </div>
+                          <span className={`text-[10px] font-medium text-center leading-tight max-w-[70px] ${isCompleted ? "text-alloro-orange" : isCurrent ? "text-gray-900" : "text-gray-400"}`}>
                             {step.label}
-                          </p>
-                          {isCurrent && (
-                            <motion.p
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              className="text-sm text-alloro-orange/80 mt-1"
-                            >
-                              {step.description}
-                            </motion.p>
-                          )}
+                          </span>
                         </div>
-                      </motion.div>
+                        {index < STATUS_STEPS.length - 1 && (
+                          <div className={`flex-1 h-0.5 rounded-full mb-4 ${isCompleted ? "bg-alloro-orange" : "bg-gray-200"}`} />
+                        )}
+                      </div>
                     );
                   })}
                 </div>
 
-                {/* Progress bar */}
-                <div className="pt-2 border-t border-gray-100">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: `${(currentStatusIndex / (STATUS_STEPS.length - 1)) * 100}%`,
-                      }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-alloro-orange to-orange-400 rounded-full"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {currentStatusIndex} of {STATUS_STEPS.length - 1} steps completed
-                  </p>
-                </div>
-
-                {/* Show GBP info if available */}
+                {/* GBP info if available */}
                 {gbpData && gbpData.name && (
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="rounded-xl bg-gray-50 p-4 space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Selected Business
-                      </p>
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-alloro-orange/10 rounded-lg">
-                          <Building2 className="h-4 w-4 text-alloro-orange" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {String(gbpData.name)}
-                          </p>
-                          {gbpData.formattedAddress && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">
-                              {String(gbpData.formattedAddress)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {gbpData.rating && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">
-                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                            {String(gbpData.rating)} ({String(gbpData.reviewCount || 0)})
-                          </span>
-                        )}
-                        {gbpData.phone && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                            <Phone className="h-3 w-3" />
-                            {String(gbpData.phone)}
-                          </span>
-                        )}
-                      </div>
+                  <div className="pt-3 border-t border-gray-100 flex items-center gap-3">
+                    <div className="p-1.5 bg-alloro-orange/10 rounded-lg">
+                      <Building2 className="h-3.5 w-3.5 text-alloro-orange" />
                     </div>
+                    <p className="text-sm font-medium text-gray-700 truncate">{String(gbpData.name)}</p>
+                    {gbpData.rating && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full shrink-0">
+                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                        {String(gbpData.rating)}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
         </motion.div>
+      )}
+
+      {/* Tab bar: Pages | Layouts */}
+      <div className="flex items-center gap-1 mb-4">
+        {(["pages", "layouts"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setDetailTab(tab)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize ${
+              detailTab === tab
+                ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
-      {/* Pages Section */}
-      <motion.div
+      {/* Pages Section — grouped by path, expandable versions */}
+      {detailTab === "pages" && <motion.div
         className="rounded-xl border border-gray-200 bg-white shadow-sm"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
       >
         <div className="border-b border-gray-100 px-5 py-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Pages</h3>
-          <Badge label={`${website.pages.length} pages`} color="blue" />
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900">Pages</h3>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+              {pageGroups.length} {pageGroups.length === 1 ? "page" : "pages"}
+            </span>
+            {isGeneratingPage && (
+              <span className="flex items-center gap-1.5 text-xs text-alloro-orange">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Generating...
+              </span>
+            )}
+          </div>
+          {(isReady || website.status === "HTML_GENERATED") && website.template_id && (
+            <ActionButton
+              label={isGeneratingPage ? "Generating..." : "Create Page"}
+              icon={isGeneratingPage ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              onClick={() => setShowCreatePageModal(true)}
+              variant="primary"
+              size="sm"
+              disabled={isGeneratingPage}
+            />
+          )}
         </div>
-        <div className="p-5">
-          {website.pages.length > 0 ? (
-            <div className="space-y-3">
-              {website.pages.map((page) => (
-                <div
-                  key={page.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100 bg-gray-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium text-gray-900">{page.path}</p>
-                      <p className="text-sm text-gray-500">
-                        Version {page.version}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPageStatusStyles(page.status)}`}
+        <div className="divide-y divide-gray-100">
+          {pageGroups.length > 0 ? (
+            pageGroups.map((group) => {
+              const isExpanded = expandedPaths.has(group.path);
+              const latestPage = group.pages[0]; // Already sorted desc
+              const publishedPage = group.pages.find((p) => p.status === "published");
+              const displayPage = publishedPage || latestPage;
+
+              return (
+                <div key={group.path}>
+                  {/* Page row (click to expand) */}
+                  <button
+                    onClick={() => togglePath(group.path)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
                   >
-                    {page.status}
-                  </span>
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">{group.path}</p>
+                        <p className="text-xs text-gray-500">
+                          {group.pages.length} {group.pages.length === 1 ? "version" : "versions"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${getPageStatusStyles(displayPage.status)}`}>
+                        {displayPage.status}
+                      </span>
+                      {(displayPage.status === "published" || displayPage.status === "draft") && (
+                        <Link
+                          to={`/admin/websites/${id}/pages/${displayPage.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 hover:border-gray-300"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit
+                        </Link>
+                      )}
+                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+
+                  {/* Expanded version list */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-gray-50 border-t border-gray-100">
+                          {group.pages.map((page) => {
+                            const canDelete = page.status !== "published" && group.pages.length > 1;
+                            return (
+                              <div
+                                key={page.id}
+                                className="flex items-center justify-between px-5 py-3 pl-14 border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Hash className="h-3.5 w-3.5 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-700">v{page.version}</span>
+                                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getPageStatusStyles(page.status)}`}>
+                                    {page.status}
+                                  </span>
+                                  <span className="text-xs text-gray-400">{formatDateTime(page.updated_at)}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {(page.status === "published" || page.status === "draft") && (
+                                    <Link
+                                      to={`/admin/websites/${id}/pages/${page.id}/edit`}
+                                      className="text-xs text-gray-500 hover:text-alloro-orange transition-colors"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Link>
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      onClick={() => handleDeletePageVersion(page.id, group)}
+                                      disabled={deletingPageId === page.id}
+                                      className="text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                      title="Delete this version"
+                                    >
+                                      {deletingPageId === page.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3 w-3" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {/* Delete entire page */}
+                          <div className="px-5 py-2.5 pl-14 border-t border-gray-200 bg-gray-50/80">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePage(group.path, group.pages.length);
+                              }}
+                              disabled={deletingPagePath === group.path}
+                              className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                            >
+                              {deletingPagePath === group.path ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
+                              Delete page and all versions
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              ))}
-            </div>
+              );
+            })
           ) : (
             <div className="text-center py-8 text-gray-500">
               <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
@@ -1069,37 +1050,64 @@ export default function WebsiteDetail() {
             </div>
           )}
         </div>
-      </motion.div>
+      </motion.div>}
 
-      {/* Link to full manager */}
-      <motion.div
-        className="rounded-xl border border-blue-200 bg-blue-50 p-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <div className="flex items-center gap-3">
-          <ExternalLink className="h-5 w-5 text-blue-600" />
-          <div className="flex-1">
-            <p className="font-medium text-blue-900">
-              Need to make changes to this website?
-            </p>
-            <p className="text-sm text-blue-700">
-              Use the full Website Builder manager for editing templates,
-              regenerating content, and more.
-            </p>
+      {/* Layouts Section */}
+      {detailTab === "layouts" && (
+        <motion.div
+          className="rounded-xl border border-gray-200 bg-white shadow-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="border-b border-gray-100 px-5 py-4">
+            <h3 className="text-lg font-semibold text-gray-900">Layouts</h3>
+            <p className="text-xs text-gray-500 mt-1">Global wrapper, header, and footer for all pages</p>
           </div>
-          <a
-            href={`https://websites.getalloro.com/projects/${website.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            Open Manager
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        </div>
-      </motion.div>
+          <div className="divide-y divide-gray-100">
+            {(["wrapper", "header", "footer"] as const).map((field) => (
+              <Link
+                key={field}
+                to={`/admin/websites/${id}/layout/${field}`}
+                className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Code className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="font-medium text-gray-900 capitalize">{field}</p>
+                    <p className="text-xs text-gray-500">
+                      {field === "wrapper"
+                        ? "HTML shell with {{slot}} placeholder"
+                        : field === "header"
+                          ? "Site header rendered on all pages"
+                          : "Site footer rendered on all pages"}
+                    </p>
+                  </div>
+                </div>
+                <Pencil className="h-4 w-4 text-gray-400" />
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Create Page Modal */}
+      {showCreatePageModal && website.template_id && (
+        <CreatePageModal
+          projectId={website.id}
+          templateId={website.template_id}
+          gbpData={gbpData}
+          defaultPlaceId={website.selected_place_id || ""}
+          defaultWebsiteUrl={website.selected_website_url || ""}
+          onSuccess={() => {
+            setShowCreatePageModal(false);
+            setIsGeneratingPage(true);
+            expectedPageCountRef.current = website.pages.length;
+            startPageGenerationPoll();
+          }}
+          onClose={() => setShowCreatePageModal(false)}
+        />
+      )}
     </div>
   );
 }

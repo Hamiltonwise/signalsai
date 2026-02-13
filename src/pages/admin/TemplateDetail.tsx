@@ -12,19 +12,26 @@ import {
   Trash2,
   Clock,
   Settings,
-  Code,
   Monitor,
   Smartphone,
   Search,
   Globe,
+  Plus,
+  ArrowLeft,
+  FileText,
+  Pencil,
 } from "lucide-react";
 import {
   fetchTemplate,
   updateTemplate,
   deleteTemplate,
   activateTemplate,
+  createTemplatePage,
+  updateTemplatePage,
+  deleteTemplatePage,
 } from "../../api/templates";
-import type { Template } from "../../api/templates";
+import type { Template, TemplatePage, Section } from "../../api/templates";
+import { renderPage, parseSectionsJs, serializeSectionsJs, normalizeSections } from "../../utils/templateRenderer";
 import {
   AdminPageHeader,
   ActionButton,
@@ -34,7 +41,7 @@ import {
 
 /**
  * Template Detail Page
- * Editor + Settings tabs for managing a single template
+ * Pages + Settings tabs for managing a single template
  */
 export default function TemplateDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,13 +50,34 @@ export default function TemplateDetail() {
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("editor");
+  const [activeTab, setActiveTab] = useState("layouts");
 
-  // Editor state
+  // Layouts tab state (wrapper/header/footer)
+  const [wrapperContent, setWrapperContent] = useState("");
+  const [headerContent, setHeaderContent] = useState("");
+  const [footerContent, setFooterContent] = useState("");
+  const [layoutsUnsaved, setLayoutsUnsaved] = useState(false);
+  const [savingLayouts, setSavingLayouts] = useState(false);
+  const [layoutsSaveMessage, setLayoutsSaveMessage] = useState<string | null>(null);
+  const [activeLayoutField, setActiveLayoutField] = useState<"wrapper" | "header" | "footer">("wrapper");
+
+  // Template pages state
+  const [templatePages, setTemplatePages] = useState<TemplatePage[]>([]);
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [creatingPage, setCreatingPage] = useState(false);
+  const [newPageName, setNewPageName] = useState("");
+  const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
+
+  // Page editor state
   const [editorContent, setEditorContent] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Page name editing
+  const [editingPageName, setEditingPageName] = useState(false);
+  const [pageNameValue, setPageNameValue] = useState("");
+  const [savingPageName, setSavingPageName] = useState(false);
 
   // Preview state
   const [previewContent, setPreviewContent] = useState("");
@@ -65,6 +93,8 @@ export default function TemplateDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
+  const selectedPage = templatePages.find((p) => p.id === selectedPageId) || null;
+
   const loadTemplate = useCallback(async () => {
     if (!id) return;
 
@@ -73,10 +103,11 @@ export default function TemplateDetail() {
       setError(null);
       const response = await fetchTemplate(id);
       setTemplate(response.data);
-      setEditorContent(response.data.html_template || "");
-      setPreviewContent(response.data.html_template || "");
+      setTemplatePages(response.data.template_pages || []);
       setNameValue(response.data.name);
-      setHasUnsavedChanges(false);
+      setWrapperContent(response.data.wrapper || "");
+      setHeaderContent(response.data.header || "");
+      setFooterContent(response.data.footer || "");
     } catch (err) {
       console.error("Failed to fetch template:", err);
       setError(err instanceof Error ? err.message : "Failed to load template");
@@ -89,58 +120,107 @@ export default function TemplateDetail() {
     loadTemplate();
   }, [loadTemplate]);
 
-  // Cmd/Ctrl+S keyboard shortcut
+  // Cmd/Ctrl+S keyboard shortcut for saving
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        if (hasUnsavedChanges && !saving) {
-          handleSave();
+        if (activeTab === "layouts" && layoutsUnsaved && !savingLayouts) {
+          handleSaveLayouts();
+        } else if (activeTab === "pages" && selectedPageId && hasUnsavedChanges && !saving) {
+          handleSavePage();
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasUnsavedChanges, saving, editorContent]);
+  }, [activeTab, selectedPageId, hasUnsavedChanges, saving, editorContent, layoutsUnsaved, savingLayouts]);
+
+  // Rebuild preview from the current sections JS + template layouts
+  const rebuildPreview = useCallback(
+    (sectionsJs: string) => {
+      try {
+        const parsed: Section[] = parseSectionsJs(sectionsJs);
+        if (!Array.isArray(parsed)) return;
+        const assembled = renderPage(
+          wrapperContent || "{{slot}}",
+          headerContent,
+          footerContent,
+          parsed
+        );
+        setPreviewContent(assembled);
+      } catch {
+        // Invalid syntax — don't update preview
+      }
+    },
+    [wrapperContent, headerContent, footerContent]
+  );
 
   const handleEditorChange = (value: string | undefined) => {
     const newContent = value || "";
     setEditorContent(newContent);
     setHasUnsavedChanges(true);
 
-    // Debounce preview update
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
     }
     previewDebounceRef.current = setTimeout(() => {
-      setPreviewContent(newContent);
+      rebuildPreview(newContent);
     }, 500);
   };
 
-  // Wrap preview HTML with custom alloro-orange scrollbar styles
+  // Layouts editor change handler
+  const handleLayoutFieldChange = (field: "wrapper" | "header" | "footer", value: string | undefined) => {
+    const v = value || "";
+    if (field === "wrapper") setWrapperContent(v);
+    else if (field === "header") setHeaderContent(v);
+    else setFooterContent(v);
+    setLayoutsUnsaved(true);
+  };
+
+  // Save layouts handler
+  const handleSaveLayouts = async () => {
+    if (!id || savingLayouts) return;
+
+    try {
+      setSavingLayouts(true);
+      setLayoutsSaveMessage(null);
+      const response = await updateTemplate(id, {
+        wrapper: wrapperContent,
+        header: headerContent,
+        footer: footerContent,
+      });
+      setTemplate(response.data);
+      setLayoutsUnsaved(false);
+      setLayoutsSaveMessage("Saved");
+      setTimeout(() => setLayoutsSaveMessage(null), 2000);
+    } catch (err) {
+      setLayoutsSaveMessage(err instanceof Error ? err.message : "Failed to save");
+      setTimeout(() => setLayoutsSaveMessage(null), 3000);
+    } finally {
+      setSavingLayouts(false);
+    }
+  };
+
   const previewWithScrollbar = (html: string) => {
     const scrollbarStyle = `<style>::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#f3f4f6;border-radius:4px}::-webkit-scrollbar-thumb{background:#d66853;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#c05a47}</style>`;
-    // Inject before </head> if present, otherwise prepend
     if (html.includes("</head>")) {
       return html.replace("</head>", `${scrollbarStyle}</head>`);
     }
     return scrollbarStyle + html;
   };
 
-  // Extract page title from HTML <title> tag
   const extractTitle = (html: string): string => {
     const match = html.match(/<title[^>]*>(.*?)<\/title>/is);
     return match ? match[1].trim() : "";
   };
 
-  // Extract meta description from HTML
   const extractMetaDescription = (html: string): string => {
     const match = html.match(/<meta\s+name=["']description["']\s+content=["'](.*?)["'][^>]*>/is)
       || html.match(/<meta\s+content=["'](.*?)["']\s+name=["']description["'][^>]*>/is);
     return match ? match[1].trim() : "";
   };
 
-  // Extract OG/canonical URL from HTML
   const extractUrl = (html: string): string => {
     const canonical = html.match(/<link\s+rel=["']canonical["']\s+href=["'](.*?)["'][^>]*>/is);
     if (canonical) return canonical[1].trim();
@@ -149,7 +229,6 @@ export default function TemplateDetail() {
     return "https://example.com";
   };
 
-  // Extract favicon URL from HTML
   const extractFavicon = (html: string): string => {
     const match = html.match(/<link\s+[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["'](.*?)["'][^>]*>/is)
       || html.match(/<link\s+[^>]*href=["'](.*?)["'][^>]*rel=["'](?:shortcut )?icon["'][^>]*>/is);
@@ -161,36 +240,124 @@ export default function TemplateDetail() {
   const pageUrl = extractUrl(previewContent);
   const pageFavicon = extractFavicon(previewContent);
 
-  const handleSave = async () => {
-    if (!id || saving) return;
+  // === Template Page Handlers ===
+
+  const handleSelectPage = (page: TemplatePage) => {
+    setSelectedPageId(page.id);
+    const sectionsJs = serializeSectionsJs(normalizeSections(page.sections));
+    setEditorContent(sectionsJs);
+    rebuildPreview(sectionsJs);
+    setHasUnsavedChanges(false);
+    setSaveMessage(null);
+    setPageNameValue(page.name);
+    setEditingPageName(false);
+  };
+
+  const handleBackToList = () => {
+    if (hasUnsavedChanges) {
+      if (!confirm("You have unsaved changes. Discard them?")) return;
+    }
+    setSelectedPageId(null);
+    setHasUnsavedChanges(false);
+    setSaveMessage(null);
+    setEditingPageName(false);
+  };
+
+  const handleCreatePage = async () => {
+    if (!id || !newPageName.trim()) return;
+
+    try {
+      setCreatingPage(true);
+      const response = await createTemplatePage(id, { name: newPageName.trim() });
+      setTemplatePages((prev) => [...prev, response.data]);
+      setNewPageName("");
+      handleSelectPage(response.data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create page");
+    } finally {
+      setCreatingPage(false);
+    }
+  };
+
+  const handleSavePage = async () => {
+    if (!id || !selectedPageId || saving) return;
 
     try {
       setSaving(true);
       setSaveMessage(null);
-      const response = await updateTemplate(id, {
-        html_template: editorContent,
+      let parsedSections: Section[];
+      try {
+        parsedSections = parseSectionsJs(editorContent);
+      } catch (parseErr) {
+        setSaveMessage(parseErr instanceof Error ? parseErr.message : "Invalid sections syntax");
+        setTimeout(() => setSaveMessage(null), 3000);
+        setSaving(false);
+        return;
+      }
+      const response = await updateTemplatePage(id, selectedPageId, {
+        sections: parsedSections,
       });
-      setTemplate(response.data);
+      setTemplatePages((prev) =>
+        prev.map((p) => (p.id === selectedPageId ? response.data : p))
+      );
       setHasUnsavedChanges(false);
       setSaveMessage("Saved");
       setTimeout(() => setSaveMessage(null), 2000);
     } catch (err) {
-      setSaveMessage(
-        err instanceof Error ? err.message : "Failed to save"
-      );
+      setSaveMessage(err instanceof Error ? err.message : "Failed to save");
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
     }
   };
 
+  const handleSavePageName = async () => {
+    if (!id || !selectedPageId || savingPageName || !pageNameValue.trim()) return;
+
+    try {
+      setSavingPageName(true);
+      const response = await updateTemplatePage(id, selectedPageId, {
+        name: pageNameValue.trim(),
+      });
+      setTemplatePages((prev) =>
+        prev.map((p) => (p.id === selectedPageId ? response.data : p))
+      );
+      setEditingPageName(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to rename page");
+    } finally {
+      setSavingPageName(false);
+    }
+  };
+
+  const handleDeletePage = async (pageId: string) => {
+    if (!id) return;
+    if (!confirm("Delete this template page? This cannot be undone.")) return;
+
+    try {
+      setDeletingPageId(pageId);
+      await deleteTemplatePage(id, pageId);
+      setTemplatePages((prev) => prev.filter((p) => p.id !== pageId));
+      if (selectedPageId === pageId) {
+        setSelectedPageId(null);
+        setHasUnsavedChanges(false);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete page");
+    } finally {
+      setDeletingPageId(null);
+    }
+  };
+
   const handlePreview = () => {
     const win = window.open("", "_blank");
     if (win) {
-      win.document.write(editorContent);
+      win.document.write(previewContent);
       win.document.close();
     }
   };
+
+  // === Template Settings Handlers ===
 
   const handlePublishToggle = async () => {
     if (!id || !template || publishing) return;
@@ -201,9 +368,7 @@ export default function TemplateDetail() {
       const response = await updateTemplate(id, { status: newStatus });
       setTemplate(response.data);
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to update template status"
-      );
+      alert(err instanceof Error ? err.message : "Failed to update template status");
     } finally {
       setPublishing(false);
     }
@@ -217,9 +382,7 @@ export default function TemplateDetail() {
       const response = await activateTemplate(id);
       setTemplate(response.data);
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Failed to activate template"
-      );
+      alert(err instanceof Error ? err.message : "Failed to activate template");
     } finally {
       setActivating(false);
     }
@@ -300,7 +463,8 @@ export default function TemplateDetail() {
   }
 
   const tabs = [
-    { id: "editor", label: "Editor", icon: <Code className="w-4 h-4" /> },
+    { id: "layouts", label: "Layouts", icon: <FileCode className="w-4 h-4" /> },
+    { id: "pages", label: "Pages", icon: <FileText className="w-4 h-4" /> },
     {
       id: "settings",
       label: "Settings",
@@ -314,7 +478,7 @@ export default function TemplateDetail() {
       <AdminPageHeader
         icon={<FileCode className="w-6 h-6" />}
         title={template.name}
-        description="Edit template HTML and manage settings"
+        description="Manage template pages and settings"
         backButton={{
           label: "Back to Templates",
           onClick: () => navigate("/admin/templates"),
@@ -329,9 +493,45 @@ export default function TemplateDetail() {
               color={template.status === "published" ? "green" : "gray"}
             />
 
-            {activeTab === "editor" && (
+            {activeTab === "layouts" && (
               <>
-                {/* Save message */}
+                <AnimatePresence>
+                  {layoutsSaveMessage && (
+                    <motion.span
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className={`text-sm font-medium ${
+                        layoutsSaveMessage === "Saved" ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {layoutsSaveMessage}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                <ActionButton
+                  label={savingLayouts ? "Saving..." : "Save Layouts"}
+                  icon={
+                    savingLayouts ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <div className="relative">
+                        <Save className="w-4 h-4" />
+                        {layoutsUnsaved && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-alloro-orange rounded-full" />
+                        )}
+                      </div>
+                    )
+                  }
+                  onClick={handleSaveLayouts}
+                  variant="primary"
+                  disabled={savingLayouts || !layoutsUnsaved}
+                />
+              </>
+            )}
+
+            {activeTab === "pages" && selectedPageId && (
+              <>
                 <AnimatePresence>
                   {saveMessage && (
                     <motion.span
@@ -363,7 +563,7 @@ export default function TemplateDetail() {
                       </div>
                     )
                   }
-                  onClick={handleSave}
+                  onClick={handleSavePage}
                   variant="primary"
                   disabled={saving || !hasUnsavedChanges}
                 />
@@ -382,381 +582,598 @@ export default function TemplateDetail() {
       {/* Tab Bar */}
       <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Editor Tab */}
-      {activeTab === "editor" && (
+      {/* Layouts Tab */}
+      {activeTab === "layouts" && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="grid grid-cols-2 gap-4"
-          style={{ height: "calc(100vh - 320px)" }}
         >
-          {/* Monaco Editor */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col" style={{ minHeight: 650 }}>
-            <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                HTML Editor
-              </span>
-              <span className="text-xs text-gray-400">
-                {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
-              </span>
-            </div>
-            <div className="flex-1">
-              <Editor
-                height="100%"
-                defaultLanguage="html"
-                value={editorContent}
-                onChange={handleEditorChange}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: "on",
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  padding: { top: 12 },
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Live Preview */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col" style={{ minHeight: 650 }}>
-            <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-                </span>
-                Live Preview
-              </span>
-              <div className="flex items-center gap-2">
-                {/* Desktop / Mobile / SEO toggle */}
-                <div className="flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
-                  <button
-                    onClick={() => setPreviewMode("desktop")}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
-                      previewMode === "desktop"
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-400 hover:text-gray-600"
-                    }`}
-                    title="Desktop view"
-                  >
-                    <Monitor className="h-3 w-3" />
-                    <span>Desktop</span>
-                  </button>
-                  <button
-                    onClick={() => setPreviewMode("mobile")}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
-                      previewMode === "mobile"
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-400 hover:text-gray-600"
-                    }`}
-                    title="Mobile view"
-                  >
-                    <Smartphone className="h-3 w-3" />
-                    <span>Mobile</span>
-                  </button>
-                  <button
-                    onClick={() => setPreviewMode("seo")}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
-                      previewMode === "seo"
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-400 hover:text-gray-600"
-                    }`}
-                    title="SEO preview"
-                  >
-                    <Search className="h-3 w-3" />
-                    <span>SEO</span>
-                  </button>
-                </div>
+          <div className="space-y-4">
+            {/* Layout field selector */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white p-0.5 w-fit">
+              {(["wrapper", "header", "footer"] as const).map((field) => (
                 <button
-                  onClick={handlePreview}
-                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:border-gray-300"
+                  key={field}
+                  onClick={() => setActiveLayoutField(field)}
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition capitalize ${
+                    activeLayoutField === field
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-400 hover:text-gray-600"
+                  }`}
                 >
-                  <Eye className="h-3 w-3" />
-                  Full Preview
+                  {field}
                 </button>
+              ))}
+            </div>
+
+            {/* Monaco editor for the active layout field */}
+            <div
+              className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col"
+              style={{ height: "calc(100vh - 360px)", minHeight: 500 }}
+            >
+              <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {activeLayoutField} — HTML Editor
+                </span>
+                <span className="text-xs text-gray-400">
+                  {activeLayoutField === "wrapper" && "Use {{slot}} as the placeholder for page content"}
+                  {activeLayoutField === "header" && "Shared header rendered above page sections"}
+                  {activeLayoutField === "footer" && "Shared footer rendered below page sections"}
+                </span>
+              </div>
+              <div className="flex-1">
+                <Editor
+                  height="100%"
+                  defaultLanguage="html"
+                  value={
+                    activeLayoutField === "wrapper"
+                      ? wrapperContent
+                      : activeLayoutField === "header"
+                      ? headerContent
+                      : footerContent
+                  }
+                  onChange={(v) => handleLayoutFieldChange(activeLayoutField, v)}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    lineNumbers: "on",
+                    wordWrap: "on",
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    padding: { top: 12 },
+                  }}
+                />
               </div>
             </div>
-            <div
-              className={`flex-1 overflow-hidden relative ${
-                previewMode !== "desktop" ? "flex justify-center bg-gray-100" : ""
-              }`}
-              style={previewMode === "seo" ? { overflowY: "auto" } : undefined}
-            >
-              {previewMode === "desktop" ? (
-                /* Desktop: Monitor frame with browser chrome */
-                <div className="absolute inset-0 flex items-start justify-center p-4 overflow-hidden">
-                  <div className="w-full h-full flex flex-col">
-                    {/* Monitor bezel top */}
-                    <div className="bg-gray-700 rounded-t-xl px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
-                      {/* Window controls */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                      </div>
-                      {/* Tab */}
-                      <div className="flex items-center gap-1.5 bg-gray-600 rounded-md px-2.5 py-1 max-w-[200px]">
-                        {pageFavicon && (
-                          <img src={pageFavicon} alt="" className="w-3 h-3 flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        )}
-                        <span className="text-[10px] text-gray-200 truncate">
-                          {pageTitle || "Untitled"}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Address bar */}
-                    <div className="bg-gray-600 px-3 py-1 flex items-center gap-2 flex-shrink-0">
-                      <div className="flex-1 bg-gray-500 rounded-md px-2 py-0.5 flex items-center gap-1.5">
-                        <Globe className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
-                        <span className="text-[10px] text-gray-300 truncate">
-                          {pageUrl}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Viewport */}
-                    <div className="flex-1 relative overflow-hidden bg-white border-x-2 border-gray-700">
-                      <iframe
-                        srcDoc={previewWithScrollbar(previewContent)}
-                        className="border-0 absolute top-0 left-0"
-                        style={{
-                          width: `${100 / 0.45}%`,
-                          height: `${100 / 0.45}%`,
-                          transform: "scale(0.45)",
-                          transformOrigin: "top left",
+          </div>
+        </motion.div>
+      )}
+
+      {/* Pages Tab */}
+      {activeTab === "pages" && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {selectedPageId && selectedPage ? (
+            /* === Page Editor View === */
+            <div className="space-y-4">
+              {/* Page editor header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleBackToList}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    All Pages
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  {editingPageName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={pageNameValue}
+                        onChange={(e) => setPageNameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSavePageName();
+                          if (e.key === "Escape") {
+                            setEditingPageName(false);
+                            setPageNameValue(selectedPage.name);
+                          }
                         }}
-                        sandbox="allow-scripts allow-same-origin"
-                        title="Template Preview"
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
+                        autoFocus
+                      />
+                      <ActionButton
+                        label={savingPageName ? "..." : "Save"}
+                        onClick={handleSavePageName}
+                        variant="primary"
+                        size="sm"
+                        disabled={savingPageName || !pageNameValue.trim()}
+                      />
+                      <ActionButton
+                        label="Cancel"
+                        onClick={() => {
+                          setEditingPageName(false);
+                          setPageNameValue(selectedPage.name);
+                        }}
+                        variant="secondary"
+                        size="sm"
                       />
                     </div>
-                    {/* Monitor stand */}
-                    <div className="bg-gray-700 rounded-b-xl h-2 flex-shrink-0" />
-                  </div>
-                </div>
-              ) : previewMode === "mobile" ? (
-                /* Mobile: Phone frame with browser chrome */
-                <div className="flex items-start justify-center py-4">
-                  <div className="flex flex-col" style={{ width: 380 }}>
-                    {/* Phone notch / status bar */}
-                    <div className="bg-gray-800 rounded-t-[2rem] pt-2 px-6 flex-shrink-0">
-                      <div className="flex items-center justify-between text-[9px] text-gray-400 px-1 pb-1">
-                        <span>9:41</span>
-                        <div className="w-20 h-5 bg-gray-900 rounded-full mx-auto" />
-                        <div className="flex items-center gap-1">
-                          <span>5G</span>
-                          <div className="w-4 h-2 border border-gray-400 rounded-sm">
-                            <div className="w-2.5 h-full bg-gray-400 rounded-sm" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Browser chrome */}
-                    <div className="bg-gray-800 px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
-                      <div className="flex-1 bg-gray-700 rounded-full px-3 py-1 flex items-center gap-1.5">
-                        <Globe className="w-2.5 h-2.5 text-gray-400 flex-shrink-0" />
-                        <span className="text-[10px] text-gray-300 truncate">
-                          {pageTitle || pageUrl}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Viewport */}
-                    <div className="bg-white border-x-4 border-gray-800 h-full overflow-hidden" style={{ height: 560 }}>
-                      <iframe
-                        srcDoc={previewWithScrollbar(previewContent)}
-                        className="w-full h-full border-0"
-                        sandbox="allow-scripts allow-same-origin"
-                        title="Template Preview (Mobile)"
-                      />
-                    </div>
-                    {/* Phone bottom bar */}
-                    <div className="bg-gray-800 rounded-b-[2rem] px-6 py-2 flex items-center justify-center flex-shrink-0">
-                      <div className="w-28 h-1 bg-gray-600 rounded-full" />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* SEO: Google Search Result Preview */
-                <div className="flex flex-col items-center py-6 px-4 w-full">
-                  <div className="w-full max-w-2xl space-y-6">
-                    {/* Google-style header */}
-                    <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
-                      <Search className="w-5 h-5 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-500">
-                        Google Search Preview
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {selectedPage.name}
                       </span>
+                      <button
+                        onClick={() => setEditingPageName(true)}
+                        className="text-gray-400 hover:text-alloro-orange transition"
+                        title="Rename page"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDeletePage(selectedPageId)}
+                  disabled={deletingPageId === selectedPageId}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-700 transition disabled:opacity-50"
+                >
+                  {deletingPageId === selectedPageId ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  Delete Page
+                </button>
+              </div>
 
-                    {/* Desktop search result */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                        Desktop Result
-                      </p>
-                      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-1.5">
-                        {/* URL breadcrumb */}
-                        <div className="flex items-center gap-2">
-                          {pageFavicon ? (
-                            <img src={pageFavicon} alt="" className="w-7 h-7 rounded-full border border-gray-100 p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
-                              <Globe className="w-3.5 h-3.5 text-gray-400" />
+              {/* Editor + Preview */}
+              <div
+                className="grid grid-cols-2 gap-4"
+                style={{ height: "calc(100vh - 360px)" }}
+              >
+                {/* Monaco Editor */}
+                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col" style={{ minHeight: 650 }}>
+                  <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Sections Editor
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <Editor
+                      height="100%"
+                      defaultLanguage="javascript"
+                      value={editorContent}
+                      onChange={handleEditorChange}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: "on",
+                        wordWrap: "on",
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        tabSize: 2,
+                        padding: { top: 12 },
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Live Preview */}
+                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col" style={{ minHeight: 650 }}>
+                  <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                      </span>
+                      Live Preview
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
+                        <button
+                          onClick={() => setPreviewMode("desktop")}
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                            previewMode === "desktop"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-400 hover:text-gray-600"
+                          }`}
+                          title="Desktop view"
+                        >
+                          <Monitor className="h-3 w-3" />
+                          <span>Desktop</span>
+                        </button>
+                        <button
+                          onClick={() => setPreviewMode("mobile")}
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                            previewMode === "mobile"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-400 hover:text-gray-600"
+                          }`}
+                          title="Mobile view"
+                        >
+                          <Smartphone className="h-3 w-3" />
+                          <span>Mobile</span>
+                        </button>
+                        <button
+                          onClick={() => setPreviewMode("seo")}
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                            previewMode === "seo"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-400 hover:text-gray-600"
+                          }`}
+                          title="SEO preview"
+                        >
+                          <Search className="h-3 w-3" />
+                          <span>SEO</span>
+                        </button>
+                      </div>
+                      <button
+                        onClick={handlePreview}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:border-gray-300"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Full Preview
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex-1 overflow-hidden relative ${
+                      previewMode !== "desktop" ? "flex justify-center bg-gray-100" : ""
+                    }`}
+                    style={previewMode === "seo" ? { overflowY: "auto" } : undefined}
+                  >
+                    {previewMode === "desktop" ? (
+                      <div className="absolute inset-0 flex items-start justify-center p-4 overflow-hidden">
+                        <div className="w-full h-full flex flex-col">
+                          <div className="bg-gray-700 rounded-t-xl px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
                             </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span className="text-sm text-gray-800">
-                              {(() => {
-                                try { return new URL(pageUrl).hostname; } catch { return "example.com"; }
-                              })()}
-                            </span>
-                            <span className="text-xs text-gray-500 truncate max-w-md">
-                              {pageUrl}
-                            </span>
-                          </div>
-                        </div>
-                        {/* Title */}
-                        <h3 className="text-xl text-[#1a0dab] hover:underline cursor-pointer leading-snug">
-                          {pageTitle || (
-                            <span className="text-gray-300 italic">No &lt;title&gt; tag found</span>
-                          )}
-                        </h3>
-                        {/* Description */}
-                        <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
-                          {pageDescription || (
-                            <span className="text-gray-300 italic">
-                              No meta description found. Add a &lt;meta name="description" content="..."&gt; tag to your template.
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {/* Character counts */}
-                      <div className="flex gap-4 px-1">
-                        <span className={`text-[10px] font-medium ${
-                          pageTitle.length === 0 ? "text-red-400" :
-                          pageTitle.length > 60 ? "text-amber-500" : "text-green-500"
-                        }`}>
-                          Title: {pageTitle.length}/60 chars
-                          {pageTitle.length === 0 && " — Missing!"}
-                          {pageTitle.length > 60 && " — May be truncated"}
-                        </span>
-                        <span className={`text-[10px] font-medium ${
-                          pageDescription.length === 0 ? "text-red-400" :
-                          pageDescription.length > 160 ? "text-amber-500" : "text-green-500"
-                        }`}>
-                          Description: {pageDescription.length}/160 chars
-                          {pageDescription.length === 0 && " — Missing!"}
-                          {pageDescription.length > 160 && " — May be truncated"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile search result */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                        Mobile Result
-                      </p>
-                      <div className="bg-white rounded-xl border border-gray-200 p-4 max-w-sm space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          {pageFavicon ? (
-                            <img src={pageFavicon} alt="" className="w-6 h-6 rounded-full border border-gray-100 p-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
-                              <Globe className="w-3 h-3 text-gray-400" />
-                            </div>
-                          )}
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs text-gray-800 truncate">
-                              {(() => {
-                                try { return new URL(pageUrl).hostname; } catch { return "example.com"; }
-                              })()}
-                            </span>
-                            <span className="text-[10px] text-gray-500 truncate">
-                              {pageUrl}
-                            </span>
-                          </div>
-                        </div>
-                        <h3 className="text-base text-[#1a0dab] hover:underline cursor-pointer leading-snug line-clamp-2">
-                          {pageTitle || (
-                            <span className="text-gray-300 italic text-sm">No title</span>
-                          )}
-                        </h3>
-                        <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
-                          {pageDescription || (
-                            <span className="text-gray-300 italic">No description</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* SEO Tips */}
-                    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                        SEO Checklist
-                      </p>
-                      <div className="space-y-2">
-                        {[
-                          {
-                            ok: pageTitle.length > 0 && pageTitle.length <= 60,
-                            warn: pageTitle.length > 60,
-                            label: "Page title",
-                            detail: pageTitle.length === 0
-                              ? "Missing — add a <title> tag"
-                              : pageTitle.length > 60
-                              ? `${pageTitle.length} chars — recommended max is 60`
-                              : `${pageTitle.length} chars — good length`,
-                          },
-                          {
-                            ok: pageDescription.length > 0 && pageDescription.length <= 160,
-                            warn: pageDescription.length > 160,
-                            label: "Meta description",
-                            detail: pageDescription.length === 0
-                              ? 'Missing — add <meta name="description" content="...">'
-                              : pageDescription.length > 160
-                              ? `${pageDescription.length} chars — recommended max is 160`
-                              : `${pageDescription.length} chars — good length`,
-                          },
-                          {
-                            ok: pageUrl !== "https://example.com",
-                            warn: false,
-                            label: "Canonical URL",
-                            detail: pageUrl === "https://example.com"
-                              ? 'Not set — add <link rel="canonical" href="...">'
-                              : pageUrl,
-                          },
-                          {
-                            ok: pageFavicon.length > 0,
-                            warn: false,
-                            label: "Favicon",
-                            detail: pageFavicon.length === 0
-                              ? 'Missing — add <link rel="icon" href="...">'
-                              : "Found",
-                          },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-start gap-2.5">
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              item.ok ? "bg-green-100" : item.warn ? "bg-amber-100" : "bg-red-100"
-                            }`}>
-                              <span className={`text-[10px] font-bold ${
-                                item.ok ? "text-green-600" : item.warn ? "text-amber-600" : "text-red-500"
-                              }`}>
-                                {item.ok ? "✓" : item.warn ? "!" : "✕"}
+                            <div className="flex items-center gap-1.5 bg-gray-600 rounded-md px-2.5 py-1 max-w-[200px]">
+                              {pageFavicon && (
+                                <img src={pageFavicon} alt="" className="w-3 h-3 flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              )}
+                              <span className="text-[10px] text-gray-200 truncate">
+                                {pageTitle || "Untitled"}
                               </span>
                             </div>
-                            <div>
-                              <span className="text-xs font-semibold text-gray-700">{item.label}</span>
-                              <p className="text-[11px] text-gray-500">{item.detail}</p>
+                          </div>
+                          <div className="bg-gray-600 px-3 py-1 flex items-center gap-2 flex-shrink-0">
+                            <div className="flex-1 bg-gray-500 rounded-md px-2 py-0.5 flex items-center gap-1.5">
+                              <Globe className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
+                              <span className="text-[10px] text-gray-300 truncate">
+                                {pageUrl}
+                              </span>
                             </div>
                           </div>
-                        ))}
+                          <div className="flex-1 relative overflow-hidden bg-white border-x-2 border-gray-700">
+                            <iframe
+                              srcDoc={previewWithScrollbar(previewContent)}
+                              className="border-0 absolute top-0 left-0"
+                              style={{
+                                width: `${100 / 0.45}%`,
+                                height: `${100 / 0.45}%`,
+                                transform: "scale(0.45)",
+                                transformOrigin: "top left",
+                              }}
+                              sandbox="allow-scripts allow-same-origin"
+                              title="Template Preview"
+                            />
+                          </div>
+                          <div className="bg-gray-700 rounded-b-xl h-2 flex-shrink-0" />
+                        </div>
                       </div>
-                    </div>
+                    ) : previewMode === "mobile" ? (
+                      <div className="flex items-start justify-center py-4">
+                        <div className="flex flex-col" style={{ width: 380 }}>
+                          <div className="bg-gray-800 rounded-t-[2rem] pt-2 px-6 flex-shrink-0">
+                            <div className="flex items-center justify-between text-[9px] text-gray-400 px-1 pb-1">
+                              <span>9:41</span>
+                              <div className="w-20 h-5 bg-gray-900 rounded-full mx-auto" />
+                              <div className="flex items-center gap-1">
+                                <span>5G</span>
+                                <div className="w-4 h-2 border border-gray-400 rounded-sm">
+                                  <div className="w-2.5 h-full bg-gray-400 rounded-sm" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bg-gray-800 px-3 py-1.5 flex items-center gap-2 flex-shrink-0">
+                            <div className="flex-1 bg-gray-700 rounded-full px-3 py-1 flex items-center gap-1.5">
+                              <Globe className="w-2.5 h-2.5 text-gray-400 flex-shrink-0" />
+                              <span className="text-[10px] text-gray-300 truncate">
+                                {pageTitle || pageUrl}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="bg-white border-x-4 border-gray-800 h-full overflow-hidden" style={{ height: 560 }}>
+                            <iframe
+                              srcDoc={previewWithScrollbar(previewContent)}
+                              className="w-full h-full border-0"
+                              sandbox="allow-scripts allow-same-origin"
+                              title="Template Preview (Mobile)"
+                            />
+                          </div>
+                          <div className="bg-gray-800 rounded-b-[2rem] px-6 py-2 flex items-center justify-center flex-shrink-0">
+                            <div className="w-28 h-1 bg-gray-600 rounded-full" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* SEO Preview */
+                      <div className="flex flex-col items-center py-6 px-4 w-full">
+                        <div className="w-full max-w-2xl space-y-6">
+                          <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+                            <Search className="w-5 h-5 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-500">
+                              Google Search Preview
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                              Desktop Result
+                            </p>
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                {pageFavicon ? (
+                                  <img src={pageFavicon} alt="" className="w-7 h-7 rounded-full border border-gray-100 p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <Globe className="w-3.5 h-3.5 text-gray-400" />
+                                  </div>
+                                )}
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-800">
+                                    {(() => {
+                                      try { return new URL(pageUrl).hostname; } catch { return "example.com"; }
+                                    })()}
+                                  </span>
+                                  <span className="text-xs text-gray-500 truncate max-w-md">
+                                    {pageUrl}
+                                  </span>
+                                </div>
+                              </div>
+                              <h3 className="text-xl text-[#1a0dab] hover:underline cursor-pointer leading-snug">
+                                {pageTitle || (
+                                  <span className="text-gray-300 italic">No &lt;title&gt; tag found</span>
+                                )}
+                              </h3>
+                              <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
+                                {pageDescription || (
+                                  <span className="text-gray-300 italic">
+                                    No meta description found. Add a &lt;meta name="description" content="..."&gt; tag.
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex gap-4 px-1">
+                              <span className={`text-[10px] font-medium ${
+                                pageTitle.length === 0 ? "text-red-400" :
+                                pageTitle.length > 60 ? "text-amber-500" : "text-green-500"
+                              }`}>
+                                Title: {pageTitle.length}/60 chars
+                                {pageTitle.length === 0 && " — Missing!"}
+                                {pageTitle.length > 60 && " — May be truncated"}
+                              </span>
+                              <span className={`text-[10px] font-medium ${
+                                pageDescription.length === 0 ? "text-red-400" :
+                                pageDescription.length > 160 ? "text-amber-500" : "text-green-500"
+                              }`}>
+                                Description: {pageDescription.length}/160 chars
+                                {pageDescription.length === 0 && " — Missing!"}
+                                {pageDescription.length > 160 && " — May be truncated"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                              Mobile Result
+                            </p>
+                            <div className="bg-white rounded-xl border border-gray-200 p-4 max-w-sm space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                {pageFavicon ? (
+                                  <img src={pageFavicon} alt="" className="w-6 h-6 rounded-full border border-gray-100 p-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <Globe className="w-3 h-3 text-gray-400" />
+                                  </div>
+                                )}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs text-gray-800 truncate">
+                                    {(() => {
+                                      try { return new URL(pageUrl).hostname; } catch { return "example.com"; }
+                                    })()}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 truncate">
+                                    {pageUrl}
+                                  </span>
+                                </div>
+                              </div>
+                              <h3 className="text-base text-[#1a0dab] hover:underline cursor-pointer leading-snug line-clamp-2">
+                                {pageTitle || (
+                                  <span className="text-gray-300 italic text-sm">No title</span>
+                                )}
+                              </h3>
+                              <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
+                                {pageDescription || (
+                                  <span className="text-gray-300 italic">No description</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                              SEO Checklist
+                            </p>
+                            <div className="space-y-2">
+                              {[
+                                {
+                                  ok: pageTitle.length > 0 && pageTitle.length <= 60,
+                                  warn: pageTitle.length > 60,
+                                  label: "Page title",
+                                  detail: pageTitle.length === 0
+                                    ? "Missing — add a <title> tag"
+                                    : pageTitle.length > 60
+                                    ? `${pageTitle.length} chars — recommended max is 60`
+                                    : `${pageTitle.length} chars — good length`,
+                                },
+                                {
+                                  ok: pageDescription.length > 0 && pageDescription.length <= 160,
+                                  warn: pageDescription.length > 160,
+                                  label: "Meta description",
+                                  detail: pageDescription.length === 0
+                                    ? 'Missing — add <meta name="description" content="...">'
+                                    : pageDescription.length > 160
+                                    ? `${pageDescription.length} chars — recommended max is 160`
+                                    : `${pageDescription.length} chars — good length`,
+                                },
+                                {
+                                  ok: pageUrl !== "https://example.com",
+                                  warn: false,
+                                  label: "Canonical URL",
+                                  detail: pageUrl === "https://example.com"
+                                    ? 'Not set — add <link rel="canonical" href="...">'
+                                    : pageUrl,
+                                },
+                                {
+                                  ok: pageFavicon.length > 0,
+                                  warn: false,
+                                  label: "Favicon",
+                                  detail: pageFavicon.length === 0
+                                    ? 'Missing — add <link rel="icon" href="...">'
+                                    : "Found",
+                                },
+                              ].map((item) => (
+                                <div key={item.label} className="flex items-start gap-2.5">
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                    item.ok ? "bg-green-100" : item.warn ? "bg-amber-100" : "bg-red-100"
+                                  }`}>
+                                    <span className={`text-[10px] font-bold ${
+                                      item.ok ? "text-green-600" : item.warn ? "text-amber-600" : "text-red-500"
+                                    }`}>
+                                      {item.ok ? "✓" : item.warn ? "!" : "✕"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+                                    <p className="text-[11px] text-gray-500">{item.detail}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* === Pages List View === */
+            <div className="space-y-4">
+              {/* Add page form */}
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={newPageName}
+                    onChange={(e) => setNewPageName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newPageName.trim()) handleCreatePage();
+                    }}
+                    placeholder="New page name (e.g. Homepage, Services, About)"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-alloro-orange focus:outline-none focus:ring-2 focus:ring-alloro-orange/20"
+                  />
+                  <ActionButton
+                    label={creatingPage ? "Creating..." : "Add Page"}
+                    icon={creatingPage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    onClick={handleCreatePage}
+                    variant="primary"
+                    disabled={creatingPage || !newPageName.trim()}
+                  />
+                </div>
+              </div>
+
+              {/* Pages list */}
+              {templatePages.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-12 text-center">
+                  <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-500">
+                    No pages yet
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Add a page to start building this template
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {templatePages.map((page) => (
+                    <motion.div
+                      key={page.id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between hover:border-gray-300 transition cursor-pointer group"
+                      onClick={() => handleSelectPage(page)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-alloro-orange/10 transition">
+                          <FileText className="w-4 h-4 text-gray-400 group-hover:text-alloro-orange transition" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {page.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {normalizeSections(page.sections).length > 0
+                              ? `${normalizeSections(page.sections).length} section${normalizeSections(page.sections).length !== 1 ? "s" : ""}`
+                              : "No sections"}
+                            {" · "}
+                            Updated {formatDate(page.updated_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePage(page.id);
+                          }}
+                          disabled={deletingPageId === page.id}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                          title="Delete page"
+                        >
+                          {deletingPageId === page.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
+          )}
         </motion.div>
       )}
 
@@ -851,6 +1268,16 @@ export default function TemplateDetail() {
               </div>
             </div>
 
+            {/* Pages count */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Pages
+              </label>
+              <p className="text-sm text-gray-600">
+                {templatePages.length} template page{templatePages.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -889,7 +1316,6 @@ export default function TemplateDetail() {
             </h3>
 
             <div className="flex flex-wrap gap-3">
-              {/* Publish/Unpublish */}
               <ActionButton
                 label={
                   publishing
@@ -906,7 +1332,6 @@ export default function TemplateDetail() {
                 loading={publishing}
               />
 
-              {/* Activate */}
               {!template.is_active && (
                 <ActionButton
                   label={activating ? "Activating..." : "Set as Active"}
@@ -926,7 +1351,7 @@ export default function TemplateDetail() {
               Danger Zone
             </h3>
             <p className="text-sm text-red-600">
-              Permanently delete this template. This action cannot be undone.
+              Permanently delete this template and all its pages. This action cannot be undone.
             </p>
 
             <div className="space-y-3">

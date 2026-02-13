@@ -4,12 +4,29 @@
 
 export type TemplateStatus = "draft" | "published";
 
+export interface Section {
+  name: string;
+  content: string;
+}
+
+export interface TemplatePage {
+  id: string;
+  template_id: string;
+  name: string;
+  sections: Section[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Template {
   id: string;
   name: string;
-  html_template: string;
+  wrapper: string;
+  header: string;
+  footer: string;
   status: TemplateStatus;
   is_active: boolean;
+  template_pages?: TemplatePage[];
   created_at: string;
   updated_at: string;
 }
@@ -52,7 +69,9 @@ export const fetchTemplate = async (
  */
 export const createTemplate = async (data: {
   name: string;
-  html_template?: string;
+  wrapper?: string;
+  header?: string;
+  footer?: string;
   is_active?: boolean;
 }): Promise<{ success: boolean; data: Template }> => {
   const response = await fetch(API_BASE, {
@@ -74,7 +93,7 @@ export const createTemplate = async (data: {
  */
 export const updateTemplate = async (
   id: string,
-  data: Partial<Pick<Template, "name" | "html_template" | "status" | "is_active">>
+  data: Partial<Pick<Template, "name" | "wrapper" | "header" | "footer" | "status" | "is_active">>
 ): Promise<{ success: boolean; data: Template }> => {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: "PATCH",
@@ -121,6 +140,103 @@ export const activateTemplate = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || "Failed to activate template");
+  }
+
+  return response.json();
+};
+
+// =====================================================================
+// TEMPLATE PAGES
+// =====================================================================
+
+/**
+ * Fetch all pages for a template
+ */
+export const fetchTemplatePages = async (
+  templateId: string
+): Promise<{ success: boolean; data: TemplatePage[] }> => {
+  const response = await fetch(`${API_BASE}/${templateId}/pages`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch template pages: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Create a new template page
+ */
+export const createTemplatePage = async (
+  templateId: string,
+  data: { name: string; sections?: Section[] }
+): Promise<{ success: boolean; data: TemplatePage }> => {
+  const response = await fetch(`${API_BASE}/${templateId}/pages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to create template page");
+  }
+
+  return response.json();
+};
+
+/**
+ * Fetch a single template page
+ */
+export const fetchTemplatePage = async (
+  templateId: string,
+  pageId: string
+): Promise<{ success: boolean; data: TemplatePage }> => {
+  const response = await fetch(`${API_BASE}/${templateId}/pages/${pageId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch template page: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Update a template page
+ */
+export const updateTemplatePage = async (
+  templateId: string,
+  pageId: string,
+  data: Partial<Pick<TemplatePage, "name" | "sections">>
+): Promise<{ success: boolean; data: TemplatePage }> => {
+  const response = await fetch(`${API_BASE}/${templateId}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update template page");
+  }
+
+  return response.json();
+};
+
+/**
+ * Delete a template page
+ */
+export const deleteTemplatePage = async (
+  templateId: string,
+  pageId: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE}/${templateId}/pages/${pageId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to delete template page");
   }
 
   return response.json();

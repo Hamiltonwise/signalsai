@@ -134,16 +134,27 @@ function LayoutEditorInner() {
 
   // --- Handle AI edit (header/footer only) ---
   const handleSendEdit = useCallback(
-    async (instruction: string) => {
+    async (instruction: string, attachedMedia?: any[]) => {
       if (!projectId || !field || !selectedInfo || !isVisualMode) return;
 
       setIsEditing(true);
       setEditError(null);
 
       const alloroClass = selectedInfo.alloroClass;
+
+      // Build enriched instruction with attached media context
+      let enrichedInstruction = instruction;
+      if (attachedMedia && attachedMedia.length > 0) {
+        enrichedInstruction += "\n\n## Use the images below:\n";
+        attachedMedia.forEach((media, index) => {
+          const altText = media.alt_text ? ` (${media.alt_text})` : "";
+          enrichedInstruction += `Image ${index + 1}${altText}: ${media.s3_url}\n`;
+        });
+      }
+
       const userMessage: ChatMessage = {
         role: "user",
-        content: instruction,
+        content: instruction, // Show user's original text only
         timestamp: Date.now(),
       };
 
@@ -164,7 +175,7 @@ function LayoutEditorInner() {
         const result = await editLayoutComponent(projectId, {
           alloroClass,
           currentHtml: selectedInfo.outerHtml,
-          instruction,
+          instruction: enrichedInstruction, // Send enriched instruction to API
           chatHistory,
         });
 
@@ -384,6 +395,7 @@ function LayoutEditorInner() {
             isEditing={isEditing}
             debugInfo={lastDebugInfo}
             systemPrompt={systemPrompt}
+            projectId={projectId}
           />
         </div>
       ) : (

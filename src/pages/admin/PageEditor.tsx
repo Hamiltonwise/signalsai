@@ -65,7 +65,6 @@ function PageEditorInner() {
   // Sections + assembled HTML state
   const [sections, setSections] = useState<Section[]>([]);
   const [htmlContent, setHtmlContent] = useState("");
-  const [originalHtml, setOriginalHtml] = useState("");
   const [editHistory, setEditHistory] = useState<Section[][]>([]);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -152,7 +151,6 @@ function PageEditorInner() {
           pageSections
         );
         setHtmlContent(assembled);
-        setOriginalHtml(assembled);
 
         // Hydrate chat history from persisted data
         const chatHistory = workingPage.edit_chat_history;
@@ -218,7 +216,7 @@ function PageEditorInner() {
 
   // --- Handle edit send ---
   const handleSendEdit = useCallback(
-    async (instruction: string) => {
+    async (instruction: string, attachedMedia?: any[]) => {
       // Block editing non-section elements (header/footer live on the project, not the page)
       if (selectedInfo && !selectedInfo.alloroClass.includes("-section-")) {
         setEditError("Header/footer components can't be edited here. Use the Layout Editor from the project page.");
@@ -231,9 +229,20 @@ function PageEditorInner() {
       setEditError(null);
 
       const alloroClass = selectedInfo.alloroClass;
+
+      // Build enriched instruction with attached media context
+      let enrichedInstruction = instruction;
+      if (attachedMedia && attachedMedia.length > 0) {
+        enrichedInstruction += "\n\n## Use the images below:\n";
+        attachedMedia.forEach((media, index) => {
+          const altText = media.alt_text ? ` (${media.alt_text})` : "";
+          enrichedInstruction += `Image ${index + 1}${altText}: ${media.s3_url}\n`;
+        });
+      }
+
       const userMessage: ChatMessage = {
         role: "user",
-        content: instruction,
+        content: instruction, // Show user's original text only
         timestamp: Date.now(),
       };
 
@@ -254,7 +263,7 @@ function PageEditorInner() {
         const result = await editPageComponent(projectId, draftPageId, {
           alloroClass,
           currentHtml: selectedInfo.outerHtml,
-          instruction,
+          instruction: enrichedInstruction, // Send enriched instruction to API
           chatHistory,
         });
 
@@ -560,6 +569,7 @@ function PageEditorInner() {
           isEditing={isEditing}
           debugInfo={lastDebugInfo}
           systemPrompt={systemPrompt}
+          projectId={projectId}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Paperclip, X, Image, Upload } from "lucide-react";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -10,9 +10,18 @@ export interface ChatMessage {
 
 interface ChatPanelProps {
   messages: ChatMessage[];
-  onSend: (instruction: string) => void;
+  onSend: (instruction: string, attachedMedia?: MediaItem[]) => void;
   isLoading: boolean;
   disabled: boolean;
+  projectId?: string;
+}
+
+interface MediaItem {
+  id: string;
+  display_name: string;
+  s3_url: string;
+  thumbnail_s3_url: string | null;
+  mime_type: string;
 }
 
 export default function ChatPanel({
@@ -20,10 +29,18 @@ export default function ChatPanel({
   onSend,
   isLoading,
   disabled,
+  projectId,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [attachedMedia, setAttachedMedia] = useState<MediaItem[]>([]);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,8 +55,9 @@ export default function ChatPanel({
   const handleSubmit = () => {
     const trimmed = input.trim();
     if (!trimmed || isLoading || disabled) return;
-    onSend(trimmed);
+    onSend(trimmed, attachedMedia.length > 0 ? attachedMedia : undefined);
     setInput("");
+    setAttachedMedia([]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -49,8 +67,154 @@ export default function ChatPanel({
     }
   };
 
+  const uploadFile = async (file: File) => {
+    if (!projectId) return;
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("files", file);
+
+      const response = await fetch(`/api/admin/websites/${projectId}/media`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!data.success || !data.data || data.data.length === 0) {
+        throw new Error("Upload failed");
+      }
+
+      const uploadedMedia = data.data[0];
+
+      // Add to attached media (invisible to user input)
+      setAttachedMedia((prev) => [...prev, uploadedMedia]);
+
+      // Auto-focus input
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadFile(file);
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled || isLoading || !projectId) return;
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (disabled || isLoading || !projectId) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const validFiles = files.filter((file) =>
+      [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "video/mp4",
+        "application/pdf",
+      ].includes(file.type)
+    );
+
+    if (validFiles.length === 0) {
+      alert("Please drop valid image, video, or PDF files");
+      return;
+    }
+
+    // Upload files one by one
+    for (const file of validFiles) {
+      await uploadFile(file);
+    }
+  };
+
+  const removeAttachedMedia = (mediaId: string) => {
+    setAttachedMedia((prev) => prev.filter((m) => m.id !== mediaId));
+  };
+
+  const fetchMediaLibrary = async () => {
+    if (!projectId) return;
+
+    try {
+      setLoadingMedia(true);
+      const response = await fetch(
+        `/api/admin/websites/${projectId}/media?type=all&limit=50`,
+        { credentials: "include" }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMediaItems(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch media:", err);
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  const attachMediaFromLibrary = (media: MediaItem) => {
+    // Add to attached list (avoid duplicates)
+    setAttachedMedia((prev) => {
+      if (prev.find((m) => m.id === media.id)) return prev;
+      return [...prev, media];
+    });
+    setShowMediaLibrary(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const toggleMediaLibrary = () => {
+    if (!showMediaLibrary) {
+      fetchMediaLibrary();
+    }
+    setShowMediaLibrary(!showMediaLibrary);
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div
+      className="flex flex-col flex-1 min-h-0 relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-alloro-orange/10 border-2 border-dashed border-alloro-orange rounded-lg z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-xl shadow-lg px-6 py-4 flex flex-col items-center gap-2">
+            <Upload className="w-8 h-8 text-alloro-orange" />
+            <p className="text-sm font-medium text-gray-900">Drop to attach image</p>
+            <p className="text-xs text-gray-500">Supports JPG, PNG, WebP, MP4, PDF</p>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && !disabled && (
@@ -92,7 +256,116 @@ export default function ChatPanel({
 
       {/* Input */}
       <div className="px-4 pb-4 pt-2 border-t border-gray-200">
+        {/* Media Library Modal */}
+        {showMediaLibrary && (
+          <div className="mb-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-[300px] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-700">Media Library</span>
+              <button
+                onClick={() => setShowMediaLibrary(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {loadingMedia ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              </div>
+            ) : mediaItems.length === 0 ? (
+              <div className="text-center py-8 text-xs text-gray-500">
+                No media uploaded yet
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 p-2">
+                {mediaItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => attachMediaFromLibrary(item)}
+                    className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-alloro-orange transition border border-gray-200"
+                  >
+                    {item.thumbnail_s3_url || item.mime_type.startsWith("image/") ? (
+                      <img
+                        src={item.thumbnail_s3_url || item.s3_url}
+                        alt={item.display_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Image className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition">
+                      {item.display_name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {attachedMedia.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {attachedMedia.map((media, index) => (
+              <div
+                key={media.id}
+                className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700"
+              >
+                <Image className="w-3 h-3 shrink-0" />
+                <span className="truncate max-w-[120px]">
+                  Image {index + 1}: {media.display_name}
+                </span>
+                <button
+                  onClick={() => removeAttachedMedia(media.id)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
+          {/* Upload & Browse buttons */}
+          {projectId && (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled || isLoading || uploading}
+                className="p-2 rounded-xl bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200 hover:text-alloro-orange transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                title="Upload new image"
+              >
+                {uploading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Paperclip className="w-3.5 h-3.5" />
+                )}
+              </button>
+              <button
+                onClick={toggleMediaLibrary}
+                disabled={disabled || isLoading}
+                className={`p-2 rounded-xl border transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 ${
+                  showMediaLibrary
+                    ? "bg-alloro-orange text-white border-alloro-orange"
+                    : "bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200 hover:text-alloro-orange"
+                }`}
+                title="Browse media library"
+              >
+                <Image className="w-3.5 h-3.5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,video/mp4,application/pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </>
+          )}
+
           <textarea
             ref={inputRef}
             value={input}
@@ -113,6 +386,7 @@ export default function ChatPanel({
               target.style.height = Math.min(target.scrollHeight, 120) + "px";
             }}
           />
+
           <button
             onClick={handleSubmit}
             disabled={!input.trim() || isLoading || disabled}

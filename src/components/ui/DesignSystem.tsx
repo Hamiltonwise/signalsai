@@ -220,7 +220,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
 interface AdminPageHeaderProps {
   icon: ReactNode;
   title: string;
-  description?: string;
+  description?: string | ReactNode;
   actionButtons?: ReactNode;
   backButton?: {
     label: string;

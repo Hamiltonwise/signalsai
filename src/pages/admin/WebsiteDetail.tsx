@@ -37,6 +37,7 @@ import {
   ActionButton,
 } from "../../components/ui/DesignSystem";
 import CreatePageModal from "../../components/admin/CreatePageModal";
+import MediaTab from "../../components/admin/MediaTab";
 
 // Status step type with icon
 interface StatusStep {
@@ -116,8 +117,8 @@ export default function WebsiteDetail() {
   const [showCreatePageModal, setShowCreatePageModal] = useState(false);
   const [isGeneratingPage, setIsGeneratingPage] = useState(false);
 
-  // Detail tab: pages vs layouts
-  const [detailTab, setDetailTab] = useState<"pages" | "layouts">("pages");
+  // Detail tab: pages vs layouts vs media
+  const [detailTab, setDetailTab] = useState<"pages" | "layouts" | "media">("pages");
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -346,9 +347,9 @@ export default function WebsiteDetail() {
           formattedAddress: selectedPlace.formattedAddress,
           city: selectedPlace.city,
           state: selectedPlace.state,
-          phone: selectedPlace.phone,
+          phone: selectedPlace.phone ?? undefined,
           category: selectedPlace.category,
-          rating: selectedPlace.rating,
+          rating: selectedPlace.rating ?? undefined,
           reviewCount: selectedPlace.reviewCount,
         });
       } catch (webhookErr) {
@@ -820,7 +821,6 @@ export default function WebsiteDetail() {
                   {STATUS_STEPS.map((step, index) => {
                     const isCompleted = index < currentStatusIndex;
                     const isCurrent = index === currentStatusIndex;
-                    const isPending = index > currentStatusIndex;
                     const Icon = step.icon;
                     const isProcessing = isCurrent && isProcessingStatus(website.status);
 
@@ -875,9 +875,9 @@ export default function WebsiteDetail() {
         </motion.div>
       )}
 
-      {/* Tab bar: Pages | Layouts */}
+      {/* Tab bar: Pages | Layouts | Media */}
       <div className="flex items-center gap-1 mb-4">
-        {(["pages", "layouts"] as const).map((tab) => (
+        {(["pages", "layouts", "media"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setDetailTab(tab)}
@@ -1088,6 +1088,17 @@ export default function WebsiteDetail() {
               </Link>
             ))}
           </div>
+        </motion.div>
+      )}
+
+      {/* Media Section */}
+      {detailTab === "media" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <MediaTab projectId={id!} />
         </motion.div>
       )}
 

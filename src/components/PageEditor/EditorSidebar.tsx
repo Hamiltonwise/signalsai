@@ -12,6 +12,7 @@ interface EditorSidebarProps {
   isEditing: boolean;
   debugInfo: EditDebugInfo | null;
   systemPrompt: string | null;
+  projectId?: string;
 }
 
 export default function EditorSidebar({
@@ -21,6 +22,7 @@ export default function EditorSidebar({
   isEditing,
   debugInfo,
   systemPrompt,
+  projectId,
 }: EditorSidebarProps) {
   const [tab, setTab] = useState<"chat" | "debug">("chat");
 
@@ -59,6 +61,7 @@ export default function EditorSidebar({
             onSend={onSendEdit}
             isLoading={isEditing}
             disabled={false}
+            projectId={projectId}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center px-6">

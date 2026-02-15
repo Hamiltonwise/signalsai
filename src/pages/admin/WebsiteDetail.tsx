@@ -36,8 +36,8 @@ import {
   AdminPageHeader,
   ActionButton,
 } from "../../components/ui/DesignSystem";
-import CreatePageModal from "../../components/admin/CreatePageModal";
-import MediaTab from "../../components/admin/MediaTab";
+import CreatePageModal from "../../components/Admin/CreatePageModal";
+import MediaTab from "../../components/Admin/MediaTab";
 
 // Status step type with icon
 interface StatusStep {

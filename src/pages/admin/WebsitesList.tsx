@@ -60,6 +60,9 @@ export default function WebsitesList() {
 
   useEffect(() => {
     loadStatuses();
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
+    loadWebsites();
   }, []);
 
   useEffect(() => {
@@ -88,6 +91,8 @@ export default function WebsitesList() {
       setError(err instanceof Error ? err.message : "Failed to load websites");
     } finally {
       setLoading(false);
+      // Manually complete loading indicator
+      window.dispatchEvent(new Event('navigation-complete'));
     }
   };
 
@@ -427,19 +432,8 @@ export default function WebsitesList() {
         )}
       </AnimatePresence>
 
-      {/* Loading State */}
-      {loading && websites.length === 0 ? (
-        <motion.div
-          className="flex items-center justify-center py-16"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="flex items-center gap-3 text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Loading websites...
-          </div>
-        </motion.div>
-      ) : websites.length === 0 ? (
+      {/* Loading State - use top bar only */}
+      {loading && websites.length === 0 ? null : websites.length === 0 ? (
         <EmptyState
           icon={<Globe className="w-12 h-12" />}
           title="No websites found"

@@ -15,6 +15,7 @@ import {
 } from "../../hooks/useIframeSelector";
 import { replaceComponentInDom, validateHtml } from "../../utils/htmlReplacer";
 import { AdminTopBar } from "../../components/Admin/AdminTopBar";
+import { AdminSidebar } from "../../components/Admin/AdminSidebar";
 import { LoadingIndicator } from "../../components/Admin/LoadingIndicator";
 import { SidebarProvider } from "../../components/Admin/SidebarContext";
 import EditorSidebar from "../../components/PageEditor/EditorSidebar";
@@ -63,6 +64,9 @@ function LayoutEditorInner() {
   useEffect(() => {
     if (!projectId || !field) return;
 
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
+
     const load = async () => {
       try {
         setLoading(true);
@@ -83,6 +87,7 @@ function LayoutEditorInner() {
               "Edit the Wrapper first and add {{slot}} where content should be injected."
             );
             setLoading(false);
+            window.dispatchEvent(new Event('navigation-complete'));
             return;
           }
           const html = wrapper.replace(
@@ -96,6 +101,8 @@ function LayoutEditorInner() {
         setError(err instanceof Error ? err.message : "Failed to load project");
       } finally {
         setLoading(false);
+        // Manually complete loading indicator
+        window.dispatchEvent(new Event('navigation-complete'));
       }
     };
 
@@ -286,13 +293,34 @@ function LayoutEditorInner() {
   // --- Loading ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        {/* Topbar loading indicator */}
         <LoadingIndicator />
         <AdminTopBar />
-        <div className="flex items-center justify-center" style={{ height: "calc(100vh - 4rem)" }}>
-          <div className="flex items-center gap-3 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin text-alloro-orange" />
-            <span className="text-sm">Loading layout editor...</span>
+        <AdminSidebar />
+
+        {/* Loading skeleton that matches layout editor structure */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left editor panel skeleton */}
+          <div className="w-1/2 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+              <div className="flex gap-2">
+                <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex-1 p-4 space-y-2">
+              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+            </div>
+          </div>
+
+          {/* Right preview panel skeleton */}
+          <div className="flex-1 bg-gray-100 p-4 flex items-center justify-center">
+            <div className="w-full h-full max-w-6xl bg-white rounded-xl shadow-lg border border-gray-200 animate-pulse"></div>
           </div>
         </div>
       </div>

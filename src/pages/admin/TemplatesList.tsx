@@ -81,10 +81,14 @@ export default function TemplatesList() {
       setError(err instanceof Error ? err.message : "Failed to load templates");
     } finally {
       setLoading(false);
+      // Manually complete loading indicator
+      window.dispatchEvent(new Event('navigation-complete'));
     }
   }, []);
 
   useEffect(() => {
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
     loadTemplates();
   }, [loadTemplates]);
 
@@ -294,19 +298,8 @@ export default function TemplatesList() {
             )}
           </AnimatePresence>
 
-          {/* Loading State */}
-          {loading && templates.length === 0 ? (
-            <motion.div
-              className="flex items-center justify-center py-16"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <div className="flex items-center gap-3 text-gray-500">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Loading templates...
-              </div>
-            </motion.div>
-          ) : filteredTemplates.length === 0 ? (
+          {/* Loading State - use top bar only */}
+          {loading && templates.length === 0 ? null : filteredTemplates.length === 0 ? (
             <EmptyState
               icon={<FileCode className="w-12 h-12" />}
               title="No templates found"

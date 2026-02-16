@@ -38,6 +38,9 @@ import {
 } from "../../components/ui/DesignSystem";
 import CreatePageModal from "../../components/Admin/CreatePageModal";
 import MediaTab from "../../components/Admin/MediaTab";
+import CodeManagerTab from "../../components/Admin/CodeManagerTab";
+import { fetchProjectCodeSnippets } from "../../api/codeSnippets";
+import type { CodeSnippet } from "../../api/codeSnippets";
 
 // Status step type with icon
 interface StatusStep {
@@ -117,8 +120,12 @@ export default function WebsiteDetail() {
   const [showCreatePageModal, setShowCreatePageModal] = useState(false);
   const [isGeneratingPage, setIsGeneratingPage] = useState(false);
 
-  // Detail tab: pages vs layouts vs media
-  const [detailTab, setDetailTab] = useState<"pages" | "layouts" | "media">("pages");
+  // Detail tab: pages vs layouts vs media vs code-manager
+  const [detailTab, setDetailTab] = useState<"pages" | "layouts" | "media" | "code-manager">("pages");
+
+  // Code snippets state
+  const [codeSnippets, setCodeSnippets] = useState<CodeSnippet[]>([]);
+  const [loadingSnippets, setLoadingSnippets] = useState(false);
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,16 +138,35 @@ export default function WebsiteDetail() {
   const NON_POLLING_STATUSES = ["CREATED", "READY"];
   const POLL_INTERVAL = 3000;
 
+  const loadCodeSnippets = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setLoadingSnippets(true);
+      const response = await fetchProjectCodeSnippets(id);
+      setCodeSnippets(response.data);
+    } catch (err) {
+      console.error("Failed to fetch code snippets:", err);
+    } finally {
+      setLoadingSnippets(false);
+    }
+  }, [id]);
+
   // Initial load
   useEffect(() => {
     isMountedRef.current = true;
-    if (id) loadWebsite();
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
+    if (id) {
+      loadWebsite();
+      loadCodeSnippets();
+    }
     return () => {
       isMountedRef.current = false;
       if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
       if (pageGenPollRef.current) clearTimeout(pageGenPollRef.current);
     };
-  }, [id]);
+  }, [id, loadCodeSnippets]);
 
   // Load templates for selector (only when CREATED status)
   useEffect(() => {
@@ -454,6 +480,8 @@ export default function WebsiteDetail() {
       setError(err instanceof Error ? err.message : "Failed to load website");
     } finally {
       setLoading(false);
+      // Manually complete loading indicator since location doesn't change
+      window.dispatchEvent(new Event('navigation-complete'));
     }
   };
 
@@ -557,11 +585,48 @@ export default function WebsiteDetail() {
   };
 
   if (loading) {
+    // Show skeleton loading state with grey cards
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-3 text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading website details...
+      <div className="space-y-6">
+        {/* Back button skeleton */}
+        <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+
+        {/* Header skeleton */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-2 flex-1">
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Tab bar skeleton */}
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        {/* Main content card skeleton */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+          </div>
+        </div>
+
+        {/* Additional card skeleton */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-32 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-32 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
         </div>
       </div>
     );
@@ -725,7 +790,6 @@ export default function WebsiteDetail() {
                           {loadingTemplates ? (
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Loading templates...
                             </div>
                           ) : templates.length === 0 ? (
                             <p className="text-sm text-red-500">No published templates available. Please create and publish a template first.</p>
@@ -875,9 +939,9 @@ export default function WebsiteDetail() {
         </motion.div>
       )}
 
-      {/* Tab bar: Pages | Layouts | Media */}
+      {/* Tab bar: Pages | Layouts | Code Manager | Media */}
       <div className="flex items-center gap-1 mb-4">
-        {(["pages", "layouts", "media"] as const).map((tab) => (
+        {(["pages", "layouts", "code-manager", "media"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setDetailTab(tab)}
@@ -1088,6 +1152,29 @@ export default function WebsiteDetail() {
               </Link>
             ))}
           </div>
+        </motion.div>
+      )}
+
+      {/* Code Manager Section */}
+      {detailTab === "code-manager" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          {loadingSnippets ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+            </div>
+          ) : (
+            <CodeManagerTab
+              projectId={id!}
+              codeSnippets={codeSnippets}
+              onSnippetsChange={loadCodeSnippets}
+              isProject={true}
+              pages={website.pages}
+            />
+          )}
         </motion.div>
       )}
 

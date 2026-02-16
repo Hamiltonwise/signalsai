@@ -21,10 +21,12 @@ import { replaceComponentInDom, validateHtml, extractSectionsFromDom } from "../
 import { AdminTopBar } from "../../components/Admin/AdminTopBar";
 import { AdminSidebar } from "../../components/Admin/AdminSidebar";
 import { LoadingIndicator } from "../../components/Admin/LoadingIndicator";
-import { SidebarProvider } from "../../components/Admin/SidebarContext";
+import { SidebarProvider, useSidebar } from "../../components/Admin/SidebarContext";
 import EditorToolbar from "../../components/PageEditor/EditorToolbar";
 import EditorSidebar from "../../components/PageEditor/EditorSidebar";
 import type { ChatMessage } from "../../components/PageEditor/ChatPanel";
+import { ConfirmModal } from "../../components/settings/ConfirmModal";
+import { AlertModal } from "../../components/ui/AlertModal";
 
 const MAX_CHAT_MESSAGES_PER_COMPONENT = 50;
 
@@ -53,7 +55,13 @@ function PageEditorInner() {
     pageId: string;
   }>();
   const navigate = useNavigate();
+  const { setCollapsed } = useSidebar();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Force collapse sidebar when editor loads (needs more space)
+  useEffect(() => {
+    setCollapsed(true);
+  }, [setCollapsed]);
 
   // Page + project state
   const [page, setPage] = useState<WebsitePage | null>(null);
@@ -75,6 +83,9 @@ function PageEditorInner() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
 
   // Debug info from last LLM edit
@@ -98,6 +109,9 @@ function PageEditorInner() {
   // --- Load page data ---
   useEffect(() => {
     if (!projectId || !pageId) return;
+
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
 
     const loadPage = async () => {
       try {
@@ -164,6 +178,8 @@ function PageEditorInner() {
         );
       } finally {
         setLoading(false);
+        // Manually complete loading indicator
+        window.dispatchEvent(new Event('navigation-complete'));
       }
     };
 
@@ -299,12 +315,17 @@ function PageEditorInner() {
 
         const iframe = iframeRef.current;
         if (iframe?.contentDocument) {
+          // Capture scroll position before mutation
+          const scrollY = iframe.contentWindow?.scrollY || 0;
+          const scrollX = iframe.contentWindow?.scrollX || 0;
+
           const { html: newHtml } = replaceComponentInDom(
             iframe.contentDocument,
             alloroClass,
             result.editedHtml!
           );
-          setHtmlContent(newHtml);
+          // Don't setHtmlContent here - it causes iframe srcDoc to reload and flicker
+          // The DOM is already mutated in place, which is what the user sees
 
           // Extract updated sections from the mutated DOM
           const updatedSections = extractSectionsFromDom(iframe.contentDocument, sections);
@@ -313,6 +334,9 @@ function PageEditorInner() {
           setIsDirty(true);
           scheduleSave(newHtml);
           setupListeners();
+
+          // Restore scroll position
+          iframe.contentWindow?.scrollTo(scrollX, scrollY);
 
           // Refresh selectedInfo with the fresh outerHTML from the mutated DOM
           const freshEl = iframe.contentDocument.querySelector(`.${CSS.escape(alloroClass)}`);
@@ -417,15 +441,13 @@ function PageEditorInner() {
   }, [projectId, draftPageId, sections, chatMap, isSaving]);
 
   // --- Publish ---
-  const handlePublish = useCallback(async () => {
+  const handlePublish = useCallback(() => {
     if (!projectId || !draftPageId || isPublishing) return;
+    setShowPublishModal(true);
+  }, [projectId, draftPageId, isPublishing]);
 
-    if (
-      !confirm(
-        "Publish this page? The current published version will be replaced."
-      )
-    )
-      return;
+  const handlePublishConfirmed = useCallback(async () => {
+    if (!projectId || !draftPageId) return;
 
     try {
       setIsPublishing(true);
@@ -441,16 +463,36 @@ function PageEditorInner() {
       }
 
       await publishPage(projectId, draftPageId);
-      navigate(`/admin/websites/${projectId}`);
+
+      // Stay in editor by creating a new draft from the published page
+      const publishedPage = await fetchPage(projectId, draftPageId);
+      const newDraft = await createDraftFromPage(projectId, publishedPage.data.id);
+
+      // Update state to work with new draft
+      setDraftPageId(newDraft.data.id);
+      setPage(newDraft.data);
+      setIsDirty(false);
+
+      // Clear chat history for fresh draft
+      setChatMap(new Map());
+
+      // Close modal and show success alert
+      setShowPublishModal(false);
+      setEditError(null);
+
+      // Show success alert with version info
+      setSuccessMessage(`Page published successfully! You are now working on version ${newDraft.data.version}.`);
+      setShowSuccessAlert(true);
     } catch (err) {
       console.error("Publish failed:", err);
       setEditError(
         err instanceof Error ? err.message : "Failed to publish"
       );
+      setShowPublishModal(false);
     } finally {
       setIsPublishing(false);
     }
-  }, [projectId, draftPageId, sections, chatMap, isDirty, isPublishing, navigate]);
+  }, [projectId, draftPageId, sections, chatMap, isDirty]);
 
   // --- Current chat messages for selected element ---
   const currentChatMessages = selectedInfo
@@ -460,13 +502,41 @@ function PageEditorInner() {
   // --- Loading state ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        {/* Topbar loading indicator */}
         <LoadingIndicator />
         <AdminTopBar />
-        <div className="flex items-center justify-center" style={{ height: "calc(100vh - 4rem)" }}>
-          <div className="flex items-center gap-3 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin text-alloro-orange" />
-            <span className="text-sm">Loading page editor...</span>
+        <AdminSidebar />
+
+        {/* Loading skeleton that matches editor layout */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left sidebar skeleton */}
+          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex-1 p-4 space-y-3">
+              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            </div>
+          </div>
+
+          {/* Center preview skeleton */}
+          <div className="flex-1 bg-gray-100 p-4 flex items-center justify-center">
+            <div className="w-full h-full max-w-6xl bg-white rounded-xl shadow-lg border border-gray-200 animate-pulse"></div>
+          </div>
+
+          {/* Right sidebar skeleton */}
+          <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex-1 p-4 space-y-3">
+              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -572,6 +642,30 @@ function PageEditorInner() {
           projectId={projectId}
         />
       </div>
+
+      {/* Publish Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+        onConfirm={handlePublishConfirmed}
+        title="Publish Page"
+        message="Publish this page? The current published version will be replaced. You'll continue editing in a new draft."
+        confirmText="Publish"
+        cancelText="Cancel"
+        isLoading={isPublishing}
+        type="info"
+      />
+
+      {/* Success Alert Modal */}
+      <AlertModal
+        isOpen={showSuccessAlert}
+        onClose={() => setShowSuccessAlert(false)}
+        title="Published Successfully"
+        message={successMessage}
+        type="success"
+        buttonText="Continue Editing"
+        autoDismiss={true}
+      />
     </div>
   );
 }

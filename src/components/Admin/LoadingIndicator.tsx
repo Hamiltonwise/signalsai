@@ -138,14 +138,20 @@ export function LoadingIndicator() {
       startLoading();
     };
 
+    const handleNavigationComplete = () => {
+      completeLoading();
+    };
+
     document.addEventListener('click', handleClick, true); // Use capture phase
     window.addEventListener('navigation-start', handleNavigationStart);
+    window.addEventListener('navigation-complete', handleNavigationComplete);
 
     return () => {
       document.removeEventListener('click', handleClick, true);
       window.removeEventListener('navigation-start', handleNavigationStart);
+      window.removeEventListener('navigation-complete', handleNavigationComplete);
     };
-  }, [startLoading]);
+  }, [startLoading, completeLoading]);
 
   // Cleanup on unmount
   useEffect(() => {

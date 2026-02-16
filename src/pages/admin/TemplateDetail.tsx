@@ -31,6 +31,9 @@ import {
   deleteTemplatePage,
 } from "../../api/templates";
 import type { Template, TemplatePage, Section } from "../../api/templates";
+import { fetchTemplateCodeSnippets } from "../../api/codeSnippets";
+import type { CodeSnippet } from "../../api/codeSnippets";
+import CodeManagerTab from "../../components/Admin/CodeManagerTab";
 import { renderPage, parseSectionsJs, serializeSectionsJs, normalizeSections } from "../../utils/templateRenderer";
 import {
   AdminPageHeader,
@@ -93,6 +96,10 @@ export default function TemplateDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
+  // Code snippets state
+  const [codeSnippets, setCodeSnippets] = useState<CodeSnippet[]>([]);
+  const [loadingSnippets, setLoadingSnippets] = useState(false);
+
   const selectedPage = templatePages.find((p) => p.id === selectedPageId) || null;
 
   const loadTemplate = useCallback(async () => {
@@ -113,12 +120,31 @@ export default function TemplateDetail() {
       setError(err instanceof Error ? err.message : "Failed to load template");
     } finally {
       setLoading(false);
+      // Manually complete loading indicator
+      window.dispatchEvent(new Event('navigation-complete'));
+    }
+  }, [id]);
+
+  const loadCodeSnippets = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setLoadingSnippets(true);
+      const response = await fetchTemplateCodeSnippets(id);
+      setCodeSnippets(response.data);
+    } catch (err) {
+      console.error("Failed to fetch code snippets:", err);
+    } finally {
+      setLoadingSnippets(false);
     }
   }, [id]);
 
   useEffect(() => {
+    // Trigger loading indicator
+    window.dispatchEvent(new Event('navigation-start'));
     loadTemplate();
-  }, [loadTemplate]);
+    loadCodeSnippets();
+  }, [loadTemplate, loadCodeSnippets]);
 
   // Cmd/Ctrl+S keyboard shortcut for saving
   useEffect(() => {
@@ -428,17 +454,41 @@ export default function TemplateDetail() {
   };
 
   if (loading) {
+    // Show skeleton loading state
     return (
-      <motion.div
-        className="flex items-center justify-center py-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="flex items-center gap-3 text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading template...
+      <div className="space-y-6">
+        {/* Back button skeleton */}
+        <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+          <div className="flex gap-3">
+            <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-28 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
         </div>
-      </motion.div>
+
+        {/* Tab bar skeleton */}
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+
+        {/* Main content card skeleton */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left panel */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+          {/* Right panel */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -465,6 +515,7 @@ export default function TemplateDetail() {
   const tabs = [
     { id: "layouts", label: "Layouts", icon: <FileCode className="w-4 h-4" /> },
     { id: "pages", label: "Pages", icon: <FileText className="w-4 h-4" /> },
+    { id: "code-manager", label: "Code Manager", icon: <FileCode className="w-4 h-4" /> },
     {
       id: "settings",
       label: "Settings",
@@ -1173,6 +1224,27 @@ export default function TemplateDetail() {
                 </div>
               )}
             </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Code Manager Tab */}
+      {activeTab === "code-manager" && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {loadingSnippets ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-alloro-orange" />
+            </div>
+          ) : (
+            <CodeManagerTab
+              templateId={id!}
+              codeSnippets={codeSnippets}
+              onSnippetsChange={loadCodeSnippets}
+            />
           )}
         </motion.div>
       )}

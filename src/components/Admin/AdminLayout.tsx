@@ -38,7 +38,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultCollapsed={true}>
       <AdminLayoutInner>{children}</AdminLayoutInner>
     </SidebarProvider>
   );

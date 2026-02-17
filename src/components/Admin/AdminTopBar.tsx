@@ -56,7 +56,7 @@ export function AdminTopBar() {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-[#212D40] border-b border-gray-700 sticky top-0 z-50 shadow-sm">
         <div className="py-0 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             {/* Logo and Brand */}
@@ -74,7 +74,7 @@ export function AdminTopBar() {
                     className="rounded-xl"
                   />
                 </motion.div>
-                <span className="font-bold text-xl text-gray-900">
+                <span className="font-bold text-xl text-white">
                   <span className="text-alloro-orange">Alloro</span> Admin
                 </span>
               </Link>
@@ -87,13 +87,13 @@ export function AdminTopBar() {
                 onClick={toggleMenu}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition-all hover:border-alloro-orange/30 hover:shadow-md"
+                className="flex items-center gap-3 rounded-xl border border-gray-600 bg-[#2a3a52] px-4 py-2 text-sm font-medium transition-all hover:border-alloro-orange/30 hover:shadow-md"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-alloro-orange/20 to-alloro-orange/10 text-alloro-orange">
                   <User className="h-4 w-4" />
                 </span>
                 <div className="flex flex-col items-start">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-white">
                     Admin Account
                   </span>
                 </div>
@@ -110,12 +110,12 @@ export function AdminTopBar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg"
+                    className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-gray-600 bg-[#2a3a52] shadow-lg"
                   >
                     <button
                       type="button"
                       onClick={handleLogoutClick}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-600 transition hover:bg-red-50 hover:text-red-600"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-300 transition hover:bg-red-900/30 hover:text-red-400"
                     >
                       <LogOut className="h-4 w-4" />
                       Log out

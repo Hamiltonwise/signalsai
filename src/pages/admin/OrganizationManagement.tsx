@@ -29,6 +29,7 @@ interface Organization {
   id: number;
   name: string;
   domain: string | null;
+  subscription_tier?: string;
   created_at: string;
   userCount: number;
   connections: {
@@ -153,6 +154,34 @@ export function OrganizationManagement() {
     e.stopPropagation();
     setEditingOrgId(null);
     setEditName("");
+  };
+
+  const handleTierChange = async (orgId: number, tier: "DWY" | "DFY") => {
+    if (!confirm(`${tier === "DFY" ? "Upgrade" : "Downgrade"} this organization to ${tier}?`)) return;
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/organizations/${orgId}/tier`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update tier");
+
+      const data = await response.json();
+      setOrganizations((prev) =>
+        prev.map((org) =>
+          org.id === orgId ? { ...org, subscription_tier: tier } : org
+        )
+      );
+      toast.success(data.message);
+    } catch (error) {
+      toast.error("Failed to update tier");
+    }
   };
 
   const handleUpdateName = async (e: React.MouseEvent) => {
@@ -337,6 +366,9 @@ export function OrganizationManagement() {
                         <h3 className="font-semibold text-gray-900 text-lg">
                           {org.name}
                         </h3>
+                        <Badge variant={org.subscription_tier === "DFY" ? "primary" : "secondary"}>
+                          {org.subscription_tier || "DWY"}
+                        </Badge>
                         <motion.button
                           onClick={(e) => startEditing(e, org)}
                           className="opacity-0 transition-opacity group-hover/name:opacity-100 p-1.5 text-gray-400 hover:text-alloro-orange rounded-lg hover:bg-alloro-orange/10"
@@ -401,6 +433,34 @@ export function OrganizationManagement() {
                           animate={{ opacity: 1 }}
                           transition={{ delay: 0.1 }}
                         >
+                          {/* Subscription Tier Section */}
+                          <div className="rounded-xl border border-gray-200 bg-white p-4">
+                            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              Subscription Tier
+                            </h4>
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm text-gray-600">
+                                Current: <strong>{org.subscription_tier || "DWY"}</strong>
+                              </span>
+                              {(!org.subscription_tier || org.subscription_tier === "DWY") && (
+                                <button
+                                  onClick={() => handleTierChange(org.id, "DFY")}
+                                  className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                                >
+                                  Upgrade to DFY
+                                </button>
+                              )}
+                              {org.subscription_tier === "DFY" && (
+                                <button
+                                  onClick={() => handleTierChange(org.id, "DWY")}
+                                  className="px-3 py-1 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                  Downgrade to DWY
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
                           {/* Users Section */}
                           <div>
                             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">

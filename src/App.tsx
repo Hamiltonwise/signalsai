@@ -6,6 +6,7 @@ import NewAccountOnboarding from "./pages/NewAccountOnboarding";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import { Settings } from "./pages/Settings";
+import { DFYWebsite } from "./pages/DFYWebsite";
 import { Notifications } from "./pages/Notifications";
 import Help from "./pages/Help";
 import { PageWrapper } from "./components/PageWrapper";
@@ -23,6 +24,7 @@ import {
 } from "./components/SetupProgressWizard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
+import { DFYRoute } from "./components/DFYRoute";
 import { PilotHandler } from "./components/PilotHandler";
 import { PilotBanner } from "./components/Admin/PilotBanner";
 
@@ -108,6 +110,14 @@ function App() {
                 <Route path="/pmsStatistics" element={<Dashboard />} />
                 <Route path="/tasks" element={<Dashboard />} />
                 <Route path="/rankings" element={<Dashboard />} />
+                <Route
+                  path="/dfy/website"
+                  element={
+                    <DFYRoute>
+                      <DFYWebsite />
+                    </DFYRoute>
+                  }
+                />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/help" element={<Help />} />

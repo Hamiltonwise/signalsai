@@ -12,6 +12,7 @@ import {
   X,
   HelpCircle,
   Lock,
+  Globe,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchClientTasks } from "../api/tasks";
@@ -116,6 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [userTaskCount, setUserTaskCount] = useState<number>(0);
   const [unreadNotificationCount, setUnreadNotificationCount] =
@@ -188,6 +190,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => clearInterval(interval);
   }, [loadNotificationCount]);
 
+  // Fetch subscription tier (for DFY Website menu)
+  useEffect(() => {
+    const fetchOrgTier = async () => {
+      const googleAccountId = userProfile?.googleAccountId;
+      if (!googleAccountId) return;
+
+      try {
+        const response = await fetch(`/api/user/website`);
+        if (response.ok) {
+          const data = await response.json();
+          // If API returns data, org has DFY tier
+          setSubscriptionTier(data.status === "PREPARING" || data.project ? "DFY" : null);
+        }
+      } catch (err) {
+        // Silent fail - just won't show menu item
+      }
+    };
+
+    fetchOrgTier();
+  }, [userProfile?.googleAccountId]);
+
   // Listen for notification updates (when user marks all as read or deletes)
   useEffect(() => {
     const handleNotificationsUpdated = () => {
@@ -234,6 +257,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       showDuringOnboarding: false,
     },
   ];
+
+  // DFY Website item (conditional)
+  const dfyNavItems = useMemo(
+    () =>
+      subscriptionTier === "DFY"
+        ? [
+            {
+              label: "Website",
+              icon: <Globe size={18} />,
+              path: "/dfy/website",
+              showDuringOnboarding: false,
+            },
+          ]
+        : [],
+    [subscriptionTier]
+  );
 
   // Execution & Alerts items - dynamic badges and notifications
   const executionNavItems = useMemo(
@@ -402,6 +441,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
             ))}
           </div>
+
+          {/* DFY Website Section */}
+          {onboardingCompleted && dfyNavItems.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
+                Done For You
+              </div>
+              {dfyNavItems.map(({ label, icon, path }) => (
+                <NavItem
+                  key={label}
+                  icon={icon}
+                  label={label}
+                  active={isActive(path)}
+                  onClick={() => handleNavigate(path)}
+                  isLocked={isWizardActive}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Execution & Alerts */}
           {onboardingCompleted && (

@@ -374,12 +374,12 @@ export function DFYWebsite() {
             placeholder="Describe your changes..."
             className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
             rows={3}
-            disabled={!selectedComponent || editing || (usage && usage.edits_today >= usage.edits_limit)}
+            disabled={!selectedComponent || editing || !!(usage && usage.edits_today >= usage.edits_limit)}
           />
 
           <button
             onClick={handleEdit}
-            disabled={!selectedComponent || !instruction.trim() || editing || (usage && usage.edits_today >= usage.edits_limit)}
+            disabled={!selectedComponent || !instruction.trim() || editing || !!(usage && usage.edits_today >= usage.edits_limit)}
             className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {editing ? "Editing..." : "Send"}

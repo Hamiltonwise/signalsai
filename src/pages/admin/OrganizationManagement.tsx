@@ -382,7 +382,7 @@ export function OrganizationManagement() {
                         <h3 className="font-semibold text-gray-900 text-lg">
                           {org.name}
                         </h3>
-                        <Badge variant={org.subscription_tier === "DFY" ? "primary" : "secondary"}>
+                        <Badge variant={org.subscription_tier === "DFY" ? "purple" : "gray"}>
                           {org.subscription_tier || "DWY"}
                         </Badge>
                         <motion.button

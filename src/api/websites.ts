@@ -18,6 +18,11 @@ export interface WebsiteProject {
   step_gbp_scrape: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  organization?: {
+    id: number;
+    name: string;
+    subscription_tier: string;
+  } | null;
 }
 
 export interface ChatHistoryMessage {
@@ -511,6 +516,35 @@ export const fetchEditorSystemPrompt = async (): Promise<string> => {
 
   const data = await response.json();
   return data.prompt;
+};
+
+// =====================================================================
+// ORGANIZATION LINKING
+// =====================================================================
+
+/**
+ * Link or unlink a website to/from an organization
+ */
+export const linkWebsiteToOrganization = async (
+  projectId: string,
+  organizationId: number | null
+): Promise<{ success: boolean; data: WebsiteProject }> => {
+  const token = localStorage.getItem("auth_token");
+  const response = await fetch(`${API_BASE}/${projectId}/link-organization`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ organizationId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to link organization");
+  }
+
+  return response.json();
 };
 
 // =====================================================================

@@ -26,8 +26,9 @@ import {
   Hash,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { fetchWebsiteDetail, updateWebsite, deleteWebsite, startPipeline, deletePageByPath } from "../../api/websites";
+import { fetchWebsiteDetail, updateWebsite, deleteWebsite, startPipeline, deletePageByPath, linkWebsiteToOrganization } from "../../api/websites";
 import type { WebsiteProjectWithPages, WebsitePage } from "../../api/websites";
+import { toast } from "react-hot-toast";
 import { searchPlaces, getPlaceDetails } from "../../api/places";
 import type { PlaceSuggestion, PlaceDetails } from "../../api/places";
 import { fetchTemplates, fetchTemplatePages } from "../../api/templates";
@@ -127,6 +128,14 @@ export default function WebsiteDetail() {
   const [codeSnippets, setCodeSnippets] = useState<CodeSnippet[]>([]);
   const [loadingSnippets, setLoadingSnippets] = useState(false);
 
+  // Organization linking state
+  const [dfyOrganizations, setDfyOrganizations] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const orgDropdownRef = useRef<HTMLDivElement>(null);
+
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -152,6 +161,56 @@ export default function WebsiteDetail() {
     }
   }, [id]);
 
+  const loadDFYOrganizations = useCallback(async () => {
+    try {
+      setLoadingOrgs(true);
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch("/api/admin/organizations", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      // Filter to DFY orgs without websites (or currently linked org)
+      const availableOrgs = data.organizations
+        .filter((org: any) =>
+          org.subscription_tier === "DFY" &&
+          (!org.website || org.id === website?.organization?.id)
+        )
+        .map((org: any) => ({ id: org.id, name: org.name }));
+
+      setDfyOrganizations(availableOrgs);
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
+      toast.error("Failed to load organizations");
+    } finally {
+      setLoadingOrgs(false);
+    }
+  }, [website?.organization?.id]);
+
+  const handleLinkOrganization = async () => {
+    if (!id || isLinking) return;
+
+    try {
+      setIsLinking(true);
+      await linkWebsiteToOrganization(id, selectedOrgId);
+      toast.success(selectedOrgId ? "Organization linked" : "Organization unlinked");
+      await loadWebsite();
+      await loadDFYOrganizations();
+      setSelectedOrgId(null);
+    } catch (err) {
+      console.error("Failed to link organization:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to link organization");
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!confirm("Unlink this website from the organization?")) return;
+    setSelectedOrgId(null);
+    await handleLinkOrganization();
+  };
+
   // Initial load
   useEffect(() => {
     isMountedRef.current = true;
@@ -167,6 +226,13 @@ export default function WebsiteDetail() {
       if (pageGenPollRef.current) clearTimeout(pageGenPollRef.current);
     };
   }, [id, loadCodeSnippets]);
+
+  // Load DFY organizations when website data changes
+  useEffect(() => {
+    if (website) {
+      loadDFYOrganizations();
+    }
+  }, [website?.organization?.id, loadDFYOrganizations]);
 
   // Load templates for selector (only when CREATED status)
   useEffect(() => {
@@ -253,6 +319,13 @@ export default function WebsiteDetail() {
         !inputRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+      }
+      // Also handle org dropdown
+      if (
+        orgDropdownRef.current &&
+        !orgDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowOrgDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -708,6 +781,98 @@ export default function WebsiteDetail() {
         }
         actionButtons={
           <div className="flex items-center gap-2">
+            {/* Organization Dropdown */}
+            <div className="relative" ref={orgDropdownRef}>
+              <button
+                onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                <Building2 className="h-4 w-4" />
+                {website?.organization ? website.organization.name : "No Organization"}
+                <ChevronDown className={`h-3 w-3 transition-transform ${showOrgDropdown ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {showOrgDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
+                  >
+                    {website?.organization ? (
+                      <>
+                        <Link
+                          to="/admin/organization-management"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setShowOrgDropdown(false)}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open Organization
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setShowOrgDropdown(false);
+                            handleUnlink();
+                          }}
+                          disabled={isLinking}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left disabled:opacity-50"
+                        >
+                          <X className="h-4 w-4" />
+                          {isLinking ? "Unlinking..." : "Unlink Organization"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {loadingOrgs ? (
+                          <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading...
+                          </div>
+                        ) : dfyOrganizations.length === 0 ? (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            No available DFY organizations
+                          </div>
+                        ) : (
+                          <>
+                            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                              Link to Organization
+                            </div>
+                            {dfyOrganizations.map((org) => (
+                              <button
+                                key={org.id}
+                                onClick={async () => {
+                                  setSelectedOrgId(org.id);
+                                  setShowOrgDropdown(false);
+                                  setIsLinking(true);
+                                  try {
+                                    await linkWebsiteToOrganization(id!, org.id);
+                                    toast.success("Organization linked");
+                                    await loadWebsite();
+                                    await loadDFYOrganizations();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to link");
+                                  } finally {
+                                    setIsLinking(false);
+                                    setSelectedOrgId(null);
+                                  }
+                                }}
+                                disabled={isLinking}
+                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 w-full text-left disabled:opacity-50"
+                              >
+                                <Building2 className="h-4 w-4" />
+                                {org.name}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {(isReady || website.status === "HTML_GENERATED") && (
               <a
                 href={`https://${website.generated_hostname}.sites.getalloro.com`}

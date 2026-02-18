@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -11,6 +12,7 @@ import {
   X,
   ExternalLink,
   RefreshCw,
+  Globe,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -61,6 +63,12 @@ interface OrganizationDetails {
       gbp?: Array<Record<string, unknown>> | null;
     } | null;
   }>;
+  website?: {
+    id: string;
+    generated_hostname: string;
+    status: string;
+    created_at: string;
+  } | null;
 }
 
 export function OrganizationManagement() {
@@ -73,6 +81,13 @@ export function OrganizationManagement() {
   const [loadingDetails, setLoadingDetails] = useState<number | null>(null);
   const [editingOrgId, setEditingOrgId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+
+  const formatStatus = (status: string): string => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   useEffect(() => {
     fetchOrganizations();
@@ -134,6 +149,7 @@ export function OrganizationManagement() {
             ...data.organization,
             users: data.users,
             connections: data.connections,
+            website: data.website,
           },
         }));
       } catch {
@@ -459,6 +475,35 @@ export function OrganizationManagement() {
                                 </button>
                               )}
                             </div>
+                          </div>
+
+                          {/* Website Section */}
+                          <div className="rounded-xl border border-gray-200 bg-white p-4">
+                            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              Website
+                            </h4>
+                            {orgDetails[org.id].website ? (
+                              <Link
+                                to={`/admin/websites/${orgDetails[org.id].website!.id}`}
+                                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-alloro-orange/30 hover:shadow-md transition-all"
+                              >
+                                <Globe className="h-5 w-5 text-alloro-orange" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {orgDetails[org.id].website!.generated_hostname}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatStatus(orgDetails[org.id].website!.status)}
+                                  </p>
+                                </div>
+                                <ExternalLink className="h-4 w-4 text-gray-400" />
+                              </Link>
+                            ) : (
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Globe className="h-4 w-4 text-gray-300" />
+                                <span>No website linked</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Users Section */}

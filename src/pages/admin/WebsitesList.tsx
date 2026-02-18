@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   RefreshCw,
@@ -506,6 +506,23 @@ export default function WebsitesList() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Organization badge */}
+                          {website.organization && (
+                            <Link
+                              to={`/admin/organization-management`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1 hover:bg-purple-100 transition-colors"
+                            >
+                              <Building2 className="h-3 w-3 text-purple-600" />
+                              {website.organization.name}
+                            </Link>
+                          )}
+                          {!website.organization && (
+                            <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
+                              <Building2 className="h-3 w-3" />
+                              No organization
+                            </span>
+                          )}
                           {/* Status badge */}
                           <span
                             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusStyles(website.status)}`}

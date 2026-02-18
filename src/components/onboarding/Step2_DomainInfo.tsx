@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ChevronLeft, Rocket } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ChevronLeft, Rocket, Loader2, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import onboarding from "../../api/onboarding";
 
 interface Step2DomainInfoProps {
   domainName: string;
@@ -8,6 +9,8 @@ interface Step2DomainInfoProps {
   onBack: () => void;
 }
 
+type DomainStatus = "idle" | "checking" | "valid" | "warning" | "unreachable";
+
 export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
   domainName,
   onDomainNameChange,
@@ -15,6 +18,9 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
   onBack,
 }) => {
   const [error, setError] = useState<string>();
+  const [domainStatus, setDomainStatus] = useState<DomainStatus>("idle");
+  const [domainMessage, setDomainMessage] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sanitizeDomain = (input: string): string => {
     let cleaned = input.trim().toLowerCase();
@@ -31,6 +37,49 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
     return cleaned;
   };
 
+  const domainRegex = /^[a-z0-9]+([-.]{1}[a-z0-9]+)*\.[a-z]{2,}$/;
+
+  // Debounced domain check
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    const sanitized = sanitizeDomain(domainName);
+
+    if (!sanitized || !domainRegex.test(sanitized)) {
+      setDomainStatus("idle");
+      setDomainMessage("");
+      return;
+    }
+
+    setDomainStatus("checking");
+    setDomainMessage("");
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const response = await onboarding.checkDomain(sanitized);
+
+        if (response.success) {
+          setDomainStatus(response.status as DomainStatus);
+          setDomainMessage(response.message);
+        } else {
+          setDomainStatus("idle");
+          setDomainMessage("");
+        }
+      } catch {
+        setDomainStatus("idle");
+        setDomainMessage("");
+      }
+    }, 800);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [domainName]);
+
   const validate = () => {
     const sanitized = sanitizeDomain(domainName);
 
@@ -39,8 +88,6 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
       return false;
     }
 
-    // Basic domain validation (allows subdomains)
-    const domainRegex = /^[a-z0-9]+([-.]{1}[a-z0-9]+)*\.[a-z]{2,}$/;
     if (!domainRegex.test(sanitized)) {
       setError("Please enter a valid domain name (e.g., example.com)");
       return false;
@@ -59,6 +106,41 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
   const handleNext = () => {
     if (validate()) {
       onNext();
+    }
+  };
+
+  const renderDomainStatus = () => {
+    switch (domainStatus) {
+      case "checking":
+        return (
+          <div className="flex items-center gap-2 mt-2">
+            <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+            <span className="text-sm text-slate-500">Checking domain...</span>
+          </div>
+        );
+      case "valid":
+        return (
+          <div className="flex items-center gap-2 mt-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-sm text-green-600">{domainMessage}</span>
+          </div>
+        );
+      case "warning":
+        return (
+          <div className="flex items-center gap-2 mt-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <span className="text-sm text-amber-600">{domainMessage}</span>
+          </div>
+        );
+      case "unreachable":
+        return (
+          <div className="flex items-center gap-2 mt-2">
+            <XCircle className="w-4 h-4 text-red-400" />
+            <span className="text-sm text-red-500">{domainMessage}</span>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -94,14 +176,17 @@ export const Step2DomainInfo: React.FC<Step2DomainInfoProps> = ({
             } text-alloro-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange transition-all`}
           />
           {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-          <div className="mt-2 space-y-1">
-            <p className="text-sm text-slate-500">
-              Enter your domain without "https://" or "www"
-            </p>
-            <p className="text-xs text-slate-400">
-              Example: bestdentalpractice.com
-            </p>
-          </div>
+          {!error && renderDomainStatus()}
+          {!error && domainStatus === "idle" && (
+            <div className="mt-2 space-y-1">
+              <p className="text-sm text-slate-500">
+                Enter your domain without "https://" or "www"
+              </p>
+              <p className="text-xs text-slate-400">
+                Example: bestdentalpractice.com
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

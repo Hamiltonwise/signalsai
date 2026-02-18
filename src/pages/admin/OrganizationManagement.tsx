@@ -81,6 +81,11 @@ export function OrganizationManagement() {
   const [loadingDetails, setLoadingDetails] = useState<number | null>(null);
   const [editingOrgId, setEditingOrgId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [tierConfirm, setTierConfirm] = useState<{
+    orgId: number;
+    orgName: string;
+    tier: "DWY" | "DFY";
+  } | null>(null);
 
   const formatStatus = (status: string): string => {
     return status
@@ -172,8 +177,14 @@ export function OrganizationManagement() {
     setEditName("");
   };
 
-  const handleTierChange = async (orgId: number, tier: "DWY" | "DFY") => {
-    if (!confirm(`${tier === "DFY" ? "Upgrade" : "Downgrade"} this organization to ${tier}?`)) return;
+  const handleTierChange = (orgId: number, orgName: string, tier: "DWY" | "DFY") => {
+    setTierConfirm({ orgId, orgName, tier });
+  };
+
+  const confirmTierChange = async () => {
+    if (!tierConfirm) return;
+    const { orgId, tier } = tierConfirm;
+    setTierConfirm(null);
 
     try {
       const token = localStorage.getItem("auth_token");
@@ -382,7 +393,7 @@ export function OrganizationManagement() {
                         <h3 className="font-semibold text-gray-900 text-lg">
                           {org.name}
                         </h3>
-                        <Badge variant={org.subscription_tier === "DFY" ? "purple" : "gray"}>
+                        <Badge variant={org.subscription_tier === "DFY" ? "orange" : "gray"}>
                           {org.subscription_tier || "DWY"}
                         </Badge>
                         <motion.button
@@ -460,15 +471,15 @@ export function OrganizationManagement() {
                               </span>
                               {(!org.subscription_tier || org.subscription_tier === "DWY") && (
                                 <button
-                                  onClick={() => handleTierChange(org.id, "DFY")}
-                                  className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                                  onClick={() => handleTierChange(org.id, org.name, "DFY")}
+                                  className="px-3 py-1 bg-alloro-orange text-white text-sm rounded-lg hover:bg-alloro-orange/90 transition-colors"
                                 >
                                   Upgrade to DFY
                                 </button>
                               )}
                               {org.subscription_tier === "DFY" && (
                                 <button
-                                  onClick={() => handleTierChange(org.id, "DWY")}
+                                  onClick={() => handleTierChange(org.id, org.name, "DWY")}
                                   className="px-3 py-1 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
                                 >
                                   Downgrade to DWY
@@ -624,6 +635,54 @@ export function OrganizationManagement() {
           ))}
         </motion.div>
       )}
+
+      {/* Tier Change Confirm Modal */}
+      <AnimatePresence>
+        {tierConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+              onClick={() => setTierConfirm(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            >
+              <h3 className="text-lg font-semibold text-gray-900">
+                {tierConfirm.tier === "DFY" ? "Upgrade" : "Downgrade"} to {tierConfirm.tier}?
+              </h3>
+              <p className="mt-2 text-sm text-gray-500">
+                {tierConfirm.tier === "DFY"
+                  ? `This will upgrade "${tierConfirm.orgName}" to DFY and create a website project.`
+                  : `This will downgrade "${tierConfirm.orgName}" to DWY and set the website project to read-only.`}
+              </p>
+              <div className="mt-5 flex gap-3 justify-end">
+                <button
+                  onClick={() => setTierConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmTierChange}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                    tierConfirm.tier === "DFY"
+                      ? "bg-alloro-orange hover:bg-alloro-orange/90"
+                      : "bg-gray-600 hover:bg-gray-700"
+                  }`}
+                >
+                  {tierConfirm.tier === "DFY" ? "Upgrade" : "Downgrade"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

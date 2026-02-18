@@ -157,6 +157,77 @@ async function updateSetupProgress(progress: {
   }
 }
 
+/**
+ * Fetch available GBP locations for the authenticated user
+ */
+async function getAvailableGBP() {
+  try {
+    return await apiGet({
+      path: baseurl + `/available-gbp`,
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Save selected GBP locations to google_property_ids.gbp
+ */
+async function saveGBP(data: Array<{ accountId: string; locationId: string; displayName: string }>) {
+  try {
+    return await apiPost({
+      path: baseurl + `/save-gbp`,
+      passedData: { data },
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Fetch website URL for a specific GBP location
+ */
+async function getGBPWebsite(accountId: string, locationId: string) {
+  try {
+    return await apiPost({
+      path: baseurl + `/gbp-website`,
+      passedData: { accountId, locationId },
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Check if a domain is reachable and not behind a firewall
+ */
+async function checkDomain(domain: string) {
+  try {
+    return await apiPost({
+      path: baseurl + `/check-domain`,
+      passedData: { domain },
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
 const onboarding = {
   getOnboardingStatus,
   getAvailableProperties,
@@ -166,6 +237,10 @@ const onboarding = {
   restartWizard,
   getSetupProgress,
   updateSetupProgress,
+  getAvailableGBP,
+  saveGBP,
+  getGBPWebsite,
+  checkDomain,
 };
 
 export default onboarding;

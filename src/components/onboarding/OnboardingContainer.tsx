@@ -36,6 +36,9 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     setState,
     setZip,
     setDomainName,
+    selectedGbpLocations,
+    fetchAvailableGBP,
+    saveGbpSelections,
     nextStep,
     previousStep,
     completeOnboarding,
@@ -212,11 +215,14 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   city={city}
                   state={state}
                   zip={zip}
+                  selectedGbpLocations={selectedGbpLocations}
                   onPracticeNameChange={setPracticeName}
                   onStreetChange={setStreet}
                   onCityChange={setCity}
                   onStateChange={setState}
                   onZipChange={setZip}
+                  onGbpSelect={saveGbpSelections}
+                  fetchAvailableGBP={fetchAvailableGBP}
                   onNext={handleNextStep}
                   onBack={handlePreviousStep}
                 />

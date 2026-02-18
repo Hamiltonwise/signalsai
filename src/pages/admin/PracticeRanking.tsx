@@ -310,6 +310,13 @@ interface BatchGroup {
   completedLocations: number;
 }
 
+const getWeekLabel = (date: Date): string => {
+  const ordinals = ["1st", "2nd", "3rd", "4th", "5th"];
+  const week = Math.ceil(date.getDate() / 7);
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  return `${month} ${ordinals[week - 1]} Week`;
+};
+
 // Filter Dropdown Component
 interface FilterDropdownOption {
   value: string;
@@ -1275,14 +1282,16 @@ export function PracticeRanking() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">
-                        Batch{" "}
-                        {batch.createdAt.toLocaleDateString("en-US", {
-                          month: "2-digit",
-                          day: "2-digit",
-                          year: "numeric",
-                        })}{" "}
-                        for {batch.domain}
+                        {getWeekLabel(batch.createdAt)}: {batch.domain}
                       </span>
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-400">
+                      Batch ran:{" "}
+                      {batch.createdAt.toLocaleDateString("en-US", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        year: "numeric",
+                      })}
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
                       <span>

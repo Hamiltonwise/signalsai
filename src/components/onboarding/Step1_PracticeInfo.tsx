@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronLeft, ChevronDown, Check } from "lucide-react";
+import { ChevronLeft, ChevronDown, Check, MapPin, Loader2, X } from "lucide-react";
 
 const US_STATES = [
   { value: "AL", label: "Alabama" },
@@ -55,17 +55,26 @@ const US_STATES = [
   { value: "WY", label: "Wyoming" },
 ];
 
+interface GBPSelection {
+  accountId: string;
+  locationId: string;
+  displayName: string;
+}
+
 interface Step1PracticeInfoProps {
   practiceName: string;
   street: string;
   city: string;
   state: string;
   zip: string;
+  selectedGbpLocations: GBPSelection[];
   onPracticeNameChange: (value: string) => void;
   onStreetChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onStateChange: (value: string) => void;
   onZipChange: (value: string) => void;
+  onGbpSelect: (locations: GBPSelection[]) => Promise<void>;
+  fetchAvailableGBP: () => Promise<any[]>;
   onNext: () => void;
   onBack: () => void;
 }
@@ -76,11 +85,14 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
   city,
   state,
   zip,
+  selectedGbpLocations,
   onPracticeNameChange,
   onStreetChange,
   onCityChange,
   onStateChange,
   onZipChange,
+  onGbpSelect,
+  fetchAvailableGBP,
   onNext,
   onBack,
 }) => {
@@ -98,6 +110,13 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const stateRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // GBP modal state
+  const [gbpModalOpen, setGbpModalOpen] = useState(false);
+  const [gbpLocations, setGbpLocations] = useState<any[]>([]);
+  const [gbpLoading, setGbpLoading] = useState(false);
+  const [gbpSaving, setGbpSaving] = useState(false);
+  const [gbpError, setGbpError] = useState<string | null>(null);
 
   // Filter states by search (matches both code and full name)
   const filteredStates = US_STATES.filter(
@@ -167,6 +186,42 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
     }
   };
 
+  const handleOpenGbpModal = async () => {
+    setGbpModalOpen(true);
+    setGbpLoading(true);
+    setGbpError(null);
+
+    try {
+      const locations = await fetchAvailableGBP();
+      setGbpLocations(locations);
+    } catch (err: any) {
+      console.error("[Onboarding] Failed to fetch GBP locations:", err);
+      setGbpError(err.message || "Failed to load GBP locations");
+      setGbpLocations([]);
+    } finally {
+      setGbpLoading(false);
+    }
+  };
+
+  const handleGbpMultiSelect = async (items: any[]) => {
+    setGbpSaving(true);
+    try {
+      const selections: GBPSelection[] = items.map((item) => ({
+        accountId: item.accountId,
+        locationId: item.locationId,
+        displayName: item.name,
+      }));
+
+      await onGbpSelect(selections);
+      setGbpModalOpen(false);
+    } catch (err: any) {
+      console.error("[Onboarding] Failed to save GBP selection:", err);
+      setGbpError(err.message || "Failed to save selection");
+    } finally {
+      setGbpSaving(false);
+    }
+  };
+
   const validate = () => {
     const newErrors: typeof errors = {};
 
@@ -207,6 +262,55 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
       /^\d{5}(-\d{4})?$/.test(zip.trim())
     );
   };
+
+  // GBP popup ref for click-outside handling
+  const gbpRef = useRef<HTMLDivElement>(null);
+  const [gbpSelectedIds, setGbpSelectedIds] = useState<Set<string>>(new Set());
+
+  // Click outside handler for GBP popup
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (gbpRef.current && !gbpRef.current.contains(e.target as Node)) {
+        setGbpModalOpen(false);
+        setGbpError(null);
+      }
+    };
+    if (gbpModalOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [gbpModalOpen]);
+
+  // Sync selected IDs when popup opens
+  useEffect(() => {
+    if (gbpModalOpen) {
+      const ids = new Set(
+        selectedGbpLocations.map(
+          (loc) => `accounts/${loc.accountId}/locations/${loc.locationId}`
+        )
+      );
+      setGbpSelectedIds(ids);
+    }
+  }, [gbpModalOpen, selectedGbpLocations]);
+
+  const toggleGbpLocation = (id: string) => {
+    setGbpSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleGbpConfirm = async () => {
+    const selected = gbpLocations.filter((loc) => gbpSelectedIds.has(loc.id));
+    await handleGbpMultiSelect(selected);
+  };
+
+  const hasGbpSelected = selectedGbpLocations.length > 0;
 
   return (
     <div className="space-y-6">
@@ -404,6 +508,145 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
             </div>
           </div>
         </div>
+
+        {/* GBP Location Selector */}
+        <div className="space-y-2" ref={gbpRef}>
+          <div>
+            <h3 className="text-sm font-medium text-alloro-navy">Google Business Profile</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Connect your GBP locations to get started faster. You can also set this up later in Settings.
+            </p>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleOpenGbpModal}
+              className={`w-full px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 font-medium ${
+                hasGbpSelected
+                  ? "bg-alloro-orange text-white border-alloro-orange hover:bg-alloro-orange/90"
+                  : "bg-white border-slate-300 text-alloro-navy hover:border-alloro-orange/50 hover:bg-alloro-orange/5"
+              }`}
+            >
+              {hasGbpSelected ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  {selectedGbpLocations.length} location{selectedGbpLocations.length !== 1 ? "s" : ""} selected
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-4 h-4" />
+                  Select GBP Locations
+                </>
+              )}
+            </button>
+
+            {/* Inline GBP Popup */}
+            {gbpModalOpen && (
+              <div className="absolute z-50 w-full bottom-full mb-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                {/* Popup Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                  <span className="text-sm font-semibold text-alloro-navy">Select GBP Locations</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGbpModalOpen(false);
+                      setGbpError(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Popup Content */}
+                <div className="max-h-56 overflow-y-auto">
+                  {gbpLoading ? (
+                    <div className="flex items-center justify-center gap-2 py-8">
+                      <Loader2 className="w-5 h-5 text-alloro-orange animate-spin" />
+                      <span className="text-sm text-slate-500">Loading locations...</span>
+                    </div>
+                  ) : gbpError ? (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-red-600 mb-2">{gbpError}</p>
+                      <button
+                        type="button"
+                        onClick={handleOpenGbpModal}
+                        className="text-sm text-alloro-orange hover:underline font-medium"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : gbpLocations.length === 0 ? (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-slate-500">No GBP locations found for your account.</p>
+                      <p className="text-xs text-slate-400 mt-1">You can set this up later in Settings.</p>
+                    </div>
+                  ) : (
+                    gbpLocations.map((loc) => {
+                      const isSelected = gbpSelectedIds.has(loc.id);
+                      return (
+                        <button
+                          key={loc.id}
+                          type="button"
+                          onClick={() => toggleGbpLocation(loc.id)}
+                          disabled={gbpSaving}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-slate-50 last:border-b-0 ${
+                            isSelected
+                              ? "bg-alloro-orange/5"
+                              : "hover:bg-slate-50"
+                          } ${gbpSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                              isSelected
+                                ? "bg-alloro-orange border-alloro-orange"
+                                : "border-slate-300"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-alloro-navy truncate">{loc.name}</p>
+                            {loc.address && (
+                              <p className="text-xs text-slate-400 truncate">{loc.address}</p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Popup Footer */}
+                {!gbpLoading && !gbpError && gbpLocations.length > 0 && (
+                  <div className="px-4 py-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleGbpConfirm}
+                      disabled={gbpSaving || gbpSelectedIds.size === 0}
+                      className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                        gbpSelectedIds.size > 0 && !gbpSaving
+                          ? "bg-alloro-orange text-white hover:bg-alloro-orange/90"
+                          : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      }`}
+                    >
+                      {gbpSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          Confirm {gbpSelectedIds.size > 0 ? `(${gbpSelectedIds.size})` : ""}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
@@ -430,6 +673,7 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
           Continue
         </button>
       </div>
+
     </div>
   );
 };

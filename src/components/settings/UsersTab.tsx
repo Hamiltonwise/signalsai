@@ -59,12 +59,7 @@ export const UsersTab: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
-      const response = await axios.get("/api/settings/users", {
-        headers: { "x-google-account-id": googleAccountId },
-      });
+      const response = await axios.get("/api/settings/users");
 
       if (response.data.success) {
         setUsers(response.data.users);
@@ -80,13 +75,9 @@ export const UsersTab: React.FC = () => {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       await axios.post(
         "/api/settings/users/invite",
-        { email: inviteEmail, role: inviteRole },
-        { headers: { "x-google-account-id": googleAccountId } }
+        { email: inviteEmail, role: inviteRole }
       );
 
       setShowInviteModal(false);
@@ -108,12 +99,7 @@ export const UsersTab: React.FC = () => {
       type: "danger",
       onConfirm: async () => {
         try {
-          const googleAccountId = getPriorityItem("google_account_id");
-          if (!googleAccountId) return;
-
-          await axios.delete(`/api/settings/users/${userId}`, {
-            headers: { "x-google-account-id": googleAccountId },
-          });
+          await axios.delete(`/api/settings/users/${userId}`);
 
           fetchUsers(); // Reload
         } catch (err) {
@@ -127,13 +113,9 @@ export const UsersTab: React.FC = () => {
 
   const handleChangeRole = async (userId: number, role: string) => {
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       await axios.put(
         `/api/settings/users/${userId}/role`,
-        { role },
-        { headers: { "x-google-account-id": googleAccountId } }
+        { role }
       );
 
       setAlertModal({ isOpen: true, title: "Role Updated", message: "Role updated successfully. The user will need to log in again.", type: "success" });

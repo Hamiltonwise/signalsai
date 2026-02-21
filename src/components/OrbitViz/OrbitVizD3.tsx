@@ -22,8 +22,6 @@ type MetricNode = {
 export interface OrbitVizD3Props {
   className?: string;
   center?: CenterData;
-  ga4?: MetricNode[];
-  gsc?: MetricNode[];
   gbp?: MetricNode[];
   clarity?: MetricNode[];
   tasksOpen?: number;
@@ -50,8 +48,6 @@ interface SimNode extends SimulationNodeDatum {
 export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   className = "",
   center,
-  ga4,
-  gsc,
   gbp,
   clarity,
   tasksOpen,
@@ -83,25 +79,21 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   const data = useMemo(() => {
     return {
       center: center ?? { totalProduction: 128_400, totalPatients: 842 },
-      ga4: ga4 ?? [{ id: "ga4_users", label: "Unique Users", value: "8.3k" }],
-      gsc: gsc ?? [{ id: "gsc_clicks", label: "Search Clicks", value: "4.2k" }],
       gbp: gbp ?? [{ id: "gbp_calls", label: "Calls", value: 232 }],
       clarity: clarity ?? [
         { id: "clar_sessions", label: "Sessions", value: "6.9k" },
         { id: "clar_bounce", label: "Bounce", value: "38%" },
       ],
-      website:
-        (ga4 as MetricNode[] | undefined) ??
-        ([
+      website: [
           { id: "web_forms", label: "Form Submissions", value: 57 },
           { id: "web_visitors", label: "Visitors", value: "8.3k" },
           { id: "web_perf", label: "Site Performance", value: 92 },
-        ] as MetricNode[]),
+        ] as MetricNode[],
       tasks: tasksOpen ?? 12,
       tasksPending: 7,
       tasksCompleted: 18,
     };
-  }, [center, ga4, gsc, gbp, clarity, tasksOpen]);
+  }, [center, gbp, clarity, tasksOpen]);
 
   // build layout numbers
   const cx = size.w / 2;
@@ -275,9 +267,9 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       distance: rings[2] - AI_DIST,
     });
 
-    // Google metrics (3 children around hub)
-    const gChildren = [data.ga4[0], data.gsc[0], data.gbp[0]].filter(Boolean);
-    const gAngles = [-24, 0, 24];
+    // Google metrics (children around hub)
+    const gChildren = [data.gbp[0]].filter(Boolean);
+    const gAngles = [0];
     const childDist = Math.min(130, radiusMax * 0.27);
     gChildren.forEach((m, i) => {
       const a = angles.google + gAngles[i]!;
@@ -429,7 +421,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
   // Link highlight logic: determine if a link is on the hovered path
   const googleChildIds = useMemo(
     () =>
-      [data.ga4[0]?.id, data.gsc[0]?.id, data.gbp[0]?.id].filter(
+      [data.gbp[0]?.id].filter(
         Boolean
       ) as string[],
     [data]
@@ -506,8 +498,6 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
       ["ai_tasks", "hub_tasks"],
       ["center", "ai_website"],
       ["ai_website", "hub_website"],
-      ["hub_google", data.ga4[0]?.id ?? "ga4_users"],
-      ["hub_google", data.gsc[0]?.id ?? "gsc_clicks"],
       ["hub_google", data.gbp[0]?.id ?? "gbp_calls"],
       ["hub_clarity", data.clarity[0]?.id ?? "clar_sessions"],
       ["hub_clarity", data.clarity[1]?.id ?? "clar_bounce"],
@@ -772,20 +762,13 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
           </g>
 
           {/* Google children */}
-          {[data.ga4[0], data.gsc[0], data.gbp[0]].map((n) =>
+          {[data.gbp[0]].map((n) =>
             n ? (
               <g key={n.id} transform={`translate(${P(n.id).x}, ${P(n.id).y})`}>
                 <g
                   className="bubble orbit-float"
                   style={{
-                    animationDelay: `${
-                      0.3 +
-                      (n.id.includes("gsc")
-                        ? 0.1
-                        : n.id.includes("gbp")
-                        ? 0.2
-                        : 0)
-                    }s`,
+                    animationDelay: `${0.3}s`,
                     cursor: "pointer",
                   }}
                   onClick={() => onNavigate?.("Patient Journey Insights")}
@@ -796,11 +779,7 @@ export const OrbitVizD3: React.FC<OrbitVizD3Props> = ({
                       // Keep value inside the orb, omit in tooltip per request
                       value: undefined,
                       desc:
-                        n.id === "ga4_users"
-                          ? "Unique users tracked across your website this period."
-                          : n.id === "gsc_clicks"
-                          ? "Number of people who opened your site from Google Search."
-                          : n.id === "gbp_calls"
+                        n.id === "gbp_calls"
                           ? "Calls to your practice from your Google Business Profile."
                           : "Google metric.",
                       r: 36,

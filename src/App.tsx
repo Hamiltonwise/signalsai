@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
+import Signup from "./pages/Signup";
+import VerifyEmail from "./pages/VerifyEmail";
 import NewAccountOnboarding from "./pages/NewAccountOnboarding";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
@@ -11,11 +13,9 @@ import { Notifications } from "./pages/Notifications";
 import Help from "./pages/Help";
 import { PageWrapper } from "./components/PageWrapper";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
-import { GSCProvider } from "./contexts/GSCContext.tsx";
-import { GA4Provider } from "./contexts/GA4Context.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
-import { GoogleAuthProvider } from "./contexts/GoogleAuthContext.tsx";
+import { SessionProvider } from "./contexts/SessionProvider.tsx";
 import { OnboardingWizardProvider } from "./contexts/OnboardingWizardContext.tsx";
 import { WizardController } from "./components/onboarding-wizard";
 import {
@@ -28,22 +28,14 @@ import { DFYRoute } from "./components/DFYRoute";
 import { PilotHandler } from "./components/PilotHandler";
 import { PilotBanner } from "./components/Admin/PilotBanner";
 
-function AuthOnlyProviders({ children }: { children: ReactNode }) {
-  return <GoogleAuthProvider>{children}</GoogleAuthProvider>;
-}
-
 // AppProviders wrapper - now used as a layout route to avoid remounting on navigation
 function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <GoogleAuthProvider>
-      <GSCProvider>
-        <GA4Provider>
-          <GBPProvider>
-            <ClarityProvider>{children}</ClarityProvider>
-          </GBPProvider>
-        </GA4Provider>
-      </GSCProvider>
-    </GoogleAuthProvider>
+    <SessionProvider>
+      <GBPProvider>
+        <ClarityProvider>{children}</ClarityProvider>
+      </GBPProvider>
+    </SessionProvider>
   );
 }
 
@@ -86,20 +78,29 @@ function App() {
                 path="/signin"
                 element={
                   <PublicRoute>
-                    <AuthOnlyProviders>
-                      <SignIn />
-                    </AuthOnlyProviders>
+                    <SignIn />
                   </PublicRoute>
                 }
               />
               <Route
-                path="/new-account-onboarding"
+                path="/signup"
                 element={
                   <PublicRoute>
-                    <AuthOnlyProviders>
-                      <NewAccountOnboarding />
-                    </AuthOnlyProviders>
+                    <Signup />
                   </PublicRoute>
+                }
+              />
+              <Route
+                path="/verify-email"
+                element={<VerifyEmail />}
+              />
+              {/* GBP connection onboarding - protected but without PageWrapper (standalone page) */}
+              <Route
+                path="/new-account-onboarding"
+                element={
+                  <ProtectedRoute>
+                    <NewAccountOnboarding />
+                  </ProtectedRoute>
                 }
               />
 

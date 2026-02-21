@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "../hooks/useAuth";
-import { useGoogleAuthContext } from "../contexts/googleAuthContext";
+import { useSession } from "../contexts/sessionContext";
 
 interface PageWrapperProps {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ interface PageWrapperProps {
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
   const { userProfile, selectedDomain } = useAuth();
-  const { disconnect } = useGoogleAuthContext();
+  const { disconnect } = useSession();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);

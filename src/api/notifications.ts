@@ -25,10 +25,10 @@ export interface NotificationsResponse {
  * Fetch notifications for logged-in client
  */
 export const fetchNotifications = async (
-  googleAccountId: number
+  organizationId: number
 ): Promise<NotificationsResponse> => {
   const response = await fetch(
-    `${API_BASE}?googleAccountId=${googleAccountId}`
+    `${API_BASE}?googleAccountId=${organizationId}`
   );
 
   if (!response.ok) {
@@ -43,14 +43,14 @@ export const fetchNotifications = async (
  */
 export const markNotificationRead = async (
   notificationId: number,
-  googleAccountId: number
+  organizationId: number
 ): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(`${API_BASE}/${notificationId}/read`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ googleAccountId }),
+    body: JSON.stringify({ googleAccountId: organizationId }),
   });
 
   if (!response.ok) {
@@ -65,14 +65,14 @@ export const markNotificationRead = async (
  * Mark all notifications as read
  */
 export const markAllNotificationsRead = async (
-  googleAccountId: number
+  organizationId: number
 ): Promise<{ success: boolean; message: string; count: number }> => {
   const response = await fetch(`${API_BASE}/mark-all-read`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ googleAccountId }),
+    body: JSON.stringify({ googleAccountId: organizationId }),
   });
 
   if (!response.ok) {
@@ -89,14 +89,14 @@ export const markAllNotificationsRead = async (
  * Delete all notifications for a user
  */
 export const deleteAllNotifications = async (
-  googleAccountId: number
+  organizationId: number
 ): Promise<{ success: boolean; message: string; count: number }> => {
   const response = await fetch(`${API_BASE}/delete-all`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ googleAccountId }),
+    body: JSON.stringify({ googleAccountId: organizationId }),
   });
 
   if (!response.ok) {

@@ -227,7 +227,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     targetSelector: "[data-wizard-target='settings-integrations']",
     title: "Connect Your Google Accounts",
     description:
-      "Start by connecting your Google Analytics, Search Console, and Business Profile. This enables us to track your online presence and rankings.",
+      "Start by connecting your Google Business Profile. This enables us to track your online presence and rankings.",
     scrollToElement: true,
     promptAction: {
       type: "click",

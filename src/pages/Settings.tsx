@@ -42,8 +42,6 @@ interface Property {
 }
 
 interface PropertiesState {
-  ga4: Property | null;
-  gsc: Property | null;
   gbp: Property[] | [];
 }
 
@@ -55,8 +53,6 @@ interface ScopeStatus {
 }
 
 interface ScopesState {
-  ga4: ScopeStatus;
-  gsc: ScopeStatus;
   gbp: ScopeStatus;
 }
 
@@ -188,8 +184,6 @@ export const Settings: React.FC = () => {
   const setupProgress = useSetupProgressSafe();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
   const [properties, setProperties] = useState<PropertiesState>({
-    ga4: null,
-    gsc: null,
     gbp: [],
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -212,7 +206,7 @@ export const Settings: React.FC = () => {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"ga4" | "gsc" | "gbp">("ga4");
+  const [modalType, setModalType] = useState<"gbp">("gbp");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [availableProperties, setAvailableProperties] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
@@ -222,7 +216,7 @@ export const Settings: React.FC = () => {
   // Confirm Modal State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [disconnectType, setDisconnectType] = useState<
-    "ga4" | "gsc" | "gbp" | null
+    "gbp" | null
   >(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -265,9 +259,6 @@ export const Settings: React.FC = () => {
 
   const fetchScopes = async () => {
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       const response = await apiGet({ path: "/settings/scopes" });
 
       if (response.success) {
@@ -318,9 +309,6 @@ export const Settings: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       const response = await apiGet({ path: "/settings/properties" });
 
       if (response.success) {
@@ -333,25 +321,17 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleConnect = async (type: "ga4" | "gsc" | "gbp") => {
+  const handleConnect = async (type: "gbp") => {
     setModalType(type);
     setModalOpen(true);
     setLoadingAvailable(true);
     setAvailableProperties([]);
     setIsSaving(false);
 
-    let selections: string[] = [];
-    if (type === "ga4" && properties.ga4?.propertyId) {
-      selections = [properties.ga4.propertyId];
-    } else if (type === "gsc" && properties.gsc?.siteUrl) {
-      selections = [properties.gsc.siteUrl];
-    }
+    const selections: string[] = [];
     setInitialSelections(selections);
 
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       const response = await apiGet({
         path: `/settings/properties/available/${type}`,
       });
@@ -379,21 +359,13 @@ export const Settings: React.FC = () => {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSelectProperty = async (item: any) => {
+  const handleSelectProperty = async (_item: any) => {
     setIsSaving(true);
     setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
     setModalOpen(false); // Close modal immediately for better UX
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any = {};
-      if (modalType === "ga4") {
-        data = { propertyId: item.id, displayName: item.name };
-      } else if (modalType === "gsc") {
-        data = { siteUrl: item.id, displayName: item.name };
-      }
+      const data: any = {};
 
       await apiPost({
         path: "/settings/properties/update",
@@ -405,14 +377,12 @@ export const Settings: React.FC = () => {
       if (response.success) {
         const props = response.properties;
         setProperties({
-          ga4: props.ga4 || null,
-          gsc: props.gsc || null,
           gbp: props.gbp || [],
         });
 
         // Check if all services are now connected
         const allConnected =
-          !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+          props?.gbp && props.gbp.length > 0;
         if (allConnected && missingScopeCount === 0) {
           setupProgress?.markStep1Complete();
         }
@@ -436,9 +406,6 @@ export const Settings: React.FC = () => {
     setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
     setModalOpen(false); // Close modal immediately for better UX
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       const data = items.map((item) => ({
         accountId: item.accountId,
         locationId: item.locationId,
@@ -455,14 +422,12 @@ export const Settings: React.FC = () => {
       if (response.success) {
         const props = response.properties;
         setProperties({
-          ga4: props.ga4 || null,
-          gsc: props.gsc || null,
           gbp: props.gbp || [],
         });
 
         // Check if all services are now connected
         const allConnected =
-          !!props?.ga4 && !!props?.gsc && props?.gbp && props.gbp.length > 0;
+          props?.gbp && props.gbp.length > 0;
         if (allConnected && missingScopeCount === 0) {
           setupProgress?.markStep1Complete();
         }
@@ -480,7 +445,7 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const initiateDisconnect = (type: "ga4" | "gsc" | "gbp") => {
+  const initiateDisconnect = (type: "gbp") => {
     setDisconnectType(type);
     setConfirmOpen(true);
   };
@@ -492,9 +457,6 @@ export const Settings: React.FC = () => {
     setLoadingCards((prev) => ({ ...prev, [disconnectType]: true }));
     setConfirmOpen(false); // Close modal immediately for better UX
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       await apiPost({
         path: "/settings/properties/update",
         passedData: { type: disconnectType, action: "disconnect" },
@@ -505,8 +467,6 @@ export const Settings: React.FC = () => {
       if (response.success) {
         const props = response.properties;
         setProperties({
-          ga4: props.ga4 || null,
-          gsc: props.gsc || null,
           gbp: props.gbp || [],
         });
 
@@ -534,15 +494,6 @@ export const Settings: React.FC = () => {
   // Integration definitions
   const integrations = [
     {
-      id: "ga4",
-      name: "Google Analytics 4",
-      icon: "/google-analytics.png",
-      connected: !!properties.ga4,
-      lastSync: properties.ga4 ? "10 mins ago" : "Not connected",
-      property: properties.ga4,
-      scopeGranted: isScopeGranted("ga4"),
-    },
-    {
       id: "gbp",
       name: "Google Business Profile",
       icon: "/google-business-profile.png",
@@ -553,23 +504,6 @@ export const Settings: React.FC = () => {
           : "Not connected",
       locations: properties.gbp,
       scopeGranted: isScopeGranted("gbp"),
-    },
-    {
-      id: "gsc",
-      name: "Google Search Console",
-      icon: "/google-search-console.png",
-      connected: !!properties.gsc,
-      lastSync: properties.gsc ? "2 hours ago" : "Not connected",
-      property: properties.gsc,
-      scopeGranted: isScopeGranted("gsc"),
-    },
-    {
-      id: "clarity",
-      name: "Microsoft Clarity",
-      icon: "/microsoft-clarity.png",
-      connected: true,
-      lastSync: "30 mins ago",
-      scopeGranted: true, // Clarity doesn't use Google OAuth
     },
   ];
 
@@ -776,11 +710,11 @@ export const Settings: React.FC = () => {
                 <div className="flex items-end justify-between px-1">
                   <div>
                     <h2 className="text-lg font-black text-alloro-navy tracking-tight mb-1">
-                      Google Integrations
+                      Business Profile Integration
                     </h2>
                     <p className="text-slate-500 text-sm">
-                      Connect your Google services to unlock analytics and
-                      insights
+                      Connect your Google Business Profile to unlock reviews,
+                      rankings, and insights
                     </p>
                   </div>
                 </div>
@@ -798,8 +732,6 @@ export const Settings: React.FC = () => {
                 {missingScopeCount === 0 &&
                   (() => {
                     const disconnected: string[] = [];
-                    if (!properties.ga4) disconnected.push("ga4");
-                    if (!properties.gsc) disconnected.push("gsc");
                     if (!properties.gbp || properties.gbp.length === 0)
                       disconnected.push("gbp");
 
@@ -815,8 +747,6 @@ export const Settings: React.FC = () => {
 
                 {/* PMS Upload Banner - show when all services connected but no PMS data */}
                 {missingScopeCount === 0 &&
-                  properties.ga4 &&
-                  properties.gsc &&
                   properties.gbp &&
                   properties.gbp.length > 0 &&
                   hasPmsData === false && <PMSUploadBanner />}
@@ -829,7 +759,7 @@ export const Settings: React.FC = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       className={`rounded-[2rem] border p-5 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
-                        !app.scopeGranted && app.id !== "clarity"
+                        !app.scopeGranted
                           ? "bg-red-50/60 border-red-200 hover:border-red-300"
                           : app.connected
                             ? "bg-white border-black/5 hover:border-alloro-orange/20"
@@ -852,7 +782,7 @@ export const Settings: React.FC = () => {
                       )}
 
                       {/* Missing Scope Warning Banner on Card */}
-                      {!app.scopeGranted && app.id !== "clarity" && (
+                      {!app.scopeGranted && (
                         <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">
                           <AlertTriangle size={12} />
                           API Access Not Granted
@@ -860,10 +790,10 @@ export const Settings: React.FC = () => {
                       )}
 
                       <div
-                        className={`flex items-center justify-between mb-10 ${!app.scopeGranted && app.id !== "clarity" ? "mt-6" : ""}`}
+                        className={`flex items-center justify-between mb-10 ${!app.scopeGranted ? "mt-6" : ""}`}
                       >
                         <div
-                          className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted && app.id !== "clarity" ? "border-red-200 opacity-60" : "border-black/5"}`}
+                          className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted ? "border-red-200 opacity-60" : "border-black/5"}`}
                         >
                           <img
                             src={app.icon}
@@ -871,7 +801,7 @@ export const Settings: React.FC = () => {
                             className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
                           />
                         </div>
-                        {!app.scopeGranted && app.id !== "clarity" ? (
+                        {!app.scopeGranted ? (
                           <span className="px-4 py-1.5 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 flex items-center gap-2 shadow-sm">
                             <AlertTriangle size={12} />
                             No Access
@@ -888,27 +818,27 @@ export const Settings: React.FC = () => {
                         )}
                       </div>
                       <h3
-                        className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted && app.id !== "clarity" ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
+                        className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
                       >
                         {app.name}
                       </h3>
                       <p
-                        className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted && app.id !== "clarity" ? "text-red-500" : "text-slate-400"}`}
+                        className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted ? "text-red-500" : "text-slate-400"}`}
                       >
-                        {!app.scopeGranted && app.id !== "clarity"
+                        {!app.scopeGranted
                           ? "Requires API permission"
                           : app.connected
                             ? "Active"
                             : "Not connected"}
                       </p>
 
-                      {canManageConnections && app.id !== "clarity" ? (
+                      {canManageConnections ? (
                         <div className="flex flex-col gap-3">
                           {app.scopeGranted ? (
                             <>
                               <button
                                 onClick={() =>
-                                  handleConnect(app.id as "ga4" | "gsc" | "gbp")
+                                  handleConnect(app.id as "gbp")
                                 }
                                 className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
                               >
@@ -925,7 +855,7 @@ export const Settings: React.FC = () => {
                                 <button
                                   onClick={() =>
                                     initiateDisconnect(
-                                      app.id as "ga4" | "gsc" | "gbp",
+                                      app.id as "gbp",
                                     )
                                   }
                                   className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"

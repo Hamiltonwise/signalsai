@@ -52,7 +52,7 @@ import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 interface PMSVisualPillarsProps {
   domain?: string;
-  googleAccountId?: number | null;
+  organizationId?: number | null;
   hasProperties?: boolean;
 }
 
@@ -148,7 +148,7 @@ const MetricCard = ({
 
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain,
-  googleAccountId,
+  organizationId,
   hasProperties = true,
 }) => {
   const navigate = useNavigate();
@@ -157,23 +157,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const isWizardActive = useIsWizardActive();
   const wizardDemoData = useWizardDemoData();
 
-  // Connection status state - track if all 3 Google services are connected
+  // Connection status state - track if GBP is connected
   const [connectionStatus, setConnectionStatus] = useState<{
-    ga4Connected: boolean;
-    gscConnected: boolean;
     gbpConnected: boolean;
     isLoading: boolean;
   }>({
-    ga4Connected: false,
-    gscConnected: false,
     gbpConnected: false,
     isLoading: true,
   });
 
-  const allServicesConnected =
-    connectionStatus.ga4Connected &&
-    connectionStatus.gscConnected &&
-    connectionStatus.gbpConnected;
+  const allServicesConnected = connectionStatus.gbpConnected;
 
   const [showUploadWizard, setShowUploadWizard] = useState(false);
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
@@ -297,8 +290,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       // Skip in wizard mode - assume connected
       if (isWizardActive) {
         setConnectionStatus({
-          ga4Connected: true,
-          gscConnected: true,
           gbpConnected: true,
           isLoading: false,
         });
@@ -310,8 +301,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
         if (response.success) {
           setConnectionStatus({
-            ga4Connected: !!response.properties?.ga4,
-            gscConnected: !!response.properties?.gsc,
             gbpConnected:
               response.properties?.gbp && response.properties.gbp.length > 0,
             isLoading: false,
@@ -428,7 +417,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       return;
     }
 
-    if (!googleAccountId) {
+    if (!organizationId) {
       setReferralLoading(false);
       return;
     }
@@ -437,7 +426,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
     try {
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
+        `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
       );
 
       if (!response.ok) {
@@ -470,7 +459,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     } finally {
       setReferralLoading(false);
     }
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   useEffect(() => {
     loadReferralData();
@@ -1140,8 +1129,6 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   // Show setup required screen if not all services are connected
   if (!connectionStatus.isLoading && !allServicesConnected && !isWizardActive) {
     const disconnectedServices = [];
-    if (!connectionStatus.ga4Connected) disconnectedServices.push("Google Analytics");
-    if (!connectionStatus.gscConnected) disconnectedServices.push("Search Console");
     if (!connectionStatus.gbpConnected) disconnectedServices.push("Business Profile");
 
     return (
@@ -1188,8 +1175,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     </span>
                   </div>
                   <p className="text-slate-500 font-medium leading-relaxed mb-3">
-                    Link your Google Analytics, Search Console, and Business
-                    Profile to enable tracking and insights.
+                    Link your Google Business Profile to enable tracking and insights.
                   </p>
                   <p className="text-sm text-amber-600 font-semibold">
                     Missing: {disconnectedServices.join(", ")}
@@ -1672,7 +1658,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
                     </h3>
                     <p className="text-sm text-slate-500 font-medium max-w-md">
                       {!hasProperties && !isWizardActive
-                        ? "Please connect your Google Analytics, Search Console, and Business Profile in Settings before uploading PMS data."
+                        ? "Please connect your Google Business Profile in Settings before uploading PMS data."
                         : "Only admins and managers can upload PMS data"}
                     </p>
                     {!hasProperties && !isWizardActive && (

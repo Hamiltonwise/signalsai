@@ -131,11 +131,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Fetch user task count (manual/USER type tasks only)
   const loadTaskCount = useCallback(async () => {
-    const googleAccountId = userProfile?.googleAccountId;
-    if (!googleAccountId || !onboardingCompleted) return;
+    const organizationId = userProfile?.organizationId;
+    if (!organizationId || !onboardingCompleted) return;
 
     try {
-      const response = await fetchClientTasks(googleAccountId);
+      const response = await fetchClientTasks(organizationId);
       if (response?.success && response.tasks) {
         // Count only pending USER tasks
         const pendingUserTasks =
@@ -147,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } catch (err) {
       console.error("Failed to fetch task count for sidebar:", err);
     }
-  }, [userProfile?.googleAccountId, onboardingCompleted]);
+  }, [userProfile?.organizationId, onboardingCompleted]);
 
   // Initial load of task count
   useEffect(() => {
@@ -168,18 +168,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Fetch unread notification count
   const loadNotificationCount = useCallback(async () => {
-    const googleAccountId = userProfile?.googleAccountId;
-    if (!googleAccountId || !onboardingCompleted) return;
+    const organizationId = userProfile?.organizationId;
+    if (!organizationId || !onboardingCompleted) return;
 
     try {
-      const response = await fetchNotifications(googleAccountId);
+      const response = await fetchNotifications(organizationId);
       if (response?.success) {
         setUnreadNotificationCount(response.unreadCount || 0);
       }
     } catch (err) {
       console.error("Failed to fetch notification count for sidebar:", err);
     }
-  }, [userProfile?.googleAccountId, onboardingCompleted]);
+  }, [userProfile?.organizationId, onboardingCompleted]);
 
   // Initial load and periodic refresh of notification count
   useEffect(() => {
@@ -193,8 +193,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Fetch subscription tier (for DFY Website menu)
   useEffect(() => {
     const fetchOrgTier = async () => {
-      const googleAccountId = userProfile?.googleAccountId;
-      if (!googleAccountId) return;
+      const organizationId = userProfile?.organizationId;
+      if (!organizationId) return;
 
       try {
         const response = await fetch(`/api/user/website`);
@@ -209,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
 
     fetchOrgTier();
-  }, [userProfile?.googleAccountId]);
+  }, [userProfile?.organizationId]);
 
   // Listen for notification updates (when user marks all as read or deletes)
   useEffect(() => {

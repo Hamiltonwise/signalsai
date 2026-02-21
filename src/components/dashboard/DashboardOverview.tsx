@@ -38,7 +38,7 @@ import {
 // Ranking data types
 interface RankingResult {
   id: number;
-  googleAccountId: number;
+  organizationId: number;
   domain: string;
   specialty: string;
   location: string;
@@ -61,7 +61,7 @@ interface RankingResult {
 }
 
 interface DashboardOverviewProps {
-  googleAccountId?: number | null;
+  organizationId?: number | null;
 }
 
 /* --- Helper Components - matches newdesign exactly --- */
@@ -133,10 +133,10 @@ const formatCurrency = (value: number | null | undefined): string => {
   })}`;
 };
 
-export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
+export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { data, error, refetch } = useAgentData(googleAccountId || null);
+  const { data, error, refetch } = useAgentData(organizationId || null);
 
   // Onboarding wizard state - shows demo data when wizard is active
   const isWizardActive = useIsWizardActive();
@@ -236,7 +236,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     }
 
     const loadRankingData = async () => {
-      if (!googleAccountId) {
+      if (!organizationId) {
         setRankingLoading(false);
         return;
       }
@@ -246,7 +246,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
       try {
         const response = await fetch(
-          `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
+          `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
         );
 
         if (!response.ok) {
@@ -277,7 +277,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadRankingData();
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   // Fetch tasks data - skip during wizard mode (use demo data instead)
   useEffect(() => {
@@ -287,7 +287,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     }
 
     const loadTasks = async () => {
-      if (!googleAccountId) {
+      if (!organizationId) {
         setTasksLoading(false);
         return;
       }
@@ -296,7 +296,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
       setTasksError(null);
 
       try {
-        const response = await fetchClientTasks(googleAccountId);
+        const response = await fetchClientTasks(organizationId);
         if (response?.success && response.tasks) {
           const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
           const opportunityTasks = allTasks.filter(
@@ -317,7 +317,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadTasks();
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   // Fetch Referral Engine data - skip during wizard mode (use demo data instead)
   useEffect(() => {
@@ -327,7 +327,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     }
 
     const loadReferralData = async () => {
-      if (!googleAccountId) {
+      if (!organizationId) {
         setReferralLoading(false);
         return;
       }
@@ -336,7 +336,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
       try {
         const response = await fetch(
-          `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
+          `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
         );
 
         if (!response.ok) {
@@ -371,7 +371,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     };
 
     loadReferralData();
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   // Calculate PMS metrics from latest month
   const calculatePmsMetrics = () => {
@@ -459,7 +459,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
   const fallbackRankingData = [
     {
       id: 1,
-      googleAccountId: googleAccountId || 0,
+      organizationId: organizationId || 0,
       domain: "demo.com",
       specialty: "Orthodontics",
       location: "Local Area",
@@ -486,7 +486,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     ? wizardDemoData
       ? wizardDemoData.rankingData.map((r) => ({
           id: 1,
-          googleAccountId: googleAccountId || 0,
+          organizationId: organizationId || 0,
           domain: "demo.com",
           specialty: "Orthodontics",
           location: "Local Area",
@@ -530,12 +530,12 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
 
   // Function to reload ranking data
   const reloadRankingData = useCallback(async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setRankingLoading(true);
     try {
       const response = await fetch(
-        `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
+        `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -551,15 +551,15 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     } finally {
       setRankingLoading(false);
     }
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Function to reload tasks
   const reloadTasks = useCallback(async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setTasksLoading(true);
     try {
-      const response = await fetchClientTasks(googleAccountId);
+      const response = await fetchClientTasks(organizationId);
       if (response?.success && response.tasks) {
         const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
         const opportunityTasks = allTasks.filter(
@@ -573,16 +573,16 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     } finally {
       setTasksLoading(false);
     }
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Function to reload referral data
   const reloadReferralData = useCallback(async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setReferralLoading(true);
     try {
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${googleAccountId}`,
+        `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -608,7 +608,7 @@ export function DashboardOverview({ googleAccountId }: DashboardOverviewProps) {
     } finally {
       setReferralLoading(false);
     }
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Handle refresh - now refreshes ALL data sources
   const handleRefresh = async () => {

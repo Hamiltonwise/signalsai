@@ -76,7 +76,7 @@ interface NonDoctorReferral {
 
 interface ReferralEngineDashboardProps {
   data?: ReferralEngineData;
-  googleAccountId?: number | null;
+  organizationId?: number | null;
   hideHeader?: boolean;
 }
 
@@ -198,10 +198,10 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
   const [uploadMessage, setUploadMessage] = useState<string>("");
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Fetch data from API when googleAccountId is provided
+  // Fetch data from API when organizationId is provided
   useEffect(() => {
     const fetchReferralEngineData = async () => {
-      if (!props.googleAccountId) {
+      if (!props.organizationId) {
         setLoading(false);
         return;
       }
@@ -211,7 +211,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
         setError(null);
 
         const response = await fetch(
-          `/api/agents/getLatestReferralEngineOutput/${props.googleAccountId}`
+          `/api/agents/getLatestReferralEngineOutput/${props.organizationId}`
         );
 
         if (!response.ok) {
@@ -246,7 +246,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
     };
 
     fetchReferralEngineData();
-  }, [props.googleAccountId]);
+  }, [props.organizationId]);
 
   const data = props.data ?? fetchedData;
 
@@ -268,8 +268,8 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
     setUploadMessage("");
 
     try {
-      // Get domain from the domain or googleAccountId
-      const domain = props.googleAccountId?.toString() || "default-domain";
+      // Get domain from the domain or organizationId
+      const domain = props.organizationId?.toString() || "default-domain";
 
       const result = await uploadPMSData({
         domain,

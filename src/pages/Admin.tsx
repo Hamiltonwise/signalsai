@@ -35,6 +35,22 @@ function WebDevEngine() {
   );
 }
 
+function SentryTest() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+      <p className="text-lg font-semibold text-gray-700">Sentry Test</p>
+      <button
+        className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+        onClick={() => {
+          throw new Error("This is your first error!");
+        }}
+      >
+        Break the world
+      </button>
+    </div>
+  );
+}
+
 /** Admin layout wrapper for non-fullscreen routes */
 function AdminWithLayout() {
   return (
@@ -63,6 +79,7 @@ function AdminWithLayout() {
         <Route path="templates/imports/:id" element={<ImportDetail />} />
         <Route path="templates/:id" element={<TemplateDetail />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="sentry-test" element={<SentryTest />} />
       </Routes>
     </AdminLayout>
   );

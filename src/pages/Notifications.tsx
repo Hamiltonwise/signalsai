@@ -34,7 +34,7 @@ export const Notifications: React.FC = () => {
   const [deletingAll, setDeletingAll] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const googleAccountId = userProfile?.googleAccountId ?? null;
+  const organizationId = userProfile?.organizationId ?? null;
 
   // Set page title
   useEffect(() => {
@@ -43,14 +43,14 @@ export const Notifications: React.FC = () => {
 
   // Fetch notifications on page load, mark as read only on close/unmount
   useEffect(() => {
-    if (!googleAccountId) {
+    if (!organizationId) {
       setLoading(false);
       return;
     }
 
     const loadNotifications = async () => {
       try {
-        const data = await fetchNotifications(googleAccountId);
+        const data = await fetchNotifications(organizationId);
         setNotifications(data.notifications);
       } catch (error) {
         console.error("Error fetching notifications:", error);
@@ -62,7 +62,7 @@ export const Notifications: React.FC = () => {
     // Mark all notifications as read when leaving the page
     const markAllReadOnLeave = async () => {
       try {
-        await markAllNotificationsRead(googleAccountId);
+        await markAllNotificationsRead(organizationId);
         // Dispatch event to update sidebar notification badge
         window.dispatchEvent(new CustomEvent("notifications:updated"));
       } catch (error) {
@@ -80,7 +80,7 @@ export const Notifications: React.FC = () => {
       clearInterval(interval);
       markAllReadOnLeave();
     };
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Get navigation path based on notification type
   const getNotificationPath = (type: string) => {
@@ -135,11 +135,11 @@ export const Notifications: React.FC = () => {
 
   // Handle notification click
   const handleNotificationClick = async (notification: Notification) => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
       if (!notification.read) {
-        await markNotificationRead(notification.id, googleAccountId);
+        await markNotificationRead(notification.id, organizationId);
         setNotifications((prev) =>
           prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
         );
@@ -156,10 +156,10 @@ export const Notifications: React.FC = () => {
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
-      await markNotificationRead(notificationId, googleAccountId);
+      await markNotificationRead(notificationId, organizationId);
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
       );
@@ -170,11 +170,11 @@ export const Notifications: React.FC = () => {
 
   // Handle mark all as read
   const handleMarkAllRead = async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setMarkingAll(true);
     try {
-      await markAllNotificationsRead(googleAccountId);
+      await markAllNotificationsRead(organizationId);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       // Dispatch event to update sidebar notification badge
       window.dispatchEvent(new CustomEvent("notifications:updated"));
@@ -187,11 +187,11 @@ export const Notifications: React.FC = () => {
 
   // Handle delete all notifications
   const handleDeleteAll = async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setDeletingAll(true);
     try {
-      await deleteAllNotifications(googleAccountId);
+      await deleteAllNotifications(organizationId);
       setNotifications([]);
       // Dispatch event to update sidebar notification badge
       window.dispatchEvent(new CustomEvent("notifications:updated"));

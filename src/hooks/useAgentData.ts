@@ -4,7 +4,7 @@ import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
 
 interface AgentData {
   success: boolean;
-  googleAccountId: number;
+  organizationId: number;
   domain: string;
   agents: {
     proofline: AgentResult | null;
@@ -21,7 +21,7 @@ interface AgentResult {
   resultId: number;
 }
 
-export function useAgentData(googleAccountId: number | null) {
+export function useAgentData(organizationId: number | null) {
   const [data, setData] = useState<AgentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +34,14 @@ export function useAgentData(googleAccountId: number | null) {
       return;
     }
 
-    if (!googleAccountId) {
+    if (!organizationId) {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      const json = await agents.getLatestAgentData(googleAccountId);
+      const json = await agents.getLatestAgentData(organizationId);
 
       if (json.successful === false) {
         throw new Error(json.errorMessage || "Failed to fetch agent data");
@@ -62,7 +62,7 @@ export function useAgentData(googleAccountId: number | null) {
 
   useEffect(() => {
     fetchData();
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   return { data, loading, error, refetch: fetchData };
 }

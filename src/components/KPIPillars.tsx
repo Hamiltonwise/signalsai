@@ -1,7 +1,5 @@
 import type { FC } from "react";
 import {
-  Search,
-  Globe,
   MapPin,
   MousePointer,
   TrendingUp,
@@ -24,129 +22,20 @@ interface PillarData {
 }
 
 interface KPIPillarsProps {
-  ga4Data?: any;
-  gscData?: any;
   gbpData?: any;
   clarityData?: any;
   connectionStatus?: {
-    ga4: boolean;
     gbp: boolean;
-    gsc: boolean;
     clarity: boolean;
   };
 }
 
 export const KPIPillars: FC<KPIPillarsProps> = ({
-  ga4Data,
-  gscData,
   gbpData,
   clarityData,
-  connectionStatus = { ga4: false, gbp: false, gsc: false, clarity: false },
+  connectionStatus = { gbp: false, clarity: false },
 }) => {
   const pillars: PillarData[] = [
-    {
-      name: "Search Visibility",
-      icon: Search,
-      score: connectionStatus.gsc ? gscData?.calculatedScore || 0 : 85,
-      trend: connectionStatus.gsc ? gscData?.trend || "stable" : "up",
-      value: connectionStatus.gsc
-        ? gscData?.totalClicks?.toLocaleString() || "0"
-        : "1.2K",
-      change: connectionStatus.gsc
-        ? `${gscData?.changePercent || "0"}%`
-        : "+15%",
-      metrics: [
-        {
-          name: "Total Clicks",
-          value: connectionStatus.gsc
-            ? `${(gscData?.totalClicks || 0).toLocaleString()} clicks`
-            : "1,247 clicks",
-          status: connectionStatus.gsc
-            ? (gscData?.totalClicks || 0) > 50
-              ? "good"
-              : "warning"
-            : "good",
-        },
-        {
-          name: "Impressions",
-          value: connectionStatus.gsc
-            ? `${(gscData?.totalImpressions || 0).toLocaleString()} impressions`
-            : "12.4K impressions",
-          status: connectionStatus.gsc
-            ? (gscData?.totalImpressions || 0) > 1000
-              ? "good"
-              : "warning"
-            : "good",
-        },
-        {
-          name: "Click-through Rate",
-          value: connectionStatus.gsc
-            ? `${(
-                ((gscData?.totalClicks || 0) /
-                  Math.max(gscData?.totalImpressions || 1, 1)) *
-                100
-              ).toFixed(1)}%`
-            : "3.2%",
-          status: connectionStatus.gsc
-            ? ((gscData?.totalClicks || 0) /
-                Math.max(gscData?.totalImpressions || 1, 1)) *
-                100 >
-              2
-              ? "good"
-              : "warning"
-            : "warning",
-        },
-      ],
-    },
-    {
-      name: "Performance",
-      icon: Globe,
-      score: connectionStatus.ga4 ? ga4Data?.calculatedScore || 0 : 72,
-      trend: connectionStatus.ga4 ? ga4Data?.trend || "stable" : "stable",
-      value: connectionStatus.ga4
-        ? `${Math.floor((ga4Data?.avgSessionDuration || 0) / 60)}:${Math.floor(
-            (ga4Data?.avgSessionDuration || 0) % 60
-          )
-            .toString()
-            .padStart(2, "0")}`
-        : "2.1s",
-      change: connectionStatus.ga4 ? `${ga4Data?.changePercent || "0"}%` : "0%",
-      metrics: [
-        {
-          name: "Total Users",
-          value: connectionStatus.ga4
-            ? ga4Data?.totalUsers?.toLocaleString() || "0"
-            : "24.5K",
-          status: connectionStatus.ga4
-            ? ga4Data?.totalUsers > 1000
-              ? "good"
-              : "warning"
-            : "good",
-        },
-        {
-          name: "Engagement Rate",
-          value: connectionStatus.ga4
-            ? `${ga4Data?.engagementRate?.toFixed(1) || "0"}%`
-            : "57.7%",
-          status: connectionStatus.ga4
-            ? ga4Data?.engagementRate > 50
-              ? "good"
-              : "warning"
-            : "good",
-        },
-        {
-          name: "Conversions",
-          value: connectionStatus.ga4
-            ? ga4Data?.conversions?.toString() || "0"
-            : "126",
-          status: connectionStatus.ga4
-            ? ga4Data?.conversions > 10
-              ? "good"
-              : "warning"
-            : "good",
-        },
-      ],
-    },
     {
       name: "Local Presence",
       icon: MapPin,

@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 
@@ -7,43 +6,20 @@ interface PublicRouteProps {
 }
 
 /**
- * PublicRoute component that redirects authenticated users to dashboard
- * Used for signin page to prevent logged-in users from accessing it
- * Checks localStorage for authentication tokens (context-free for route-level protection)
- * Uses delayed check to avoid interfering with OAuth flow
+ * PublicRoute component that redirects authenticated users to dashboard.
+ * Used for signin/signup pages to prevent logged-in users from accessing them.
+ * Checks for JWT token in storage (context-free for route-level protection).
  */
 export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
+  const authToken = getPriorityItem("auth_token");
+  const token = getPriorityItem("token");
 
-  useEffect(() => {
-    // Small delay to allow OAuth flow to complete if in progress
-    const timer = setTimeout(() => {
-      const googleAccountId = getPriorityItem("google_account_id");
-      const isAuthenticated = !!googleAccountId;
+  const isAuthenticated = !!authToken || !!token;
 
-      if (isAuthenticated) {
-        console.log(
-          "[PublicRoute] google_account_id present; redirecting to dashboard"
-        );
-        setShouldRedirect(true);
-      }
-      setHasChecked(true);
-    }, 100); // Small delay to let OAuth complete
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Wait for check to complete before deciding
-  if (!hasChecked) {
-    return <>{children}</>;
-  }
-
-  // If authenticated, redirect to dashboard
-  if (shouldRedirect) {
+  if (isAuthenticated) {
+    console.log("[PublicRoute] JWT token present; redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
-  // If not authenticated, render the public content (signin page)
   return <>{children}</>;
 };

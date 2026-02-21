@@ -4,13 +4,9 @@ import { createContext } from "react";
 export interface DomainMapping {
   domain: string;
   displayName: string;
-  gsc_domainkey: string;
-  ga4_propertyId: string;
   // GBP integration properties
   gbp_accountId?: string;
   gbp_locationId?: string;
-  // Future integrations can be added here:
-  // clarity_siteId?: string;
 }
 
 // User profile information
@@ -19,8 +15,8 @@ export interface UserProfile {
   lastName: string | null;
   practiceName: string | null;
   domainName: string | null;
-  googleAccountId?: number | null;
   email?: string | null;
+  organizationId?: number | null;
 }
 
 export interface AuthContextType {

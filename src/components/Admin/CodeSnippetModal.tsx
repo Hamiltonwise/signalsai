@@ -150,7 +150,7 @@ export default function CodeSnippetModal({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Google Analytics"
+                placeholder="e.g., GBP Tracking"
                 maxLength={255}
                 className="w-full px-4 py-2.5 border border-black/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange transition-all"
                 autoFocus

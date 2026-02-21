@@ -18,12 +18,12 @@ import {
 } from "../../api/notifications";
 
 interface NotificationWidgetProps {
-  googleAccountId: number | null;
+  organizationId: number | null;
   onNotificationRead?: () => void;
 }
 
 export function NotificationWidget({
-  googleAccountId,
+  organizationId,
   onNotificationRead,
 }: NotificationWidgetProps) {
   const navigate = useNavigate();
@@ -34,13 +34,13 @@ export function NotificationWidget({
 
   // Fetch notifications and filter for the latest unread
   const fetchLatestUnread = async () => {
-    if (!googleAccountId) {
+    if (!organizationId) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const data = await fetchNotifications(googleAccountId);
+      const data = await fetchNotifications(organizationId);
 
       if (data.success) {
         // Get first unread notification (they're ordered by created_at DESC)
@@ -61,7 +61,7 @@ export function NotificationWidget({
   // Initial fetch
   useEffect(() => {
     fetchLatestUnread();
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Get navigation path based on notification type
   const getNotificationPath = (type: string) => {
@@ -81,12 +81,12 @@ export function NotificationWidget({
 
   // Handle notification click
   const handleNotificationClick = async () => {
-    if (!latestUnread || !googleAccountId) return;
+    if (!latestUnread || !organizationId) return;
 
     setIsMarking(true);
     try {
       // Mark as read
-      await markNotificationRead(latestUnread.id, googleAccountId);
+      await markNotificationRead(latestUnread.id, organizationId);
 
       // Navigate to appropriate page
       navigate(getNotificationPath(latestUnread.type));
@@ -107,11 +107,11 @@ export function NotificationWidget({
   // Handle mark as read button (without navigation)
   const handleMarkAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    if (!latestUnread || !googleAccountId) return;
+    if (!latestUnread || !organizationId) return;
 
     setIsMarking(true);
     try {
-      await markNotificationRead(latestUnread.id, googleAccountId);
+      await markNotificationRead(latestUnread.id, organizationId);
 
       // Refresh to show next unread notification
       await fetchLatestUnread();

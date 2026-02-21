@@ -176,7 +176,7 @@ export function ProoflineAgentEditor({
             }
             disabled={isReadOnly}
             className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-50 disabled:text-gray-500"
-            placeholder="e.g., GA4, GSC"
+            placeholder="e.g., GBP, Clarity"
           />
         </div>
 

@@ -18,7 +18,7 @@ export type AgentType =
 export interface ActionItem {
   id: number;
   domain_name: string;
-  google_account_id?: number;
+  organization_id?: number;
   title: string;
   description?: string;
   category: ActionItemCategory;
@@ -54,7 +54,7 @@ export interface ActionItemsResponse {
 
 export interface CreateActionItemRequest {
   domain_name: string;
-  google_account_id?: number;
+  organization_id?: number;
   title: string;
   description?: string;
   category: ActionItemCategory;
@@ -75,7 +75,7 @@ export interface UpdateActionItemRequest {
 
 export interface FetchActionItemsRequest {
   domain_name?: string;
-  google_account_id?: number;
+  organization_id?: number;
   category?: ActionItemCategory;
   status?: ActionItemStatus;
   is_approved?: boolean;

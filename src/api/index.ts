@@ -6,23 +6,16 @@ import { getPriorityItem } from "../hooks/useLocalStorage";
 const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
 
 /**
- * Helper function to get common headers for API requests
- * Includes both authorization token and google account ID for multi-tenant requests
+ * Helper function to get common headers for API requests.
+ * JWT is the sole authentication mechanism — sent via Authorization header.
  */
 const getCommonHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {};
 
-  // Use priority item for pilot support
+  // Use priority item for pilot support (sessionStorage first, then localStorage)
   const token = getPriorityItem("token");
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-  }
-
-  // Add Google Account ID for multi-tenant OAuth token refresh
-  // Use priority item for pilot support
-  const googleAccountId = getPriorityItem("google_account_id");
-  if (googleAccountId) {
-    headers["x-google-account-id"] = googleAccountId;
   }
 
   return headers;
@@ -74,7 +67,7 @@ export async function apiPost({
     // Handle FormData differently - don't set Content-Type for FormData
     const isFormData = passedData instanceof FormData;
 
-    // Start with common headers (includes google-account-id)
+    // Start with common headers
     const headers: Record<string, string> = getCommonHeaders();
 
     if (token) {
@@ -122,7 +115,7 @@ export async function apiPatch({
   };
 }) {
   try {
-    // Start with common headers (includes google-account-id)
+    // Start with common headers
     const headers: Record<string, string> = {
       ...getCommonHeaders(),
       "Content-Type": "application/json",
@@ -162,7 +155,7 @@ export async function apiPut({
   };
 }) {
   try {
-    // Start with common headers (includes google-account-id)
+    // Start with common headers
     const headers: Record<string, string> = {
       ...getCommonHeaders(),
       "Content-Type": "application/json",

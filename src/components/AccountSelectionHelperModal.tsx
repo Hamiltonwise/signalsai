@@ -16,16 +16,6 @@ export const AccountSelectionHelperModal: React.FC<
       description: "Business listing & reviews",
       logo: "/google-business-profile.png",
     },
-    {
-      name: "Search Console",
-      description: "Search rankings",
-      logo: "/google-search-console.png",
-    },
-    {
-      name: "Analytics 4",
-      description: "Website traffic",
-      logo: "/google-analytics.png",
-    },
   ];
 
   return (

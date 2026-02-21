@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { AlertCircle } from "lucide-react";
 
 interface DisconnectedServicesBannerProps {
-  disconnectedServices: string[]; // Array of service IDs: 'ga4', 'gsc', 'gbp'
+  disconnectedServices: string[]; // Array of service IDs: 'gbp'
 }
 
 export const DisconnectedServicesBanner: React.FC<
@@ -13,10 +13,6 @@ export const DisconnectedServicesBanner: React.FC<
 
   const serviceNames = disconnectedServices.map((service) => {
     switch (service) {
-      case "ga4":
-        return "Google Analytics";
-      case "gsc":
-        return "Search Console";
       case "gbp":
         return "Business Profile";
       default:

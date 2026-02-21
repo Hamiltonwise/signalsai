@@ -14,10 +14,10 @@ const API_BASE = "/api/tasks";
  * Fetch tasks for logged-in client (grouped by category)
  */
 export const fetchClientTasks = async (
-  googleAccountId: number
+  organizationId: number
 ): Promise<GroupedActionItemsResponse> => {
   const response = await fetch(
-    `${API_BASE}?googleAccountId=${googleAccountId}`
+    `${API_BASE}?googleAccountId=${organizationId}`
   );
 
   if (!response.ok) {
@@ -32,14 +32,14 @@ export const fetchClientTasks = async (
  */
 export const completeTask = async (
   taskId: number,
-  googleAccountId: number
+  organizationId: number
 ): Promise<{ success: boolean; task: ActionItem; message: string }> => {
   const response = await fetch(`${API_BASE}/${taskId}/complete`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ googleAccountId }),
+    body: JSON.stringify({ googleAccountId: organizationId }),
   });
 
   if (!response.ok) {

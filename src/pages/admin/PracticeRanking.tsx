@@ -54,7 +54,6 @@ interface GoogleAccount {
   domain: string;
   practiceName: string;
   hasGbp: boolean;
-  hasGsc: boolean;
   gbpLocations: GbpLocation[];
   gbpCount: number;
 }
@@ -84,8 +83,8 @@ interface SearchParams {
 
 interface RankingJob {
   id: number;
-  googleAccountId?: number;
-  google_account_id?: number;
+  organizationId?: number;
+  organization_id?: number;
   domain: string;
   specialty: string;
   location: string | null;
@@ -117,7 +116,7 @@ interface RankingJob {
 // Helper to normalize job data (handle both camelCase and snake_case)
 const normalizeJob = (job: RankingJob): RankingJob => ({
   ...job,
-  google_account_id: job.googleAccountId || job.google_account_id,
+  organization_id: job.organizationId || job.organization_id,
   gbp_location_id: job.gbpLocationId || job.gbp_location_id,
   gbp_location_name: job.gbpLocationName || job.gbp_location_name,
   batch_id: job.batchId || job.batch_id,
@@ -230,16 +229,6 @@ interface RankingResult {
       gbpLocationId?: string;
       gbpLocationName?: string;
       _raw?: unknown;
-    } | null;
-    client_gsc: {
-      rows?: unknown[];
-      topQueries?: unknown[];
-      totals?: {
-        impressions?: number;
-        clicks?: number;
-        avgPosition?: number;
-      };
-      [key: string]: unknown;
     } | null;
     competitors: Record<string, unknown>[];
     competitors_discovered?: number;
@@ -776,7 +765,7 @@ export function PracticeRanking() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          googleAccountId: selectedAccount,
+          organizationId: selectedAccount,
           locations: locationForms.map((form) => ({
             gbpAccountId: form.gbpAccountId,
             gbpLocationId: form.gbpLocationId,
@@ -1138,12 +1127,6 @@ export function PracticeRanking() {
                 <Badge variant="success">
                   <MapPin className="w-3 h-3 mr-1" />
                   {selectedAccountData.gbpCount} GBP Location{selectedAccountData.gbpCount !== 1 ? "s" : ""}
-                </Badge>
-              )}
-              {selectedAccountData.hasGsc && (
-                <Badge variant="info">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  GSC Connected
                 </Badge>
               )}
             </div>

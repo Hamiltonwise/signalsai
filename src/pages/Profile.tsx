@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { User, Lock, LogOut, Save, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useGoogleAuthContext } from "../contexts/googleAuthContext";
+import { useSession } from "../contexts/sessionContext";
 import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
   const { userProfile } = useAuth();
-  const { disconnect } = useGoogleAuthContext();
+  const { disconnect } = useSession();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,8 +27,7 @@ const Profile = () => {
   };
 
   const handleLogout = () => {
-    disconnect();
-    window.location.href = "/signin";
+    disconnect(); // Clears storage, cookies, and redirects to /signin
   };
 
   return (

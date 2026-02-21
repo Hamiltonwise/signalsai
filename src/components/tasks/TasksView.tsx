@@ -42,7 +42,7 @@ const pulseAnimationStyle = `
 `;
 
 interface TasksViewProps {
-  googleAccountId: number | null;
+  organizationId: number | null;
 }
 
 interface TaskCardProps {
@@ -278,7 +278,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   );
 };
 
-export function TasksView({ googleAccountId }: TasksViewProps) {
+export function TasksView({ organizationId }: TasksViewProps) {
   const location = useLocation();
   const isWizardActive = useIsWizardActive();
   const [tasks, setTasks] = useState<GroupedActionItems | null>(null);
@@ -440,7 +440,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
     setCompletionPct(total > 0 ? Math.round((done / total) * 100) : 0);
   }, [tasks]);
 
-  // Fetch tasks on mount and when googleAccountId changes
+  // Fetch tasks on mount and when organizationId changes
   // Skip during wizard mode - use demo data instead
   useEffect(() => {
     if (isWizardActive) {
@@ -448,21 +448,21 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
       return;
     }
 
-    if (!googleAccountId) {
+    if (!organizationId) {
       setLoading(false);
       return;
     }
 
     loadTasks();
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   const loadTasks = async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchClientTasks(googleAccountId);
+      const response = await fetchClientTasks(organizationId);
       setTasks(response.tasks);
     } catch (err) {
       console.error("Failed to fetch tasks:", err);
@@ -479,7 +479,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
   };
 
   const handleToggleTask = async (taskId: number, currentStatus: string) => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
       setCompletingTaskId(taskId);
@@ -500,7 +500,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
         }
       } else {
         // Mark as complete
-        await completeTask(taskId, googleAccountId);
+        await completeTask(taskId, organizationId);
       }
 
       // Reload tasks to get updated state
@@ -516,7 +516,7 @@ export function TasksView({ googleAccountId }: TasksViewProps) {
     }
   };
 
-  if (!googleAccountId) {
+  if (!organizationId) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}

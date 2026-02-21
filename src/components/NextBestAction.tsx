@@ -2,25 +2,19 @@ import React from "react";
 import { Target, ArrowRight, CheckCircle, Clock } from "lucide-react";
 
 interface NextBestActionProps {
-  ga4Data?: any;
-  gscData?: any;
   gbpData?: any;
   clarityData?: any;
   pmsData?: any;
   connectionStatus?: {
-    ga4: boolean;
     gbp: boolean;
-    gsc: boolean;
     clarity: boolean;
   };
 }
 
 export const NextBestAction: React.FC<NextBestActionProps> = ({
-  ga4Data,
-  gscData,
   gbpData,
   clarityData,
-  connectionStatus = { ga4: false, gbp: false, gsc: false, clarity: false },
+  connectionStatus = { gbp: false, clarity: false },
 }) => {
   // Generate priority action based on real data
   const getPriorityAction = () => {
@@ -37,21 +31,6 @@ export const NextBestAction: React.FC<NextBestActionProps> = ({
       };
     }
 
-    // Check for GSC opportunities
-    if (connectionStatus.gsc && gscData?.averagePosition > 5) {
-      return {
-        title: "Improve Search Rankings",
-        description: `Average position is ${gscData.averagePosition.toFixed(
-          1
-        )} - optimize for better visibility`,
-        impact: "High Impact",
-        color: "from-orange-50 to-orange-100 border-orange-200",
-        textColor: "text-orange-800",
-        badgeColor: "bg-orange-600",
-        estimate: "Estimated impact: +30% more search clicks",
-      };
-    }
-
     // Check for GBP opportunities
     if (connectionStatus.gbp && gbpData?.averageRating < 4.5) {
       return {
@@ -64,21 +43,6 @@ export const NextBestAction: React.FC<NextBestActionProps> = ({
         textColor: "text-yellow-800",
         badgeColor: "bg-yellow-600",
         estimate: "Estimated impact: +40% local visibility",
-      };
-    }
-
-    // Check for GA4 opportunities
-    if (connectionStatus.ga4 && ga4Data?.engagementRate < 50) {
-      return {
-        title: "Improve Website Engagement",
-        description: `Engagement rate is ${ga4Data.engagementRate.toFixed(
-          1
-        )}% - optimize content`,
-        impact: "Medium Impact",
-        color: "from-blue-50 to-blue-100 border-blue-200",
-        textColor: "text-blue-800",
-        badgeColor: "bg-blue-600",
-        estimate: "Estimated impact: +20% user engagement",
       };
     }
 
@@ -115,15 +79,6 @@ export const NextBestAction: React.FC<NextBestActionProps> = ({
         status: "pending",
         date: "This week",
         color: "bg-orange-400",
-      });
-    }
-
-    if (connectionStatus.ga4 && ga4Data?.conversions < 5) {
-      actions.push({
-        title: "Optimize contact forms for better conversions",
-        status: "pending",
-        date: "This week",
-        color: "bg-purple-400",
       });
     }
 

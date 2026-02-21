@@ -8,8 +8,8 @@ export function PilotBanner() {
   const handleEndSession = () => {
     // Clear all pilot session data
     sessionStorage.removeItem("token");
-    sessionStorage.removeItem("google_account_id");
     sessionStorage.removeItem("pilot_mode");
+    sessionStorage.removeItem("user_role");
 
     // Close the pilot window
     window.close();

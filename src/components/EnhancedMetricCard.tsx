@@ -14,7 +14,7 @@ interface EnhancedMetricCardProps {
   icon: LucideIcon;
   color: string;
   description?: string;
-  dataSource?: "GA4" | "GSC" | "GBP" | "Clarity";
+  dataSource?: "GBP" | "Clarity";
   isInverse?: boolean;
   showSubMetrics?: boolean; // For cards that need to show additional metrics below
   subMetrics?: Array<{
@@ -59,8 +59,6 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
     if (!dataSource) return null;
 
     const badgeColors = {
-      GA4: "bg-blue-100 text-blue-800",
-      GSC: "bg-red-100 text-red-800",
       GBP: "bg-green-100 text-green-800",
       Clarity: "bg-purple-100 text-purple-800",
       PMS: "bg-indigo-100 text-indigo-800",

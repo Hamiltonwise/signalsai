@@ -113,15 +113,6 @@ interface RankingResult {
   } | null;
   rawData: {
     client_gbp: ClientGbpData | null;
-    client_gsc: {
-      rows?: unknown[];
-      topQueries?: unknown[];
-      totals?: {
-        impressions?: number;
-        clicks?: number;
-        avgPosition?: number;
-      };
-    } | null;
     competitors: Array<{
       name: string;
       rankScore: number;
@@ -197,7 +188,7 @@ interface RankingTask {
 }
 
 interface RankingsDashboardProps {
-  googleAccountId: number | null;
+  organizationId: number | null;
 }
 
 // KPICard Component - Matching newdesign
@@ -283,7 +274,7 @@ const KPICard = ({
   </div>
 );
 
-export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
+export function RankingsDashboard({ organizationId }: RankingsDashboardProps) {
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
   const wizardDemoData = useWizardDemoData();
@@ -303,12 +294,12 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
       setLoading(false);
       return;
     }
-    if (googleAccountId) {
+    if (organizationId) {
       fetchLatestRankings();
     } else {
       setLoading(false);
     }
-  }, [googleAccountId, isWizardActive]);
+  }, [organizationId, isWizardActive]);
 
   const fetchLatestRankings = async () => {
     try {
@@ -317,7 +308,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
 
       // Fetch the latest rankings for all locations of this google account
       const response = await fetch(
-        `/api/practice-ranking/latest?googleAccountId=${googleAccountId}`,
+        `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -450,7 +441,7 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
     );
   }
 
-  if (!googleAccountId && !isWizardActive) {
+  if (!organizationId && !isWizardActive) {
     return (
       <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16">
         <div className="text-center max-w-md bg-white rounded-2xl border border-slate-200 shadow-premium p-10">
@@ -568,7 +559,6 @@ export function RankingsDashboard({ googleAccountId }: RankingsDashboardProps) {
               hasPhone: true,
               hasHours: true,
             },
-            client_gsc: null,
             competitors: [
               {
                 name: "Smile Orthodontics",

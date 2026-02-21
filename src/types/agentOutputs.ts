@@ -14,7 +14,9 @@ export type AgentOutputType =
 
 export interface AgentOutput {
   id: number;
-  google_account_id: number | null;
+  organization_id: number | null;
+  /** @deprecated Use organization_id. Kept for backward compat during migration. */
+  google_account_id?: number | null;
   domain: string;
   agent_type: AgentOutputType;
   date_start: string;

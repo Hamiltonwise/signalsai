@@ -1,5 +1,5 @@
-import React from "react";
-import { useGoogleAuthContext } from "../contexts/googleAuthContext";
+import React, { useState } from "react";
+import googleAuth from "../api/google-auth";
 
 interface GoogleConnectButtonProps {
   className?: string;
@@ -7,13 +7,17 @@ interface GoogleConnectButtonProps {
   size?: "sm" | "md" | "lg";
 }
 
+/**
+ * Google Connect Button — initiates Google OAuth for GBP connection (NOT for login).
+ * Used in settings/onboarding to connect a Google account for GBP data access.
+ */
 export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
   className = "",
   variant = "primary",
   size = "md",
 }) => {
-  const { isAuthenticated, isLoading, connectGoogle, error, clearError } =
-    useGoogleAuthContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const baseClasses =
     "flex items-center justify-center gap-3 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -32,14 +36,25 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
     lg: "px-6 py-4 text-lg",
   };
 
-  const handleConnect = () => {
-    if (error) clearError();
-    connectGoogle();
-  };
+  const handleConnect = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setError(null);
 
-  if (isAuthenticated) {
-    return null; // Don't show button when already connected
-  }
+    try {
+      const response = await googleAuth.getOAuthUrl();
+      if (response.success && response.authUrl) {
+        // Redirect to Google OAuth for GBP connection
+        window.location.href = response.authUrl;
+      } else {
+        setError(response.message || "Failed to start Google connection");
+      }
+    } catch {
+      setError("Failed to connect. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -60,7 +75,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
         ) : (
           <>
             <GoogleIcon className="w-5 h-5" />
-            <span>Continue with Google</span>
+            <span>Connect Google Account</span>
           </>
         )}
       </button>
@@ -85,7 +100,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
               </p>
               <p className="text-sm text-red-600 mt-1">{error}</p>
               <button
-                onClick={clearError}
+                onClick={() => setError(null)}
                 className="text-sm text-red-700 hover:text-red-800 underline mt-2"
               >
                 Dismiss

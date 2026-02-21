@@ -8,17 +8,12 @@ export function PilotHandler() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const pilotToken = params.get("pilot_token");
-    const googleAccountId = params.get("google_account_id");
     const userRole = params.get("user_role");
 
     if (pilotToken) {
-      // Save to sessionStorage (not localStorage!)
+      // Save to sessionStorage (not localStorage!) so it doesn't persist
       sessionStorage.setItem("token", pilotToken);
       sessionStorage.setItem("pilot_mode", "true");
-
-      if (googleAccountId) {
-        sessionStorage.setItem("google_account_id", googleAccountId);
-      }
 
       if (userRole) {
         sessionStorage.setItem("user_role", userRole);

@@ -16,10 +16,10 @@ async function getOAuthUrl() {
   }
 }
 
-async function validateToken(googleAccountId: number) {
+async function validateToken(connectionId: number) {
   try {
     return await apiGet({
-      path: baseurl + `/validate/${googleAccountId}`,
+      path: baseurl + `/validate/${connectionId}`,
     });
   } catch (err) {
     console.log(err);

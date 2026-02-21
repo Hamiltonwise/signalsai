@@ -11,11 +11,9 @@ import { ReferralEngineDashboard } from "../components/ReferralEngineDashboard";
 import { PMSVisualPillars } from "../components/PMS/PMSVisualPillars";
 import { RankingsDashboard } from "../components/dashboard/RankingsDashboard";
 
-// Integration Modal Components ✅
+// Integration Modal Components
 import { GBPIntegrationModal } from "../components/GBPIntegrationModal";
-import { GSCIntegrationModal } from "../components/GSCIntegrationModal";
 import { ClarityIntegrationModal } from "../components/ClarityIntegrationModal";
-import { GA4IntegrationModal } from "../components/GA4IntegrationModal";
 import { PMSUploadModal } from "../components/PMS/PMSUploadModal";
 import { VitalSignsCards } from "@/components/VitalSignsCards/VitalSignsCards";
 import { TasksView } from "../components/tasks/TasksView";
@@ -24,7 +22,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 // Onboarding Components
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
-import { getPriorityItem } from "../hooks/useLocalStorage";
 import { useIsWizardActive, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
 
 export default function Dashboard() {
@@ -43,9 +40,7 @@ export default function Dashboard() {
   const recheckWizardStatus = useRecheckWizardStatus();
 
   // Modal state management
-  const [showGA4Modal, setShowGA4Modal] = useState(false);
   const [showGBPModal, setShowGBPModal] = useState(false);
-  const [showGSCModal, setShowGSCModal] = useState(false);
   const [showClarityModal, setShowClarityModal] = useState(false);
   const [showPMSUpload, setShowPMSUpload] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
@@ -80,19 +75,6 @@ export default function Dashboard() {
     setActiveTab(tabFromPath(location.pathname));
   }, [location.pathname]);
 
-  // Ensure userProfile.googleAccountId is loaded from storage if not already set
-  // This handles the case where login just completed and userProfile needs refresh
-  useEffect(() => {
-    const storedGoogleAccountId = getPriorityItem("google_account_id");
-
-    // If storage has googleAccountId but userProfile doesn't, refresh
-    if (storedGoogleAccountId && !userProfile?.googleAccountId) {
-      console.log(
-        "[Dashboard] googleAccountId in localStorage but not in userProfile, refreshing..."
-      );
-      refreshUserProperties();
-    }
-  }, [userProfile?.googleAccountId, refreshUserProperties]);
 
   // REMOVED: Duplicate onboarding status check
   // AuthContext now handles this centrally - see AuthContext.tsx loadUserProperties()
@@ -245,7 +227,7 @@ export default function Dashboard() {
                         <span className="px-2 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-wider rounded-lg">Required</span>
                       </div>
                       <p className="text-slate-500 font-medium leading-relaxed mb-4">
-                        Link your Google Analytics, Search Console, and Business Profile to enable tracking and insights.
+                        Link your Google Business Profile to enable tracking and insights.
                       </p>
                       <div className="flex items-center gap-2 text-alloro-orange font-bold text-sm group-hover:gap-3 transition-all">
                         <Settings className="w-4 h-4" />
@@ -306,7 +288,7 @@ export default function Dashboard() {
                 >
                   {activeTab === "Dashboard" && (
                     <DashboardOverview
-                      googleAccountId={userProfile?.googleAccountId ?? null}
+                      organizationId={userProfile?.organizationId ?? null}
                     />
                   )}
 
@@ -337,7 +319,7 @@ export default function Dashboard() {
                       {selectedDomain?.domain || isWizardActive ? (
                         <PMSVisualPillars
                           domain={selectedDomain?.domain || ""}
-                          googleAccountId={userProfile?.googleAccountId ?? null}
+                          organizationId={userProfile?.organizationId ?? null}
                           hasProperties={hasProperties}
                         />
                       ) : (
@@ -359,34 +341,26 @@ export default function Dashboard() {
 
                   {activeTab === "Rankings" && (
                     <RankingsDashboard
-                      googleAccountId={userProfile?.googleAccountId ?? null}
+                      organizationId={userProfile?.organizationId ?? null}
                     />
                   )}
 
                   {activeTab === "Tasks" && (
                     <TasksView
-                      googleAccountId={userProfile?.googleAccountId ?? null}
+                      organizationId={userProfile?.organizationId ?? null}
                     />
                   )}
 
                   {activeTab === "Referral Engine" && (
                     <ReferralEngineDashboard
-                      googleAccountId={userProfile?.googleAccountId ?? null}
+                      organizationId={userProfile?.organizationId ?? null}
                     />
                   )}
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            {/* Integration Modal Components ✅ */}
-            <GA4IntegrationModal
-              isOpen={showGA4Modal}
-              onClose={() => setShowGA4Modal(false)}
-              onSuccess={() => {
-                console.log("GA4 integration successful!");
-              }}
-            />
-
+            {/* Integration Modal Components */}
             <GBPIntegrationModal
               isOpen={showGBPModal}
               onClose={() => setShowGBPModal(false)}
@@ -395,17 +369,6 @@ export default function Dashboard() {
               session={session}
               onSuccess={() => {
                 console.log("GBP integration successful!");
-              }}
-            />
-
-            <GSCIntegrationModal
-              isOpen={showGSCModal}
-              onClose={() => setShowGSCModal(false)}
-              clientId={clientId}
-              ready={ready}
-              session={session}
-              onSuccess={() => {
-                console.log("GSC integration successful!");
               }}
             />
 

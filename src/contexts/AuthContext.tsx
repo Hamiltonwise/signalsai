@@ -6,13 +6,10 @@ import {
   type UserProfile,
 } from "./authContext";
 import onboarding from "../api/onboarding";
-import { getPriorityItem } from "../hooks/useLocalStorage";
 
 interface AuthProviderProps {
   children: ReactNode;
 }
-
-// Removed hardcoded domain mappings - data should come from user's onboarding/profile
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [selectedDomain, setSelectedDomain] = useState<DomainMapping | null>(
@@ -31,17 +28,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return cached !== "false"; // Default to true unless explicitly false
   });
 
-  // Function to load user properties (can be called on mount or manually)
+  // Load user properties from the onboarding API (JWT provides auth context)
   const loadUserProperties = async () => {
     setIsLoadingUserProperties(true);
     try {
-      // Always try to get googleAccountId from priority storage as the most reliable source
-      // This supports both normal (localStorage) and pilot (sessionStorage) modes
-      const storedGoogleAccountId = getPriorityItem("google_account_id");
-      const googleAccountIdFromStorage = storedGoogleAccountId
-        ? parseInt(storedGoogleAccountId, 10)
-        : null;
-
       const status = await onboarding.getOnboardingStatus();
 
       // Update centralized onboarding state
@@ -50,88 +40,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem("onboardingCompleted", String(isCompleted));
 
       if (status.success && status.onboardingCompleted) {
-        // Get googleAccountId: prefer backend, then localStorage
-        const googleAccountId =
-          status.profile?.googleAccountId || googleAccountIdFromStorage;
-
-        // Load user profile - always set it if onboarding is complete (even without propertyIds)
+        // Load user profile from backend response
         setUserProfile({
           firstName: status.profile?.firstName || null,
           lastName: status.profile?.lastName || null,
           practiceName: status.profile?.practiceName || null,
           domainName: status.profile?.domainName || null,
           email: status.profile?.email || null,
-          googleAccountId,
+          organizationId: status.organizationId || null,
         });
 
         // Only set selectedDomain and hasProperties if propertyIds exist
         if (status.propertyIds) {
-          // Transform onboarding data to DomainMapping format
           const userMapping: DomainMapping = {
             domain:
               status.profile?.domainName ||
-              status.propertyIds.ga4?.displayName ||
               "Your Practice",
             displayName:
               status.profile?.practiceName ||
-              status.propertyIds.ga4?.displayName ||
               "Your Practice",
-            ga4_propertyId:
-              status.propertyIds.ga4?.propertyId?.replace("properties/", "") ||
-              "",
-            gsc_domainkey: status.propertyIds.gsc?.siteUrl || "",
             gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
             gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
           };
           setSelectedDomain(userMapping);
 
-          // Check if properties are actually connected
           const hasProps = !!(
-            status.propertyIds.ga4 ||
-            status.propertyIds.gsc ||
-            (status.propertyIds.gbp && status.propertyIds.gbp.length > 0)
+            status.propertyIds.gbp && status.propertyIds.gbp.length > 0
           );
           setHasProperties(hasProps);
           localStorage.setItem("hasProperties", String(hasProps));
         } else {
-          // No properties connected yet - set hasProperties to false
           setHasProperties(false);
           localStorage.setItem("hasProperties", "false");
         }
-      } else if (googleAccountIdFromStorage) {
-        // Even if onboarding status fails, if we have googleAccountId in localStorage,
-        // set a minimal userProfile so dashboard can fetch data
-        console.log(
-          "[AuthContext] Onboarding status incomplete but googleAccountId found in localStorage:",
-          googleAccountIdFromStorage
-        );
-        setUserProfile((prev) => ({
-          firstName: prev?.firstName || null,
-          lastName: prev?.lastName || null,
-          practiceName: prev?.practiceName || null,
-          domainName: prev?.domainName || null,
-          googleAccountId: googleAccountIdFromStorage,
-        }));
-        // No fallback to hardcoded data - let the domain remain null
-        setSelectedDomain(null);
       } else {
-        // No fallback to hardcoded data if onboarding not completed
         setSelectedDomain(null);
       }
     } catch (error) {
       console.error("Failed to load user properties:", error);
-      // Even on error, try to use priority storage googleAccountId
-      const storedGoogleAccountId = getPriorityItem("google_account_id");
-      if (storedGoogleAccountId) {
-        setUserProfile((prev) => ({
-          firstName: prev?.firstName || null,
-          lastName: prev?.lastName || null,
-          practiceName: prev?.practiceName || null,
-          domainName: prev?.domainName || null,
-          googleAccountId: parseInt(storedGoogleAccountId, 10),
-        }));
-      }
-      // No fallback to hardcoded data on error
       setSelectedDomain(null);
     } finally {
       setIsLoadingUserProperties(false);
@@ -145,21 +91,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleDomainChange = () => {
     // Domain change is no longer used since we removed hardcoded mappings
-    // This function is kept for interface compatibility but does nothing
     console.warn(
       "[AuthContext] handleDomainChange called but no domain mappings exist"
     );
   };
 
   const contextValue: AuthContextType = {
-    domains: [], // No hardcoded domain mappings
+    domains: [],
     selectedDomain,
     handleDomainChange,
     setSelectedDomain,
     isLoadingUserProperties,
     userProfile,
     refreshUserProperties: loadUserProperties,
-    // Centralized onboarding state
     onboardingCompleted,
     hasProperties,
     setOnboardingCompleted,

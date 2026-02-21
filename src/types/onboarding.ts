@@ -1,16 +1,4 @@
 // Property types for each Google service
-export interface GA4Property {
-  propertyId: string;
-  displayName: string;
-  accountName?: string;
-}
-
-export interface GSCSite {
-  siteUrl: string;
-  displayName: string;
-  permissionLevel?: string;
-}
-
 export interface GBPLocation {
   accountId: string;
   locationId: string;
@@ -29,22 +17,12 @@ export interface ProfileInfo {
 
 // Available properties response from API
 export interface AvailableProperties {
-  ga4: GA4Property[];
-  gsc: GSCSite[];
   gbp: GBPLocation[];
 }
 
 // Saved property selections (stored in database)
 export interface PropertySelections {
   profile: ProfileInfo;
-  ga4: {
-    propertyId: string;
-    displayName: string;
-  } | null;
-  gsc: {
-    siteUrl: string;
-    displayName: string;
-  } | null;
   gbp: Array<{
     accountId: string;
     locationId: string;
@@ -65,7 +43,7 @@ export interface OnboardingStep {
   id: number;
   title: string;
   description: string;
-  serviceName: "ga4" | "gsc" | "gbp";
+  serviceName: "gbp";
   icon?: string;
 }
 
@@ -90,8 +68,6 @@ export interface OnboardingContextType {
 
   // Actions
   fetchAvailableProperties: () => Promise<void>;
-  selectGA4Property: (property: GA4Property | null) => void;
-  selectGSCSite: (site: GSCSite | null) => void;
   selectGBPLocations: (locations: GBPLocation[]) => void;
   nextStep: () => void;
   previousStep: () => void;

@@ -5,8 +5,8 @@ import { X, Check, Loader2, Search } from "lucide-react";
 interface PropertyItem {
   id: string;
   name: string;
-  account?: string; // For GA4
-  permissionLevel?: string; // For GSC
+  account?: string;
+  permissionLevel?: string;
   address?: string; // For GBP
   // Helper for GBP
   accountId?: string;
@@ -22,7 +22,7 @@ interface PropertySelectionModalProps {
   onMultiSelect?: (items: PropertyItem[]) => void; // For multi select
   isLoading?: boolean; // Loading available items
   isSaving?: boolean; // Saving selection
-  type: "ga4" | "gsc" | "gbp";
+  type: "gbp";
   initialSelections?: string[]; // IDs of currently connected properties
   multiSelect?: boolean;
 }
@@ -36,7 +36,7 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
   onMultiSelect,
   isLoading,
   isSaving,
-  type,
+  type: _type,
   initialSelections = [],
   multiSelect = false,
 }) => {
@@ -197,9 +197,7 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
                                 : "text-slate-500"
                             }`}
                           >
-                            {type === "ga4" && item.account}
-                            {type === "gsc" && item.id}
-                            {type === "gbp" && item.address}
+                            {item.address}
                           </div>
                         </div>
                         <div className="shrink-0">

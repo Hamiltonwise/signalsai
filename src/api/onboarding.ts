@@ -20,7 +20,7 @@ async function getOnboardingStatus() {
 }
 
 /**
- * Fetch all available properties (GA4, GSC, GBP) for the authenticated user
+ * Fetch all available properties (GBP) for the authenticated user
  */
 async function getAvailableProperties() {
   try {
@@ -38,7 +38,7 @@ async function getAvailableProperties() {
 
 /**
  * Save user's selected properties
- * @param properties Object containing ga4, gsc, and gbp selections
+ * @param properties Object containing gbp selections
  */
 async function saveProperties(data: {
   profile: {

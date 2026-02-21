@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { BarChart3, Search, MapPin, CheckCircle2, XCircle } from "lucide-react";
+import { MapPin, CheckCircle2, XCircle } from "lucide-react";
 import { PropertySelectionModal } from "./PropertySelectionModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
@@ -17,15 +17,11 @@ interface Property {
 }
 
 interface PropertiesState {
-  ga4: Property | null;
-  gsc: Property | null;
   gbp: Property[] | [];
 }
 
 export const PropertiesTab: React.FC = () => {
   const [properties, setProperties] = useState<PropertiesState>({
-    ga4: null,
-    gsc: null,
     gbp: [],
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +29,7 @@ export const PropertiesTab: React.FC = () => {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"ga4" | "gsc" | "gbp">("ga4");
+  const [modalType, setModalType] = useState<"gbp">("gbp");
   const [availableProperties, setAvailableProperties] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +38,7 @@ export const PropertiesTab: React.FC = () => {
   // Confirm Modal State
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [disconnectType, setDisconnectType] = useState<
-    "ga4" | "gsc" | "gbp" | null
+    "gbp" | null
   >(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -57,12 +53,7 @@ export const PropertiesTab: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
-      const response = await axios.get("/api/settings/properties", {
-        headers: { "x-google-account-id": googleAccountId },
-      });
+      const response = await axios.get("/api/settings/properties");
 
       if (response.data.success) {
         setProperties(response.data.properties);
@@ -74,41 +65,19 @@ export const PropertiesTab: React.FC = () => {
     }
   };
 
-  const handleConnect = async (type: "ga4" | "gsc" | "gbp") => {
+  const handleConnect = async (type: "gbp") => {
     setModalType(type);
     setModalOpen(true);
     setLoadingAvailable(true);
     setAvailableProperties([]);
     setIsSaving(false);
 
-    // Prepare initial selections for highlighting
-    let selections: string[] = [];
-    if (type === "ga4" && properties.ga4?.propertyId) {
-      selections = [properties.ga4.propertyId];
-    } else if (type === "gsc" && properties.gsc?.siteUrl) {
-      selections = [properties.gsc.siteUrl];
-    } else if (type === "gbp" && properties.gbp.length > 0) {
-      // For GBP, we need to match the ID format used in availableProperties.
-      // The available properties use 'locations/...' or 'accounts/.../locations/...'
-      // But we only stored locationId.
-      // We'll need to rely on matching logic in the modal or try to reconstruct.
-      // Since we don't have the full ID stored easily, we might need to do a best effort match
-      // once we fetch available properties.
-      // For now, let's just pass empty and handle it after fetch if possible,
-      // OR we can filter availableProperties once fetched to find matches.
-      // Let's wait until fetch completes to set selections for GBP.
-    }
+    const selections: string[] = [];
     setInitialSelections(selections);
 
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       const response = await axios.get(
-        `/api/settings/properties/available/${type}`,
-        {
-          headers: { "x-google-account-id": googleAccountId },
-        }
+        `/api/settings/properties/available/${type}`
       );
 
       if (response.data.success) {
@@ -132,30 +101,15 @@ export const PropertiesTab: React.FC = () => {
     }
   };
 
-  const handleSelectProperty = async (item: any) => {
-    // Single select handler (GA4, GSC)
+  const handleSelectProperty = async (_item: any) => {
+    // Single select handler
     setIsSaving(true);
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
-      let data: any = {};
-      if (modalType === "ga4") {
-        data = {
-          propertyId: item.id,
-          displayName: item.name,
-        };
-      } else if (modalType === "gsc") {
-        data = {
-          siteUrl: item.id,
-          displayName: item.name,
-        };
-      }
+      const data: any = {};
 
       await axios.post(
         "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" },
-        { headers: { "x-google-account-id": googleAccountId } }
+        { type: modalType, data, action: "connect" }
       );
 
       setModalOpen(false);
@@ -171,9 +125,6 @@ export const PropertiesTab: React.FC = () => {
     // Multi select handler (GBP)
     setIsSaving(true);
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       // Map items to the storage format
       const data = items.map((item) => ({
         accountId: item.accountId,
@@ -183,8 +134,7 @@ export const PropertiesTab: React.FC = () => {
 
       await axios.post(
         "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" },
-        { headers: { "x-google-account-id": googleAccountId } }
+        { type: modalType, data, action: "connect" }
       );
 
       setModalOpen(false);
@@ -196,7 +146,7 @@ export const PropertiesTab: React.FC = () => {
     }
   };
 
-  const initiateDisconnect = (type: "ga4" | "gsc" | "gbp") => {
+  const initiateDisconnect = (type: "gbp") => {
     setDisconnectType(type);
     setConfirmOpen(true);
   };
@@ -206,13 +156,9 @@ export const PropertiesTab: React.FC = () => {
 
     setIsDisconnecting(true);
     try {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) return;
-
       await axios.post(
         "/api/settings/properties/update",
-        { type: disconnectType, action: "disconnect" },
-        { headers: { "x-google-account-id": googleAccountId } }
+        { type: disconnectType, action: "disconnect" }
       );
 
       fetchProperties(); // Reload
@@ -286,30 +232,6 @@ export const PropertiesTab: React.FC = () => {
     );
 
   const integrations = [
-    {
-      type: "ga4" as const,
-      title: "Google Analytics 4",
-      description: "Track website traffic and user behavior analytics",
-      icon: BarChart3,
-      iconColor: "text-orange-500",
-      iconBg: "bg-orange-50",
-      connected: !!properties.ga4,
-      property: properties.ga4,
-      idLabel: "Property ID",
-      idValue: properties.ga4?.propertyId,
-    },
-    {
-      type: "gsc" as const,
-      title: "Google Search Console",
-      description: "Monitor search performance and indexing status",
-      icon: Search,
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-50",
-      connected: !!properties.gsc,
-      property: properties.gsc,
-      idLabel: "Site URL",
-      idValue: properties.gsc?.siteUrl,
-    },
     {
       type: "gbp" as const,
       title: "Google Business Profile",
@@ -424,26 +346,6 @@ export const PropertiesTab: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </div>
-              ) : integration.property ? (
-                <div className="p-4 bg-slate-50 rounded-[16px] border border-slate-200">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-xl ${integration.iconBg} flex items-center justify-center`}
-                    >
-                      <integration.icon
-                        className={`w-4 h-4 ${integration.iconColor}`}
-                      />
-                    </div>
-                    <div>
-                      <span className="text-sm font-black text-alloro-navy block tracking-tight">
-                        {integration.property.displayName}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                        {integration.idLabel}: {integration.idValue}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               ) : null}
             </div>

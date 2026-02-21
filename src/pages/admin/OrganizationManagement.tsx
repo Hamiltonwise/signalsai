@@ -35,8 +35,6 @@ interface Organization {
   created_at: string;
   userCount: number;
   connections: {
-    ga4: boolean;
-    gsc: boolean;
     gbp: boolean;
   };
 }
@@ -58,8 +56,6 @@ interface OrganizationDetails {
     accountId: number;
     email: string;
     properties: {
-      ga4?: { name: string } | null;
-      gsc?: { name: string } | null;
       gbp?: Array<Record<string, unknown>> | null;
     } | null;
   }>;
@@ -268,8 +264,8 @@ export function OrganizationManagement() {
         toast.success("Pilot session started!");
 
         let pilotUrl = `/?pilot_token=${data.token}`;
-        if (data.googleAccountId) {
-          pilotUrl += `&google_account_id=${data.googleAccountId}`;
+        if (data.organizationId) {
+          pilotUrl += `&organization_id=${data.organizationId}`;
         }
         pilotUrl += `&user_role=${userRole}`;
 
@@ -417,8 +413,6 @@ export function OrganizationManagement() {
                     </span>
                     <span className="text-gray-300">|</span>
                     <span className="flex items-center gap-3">
-                      <ConnectionBadge label="GA4" connected={org.connections.ga4} />
-                      <ConnectionBadge label="GSC" connected={org.connections.gsc} />
                       <ConnectionBadge label="GBP" connected={org.connections.gbp} />
                     </span>
                   </div>
@@ -587,24 +581,6 @@ export function OrganizationManagement() {
                                     <span>Connected via <span className="font-medium">{conn.email}</span></span>
                                   </div>
                                   <div className="flex flex-wrap gap-2">
-                                    {conn.properties && conn.properties.ga4 ? (
-                                      <div className="rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-700 border border-green-100">
-                                        <span className="font-semibold">GA4:</span> {conn.properties.ga4.name}
-                                      </div>
-                                    ) : (
-                                      <div className="rounded-lg bg-gray-50 px-3 py-1.5 text-xs text-gray-400 border border-gray-100">
-                                        No GA4
-                                      </div>
-                                    )}
-                                    {conn.properties && conn.properties.gsc ? (
-                                      <div className="rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-700 border border-green-100">
-                                        <span className="font-semibold">GSC:</span> {conn.properties.gsc.name}
-                                      </div>
-                                    ) : (
-                                      <div className="rounded-lg bg-gray-50 px-3 py-1.5 text-xs text-gray-400 border border-gray-100">
-                                        No GSC
-                                      </div>
-                                    )}
                                     {conn.properties &&
                                     conn.properties.gbp &&
                                     conn.properties.gbp.length > 0 ? (

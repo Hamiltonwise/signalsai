@@ -18,7 +18,7 @@ export function AdminTopBar() {
   const handleLogout = () => {
     // Clear admin authentication tokens
     localStorage.removeItem("auth_token");
-    localStorage.removeItem("google_account_id");
+    localStorage.removeItem("user_role");
 
     // Clear cookie with shared domain for cross-app auth sync
     const isProduction = window.location.hostname.includes('getalloro.com');

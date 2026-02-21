@@ -81,8 +81,8 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   // Check wizard status on mount
   useEffect(() => {
     const checkWizardStatus = async () => {
-      const googleAccountId = getPriorityItem("google_account_id");
-      if (!googleAccountId) {
+      const authToken = getPriorityItem("auth_token") || getPriorityItem("token");
+      if (!authToken) {
         setIsLoadingWizardStatus(false);
         return;
       }
@@ -189,12 +189,12 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   const recheckWizardStatus = useCallback(async () => {
     console.log("[WizardContext] recheckWizardStatus called");
 
-    // Verify google_account_id exists before making API call
-    const googleAccountId = getPriorityItem("google_account_id");
-    console.log("[WizardContext] google_account_id:", googleAccountId);
+    // Verify auth token exists before making API call
+    const authToken = getPriorityItem("auth_token") || getPriorityItem("token");
+    console.log("[WizardContext] authToken present:", !!authToken);
 
-    if (!googleAccountId) {
-      console.log("[WizardContext] No google_account_id found, skipping wizard check");
+    if (!authToken) {
+      console.log("[WizardContext] No auth token found, skipping wizard check");
       setIsLoadingWizardStatus(false);
       return;
     }

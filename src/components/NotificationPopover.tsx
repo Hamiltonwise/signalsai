@@ -23,12 +23,12 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 interface NotificationPopoverProps {
-  googleAccountId: number | null;
+  organizationId: number | null;
   customTrigger?: React.ReactNode;
 }
 
 export function NotificationPopover({
-  googleAccountId,
+  organizationId,
   customTrigger,
 }: NotificationPopoverProps) {
   const navigate = useNavigate();
@@ -42,11 +42,11 @@ export function NotificationPopover({
 
   // Poll notifications every 3 seconds
   useEffect(() => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     const pollNotifications = async () => {
       try {
-        const data = await fetchNotifications(googleAccountId);
+        const data = await fetchNotifications(organizationId);
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
       } catch (error) {
@@ -61,7 +61,7 @@ export function NotificationPopover({
     const interval = setInterval(pollNotifications, 3000);
 
     return () => clearInterval(interval);
-  }, [googleAccountId]);
+  }, [organizationId]);
 
   // Update button position and handle click outside
   useEffect(() => {
@@ -111,12 +111,12 @@ export function NotificationPopover({
 
   // Handle notification click - mark as read and navigate
   const handleNotificationClick = async (notification: Notification) => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
       // Mark as read if not already read
       if (!notification.read) {
-        await markNotificationRead(notification.id, googleAccountId);
+        await markNotificationRead(notification.id, organizationId);
         // Update local state
         setNotifications((prev) =>
           prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
@@ -139,10 +139,10 @@ export function NotificationPopover({
     e: React.MouseEvent
   ) => {
     e.stopPropagation(); // Prevent notification click
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     try {
-      await markNotificationRead(notificationId, googleAccountId);
+      await markNotificationRead(notificationId, organizationId);
       // Update local state
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
@@ -154,11 +154,11 @@ export function NotificationPopover({
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!googleAccountId) return;
+    if (!organizationId) return;
 
     setLoading(true);
     try {
-      await markAllNotificationsRead(googleAccountId);
+      await markAllNotificationsRead(organizationId);
       // Update local state
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);

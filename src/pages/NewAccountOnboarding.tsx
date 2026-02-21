@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ChevronDown, CheckCircle2, HelpCircle } from "lucide-react";
+import { FileText, ChevronDown, CheckCircle2, HelpCircle, ArrowRight } from "lucide-react";
 import { GoogleConnectButton } from "../components/GoogleConnectButton";
 import { GoogleAPITermsModal } from "../components/settings/GoogleAPITermsModal";
 import { AccountSelectionHelperModal } from "../components/AccountSelectionHelperModal";
-import { useGoogleAuthContext } from "../contexts/googleAuthContext";
 
 export default function NewAccountOnboarding() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useGoogleAuthContext();
   const [step1Completed, setStep1Completed] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showAccountHelp, setShowAccountHelp] = useState(false);
-
-  // Redirect to dashboard if already authenticated
-  if (isAuthenticated) {
-    navigate("/dashboard");
-    return null;
-  }
 
   const handleTermsAccepted = () => {
     setStep1Completed(true);
@@ -46,10 +38,10 @@ export default function NewAccountOnboarding() {
             </span>
           </div>
           <h1 className="text-4xl font-black text-alloro-navy font-heading tracking-tight mb-3">
-            Welcome to Alloro
+            Connect Your Practice
           </h1>
           <p className="text-lg text-slate-500 font-medium">
-            Complete these two steps to connect your Google account
+            Link your Google Business Profile to unlock practice insights
           </p>
         </div>
 
@@ -155,15 +147,15 @@ export default function NewAccountOnboarding() {
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-black text-alloro-navy tracking-tight">
-                        Connect Your Google Account
+                        Connect Google Business Profile
                       </h3>
                       <span className="px-2 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-wider rounded-lg">
                         Required
                       </span>
                     </div>
                     <p className="text-slate-500 font-medium leading-relaxed mb-4">
-                      Sign in with your Google account to enable analytics
-                      tracking and insights for your practice.
+                      Connect your Google Business Profile to enable reviews,
+                      rankings, and insights for your practice.
                     </p>
 
                     {/* Google Connect Button */}
@@ -204,7 +196,7 @@ export default function NewAccountOnboarding() {
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-black text-slate-400 tracking-tight">
-                        Connect Your Google Account
+                        Connect Google Business Profile
                       </h3>
                       <span className="px-2 py-1 bg-slate-200 text-slate-400 text-[10px] font-black uppercase tracking-wider rounded-lg">
                         Next
@@ -220,17 +212,15 @@ export default function NewAccountOnboarding() {
           </AnimatePresence>
         </div>
 
-        {/* Help text */}
+        {/* Skip option */}
         <div className="text-center mt-8">
-          <p className="text-sm text-slate-400">
-            Already have an account?{" "}
-            <a
-              href="/signin"
-              className="text-alloro-orange font-semibold hover:underline"
-            >
-              Sign in
-            </a>
-          </p>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-alloro-orange transition-colors font-medium"
+          >
+            <span>Skip for now and go to dashboard</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

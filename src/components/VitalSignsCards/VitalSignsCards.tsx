@@ -15,9 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useGA4 } from "../../hooks/useGA4";
 import { useGBP } from "../../hooks/useGBP";
-import { useGSC } from "../../hooks/useGSC";
 import { useClarity } from "../../hooks/useClarity";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -28,22 +26,6 @@ interface VitalSignsCardsProps {
 
 // Stage configuration
 const STAGES = [
-  {
-    id: "awareness",
-    title: "Awareness",
-    iconName: "Search",
-    description:
-      "The first moment potential patients discover your practice exists. Without visibility, even the best dental practice remains unknown.",
-    dataSource: "Google Search Console",
-  },
-  {
-    id: "research",
-    title: "Research",
-    iconName: "Globe",
-    description:
-      "When patients explore your services and evaluate your expertise. This is where trust begins and confidence builds.",
-    dataSource: "Google Analytics 4",
-  },
   {
     id: "consideration",
     title: "Consideration",
@@ -93,39 +75,23 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   // selectedDomain is passed for context - data fetching is handled by hooks
   console.debug("VitalSignsCards selectedDomain:", selectedDomain);
 
-  const [activeTabId, setActiveTabId] = useState("awareness");
+  const [activeTabId, setActiveTabId] = useState("consideration");
   const [isFetchingAIData, setIsFetchingAIData] = useState(false);
   const [aiDataStatus, setAiDataStatus] = useState<{
-    ga4: "idle" | "loading" | "success" | "error";
     gbp: "idle" | "loading" | "success" | "error";
-    gsc: "idle" | "loading" | "success" | "error";
     clarity: "idle" | "loading" | "success" | "error";
   }>({
-    ga4: "idle",
     gbp: "idle",
-    gsc: "idle",
     clarity: "idle",
   });
 
   // Hooks for data
-  const {
-    ga4Data,
-    isLoading: ga4Loading,
-    error: ga4Error,
-    fetchAIReadyData: fetchGA4AIData,
-  } = useGA4();
   const {
     gbpData,
     isLoading: gbpLoading,
     error: gbpError,
     fetchAIReadyData: fetchGBPAIData,
   } = useGBP();
-  const {
-    gscData,
-    isLoading: gscLoading,
-    error: gscError,
-    fetchAIReadyGscData: fetchGSCAIData,
-  } = useGSC();
   const {
     clarityData,
     isLoading: clarityLoading,
@@ -140,20 +106,10 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   // Get data status for each integration
   const integrationStatus = useMemo(
     () => ({
-      ga4: {
-        connected: !ga4Error && !ga4Loading,
-        loading: ga4Loading,
-        error: ga4Error,
-      },
       gbp: {
         connected: !gbpError && !gbpLoading,
         loading: gbpLoading,
         error: gbpError,
-      },
-      gsc: {
-        connected: !gscError && !gscLoading,
-        loading: gscLoading,
-        error: gscError,
       },
       clarity: {
         connected: !clarityError && !clarityLoading,
@@ -162,12 +118,8 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
       },
     }),
     [
-      ga4Loading,
-      ga4Error,
       gbpLoading,
       gbpError,
-      gscLoading,
-      gscError,
       clarityLoading,
       clarityError,
     ]
@@ -176,52 +128,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   // Get metrics for active stage
   const getStageMetrics = () => {
     switch (activeTabId) {
-      case "awareness":
-        return [
-          {
-            label: "Search Impressions",
-            value: gscLoading
-              ? "..."
-              : formatNumber(gscData.impressions.currMonth),
-            subtext: "Monthly searches",
-          },
-          {
-            label: "Avg. Position",
-            value: gscLoading
-              ? "..."
-              : gscData.avgPosition.currMonth.toFixed(1),
-            subtext: "Search ranking",
-          },
-          {
-            label: "Total Clicks",
-            value: gscLoading ? "..." : formatNumber(gscData.clicks.currMonth),
-            subtext: "Click-throughs",
-          },
-        ];
-      case "research":
-        return [
-          {
-            label: "Active Users",
-            value: ga4Loading
-              ? "..."
-              : formatNumber(ga4Data.activeUsers.currMonth),
-            subtext: "Website visitors",
-          },
-          {
-            label: "Engagement Rate",
-            value: ga4Loading
-              ? "..."
-              : (ga4Data.engagementRate.currMonth * 100).toFixed(1) + "%",
-            subtext: "Interaction rate",
-          },
-          {
-            label: "Conversions",
-            value: ga4Loading
-              ? "..."
-              : ga4Data.conversions.currMonth.toString(),
-            subtext: "Goal completions",
-          },
-        ];
       case "consideration":
         return [
           {
@@ -274,30 +180,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   // Get insight for active stage
   const getStageInsight = () => {
     switch (activeTabId) {
-      case "awareness":
-        return gscLoading
-          ? "Loading search performance data..."
-          : gscError
-          ? "Error loading search performance. Check GSC integration."
-          : `Your practice has ${formatNumber(
-              gscData.impressions.currMonth
-            )} search impressions with ${formatNumber(
-              gscData.clicks.currMonth
-            )} clicks. Average position: ${gscData.avgPosition.currMonth.toFixed(
-              1
-            )}.`;
-      case "research":
-        return ga4Loading
-          ? "Loading website analytics data..."
-          : ga4Error
-          ? "Error loading analytics. Check GA4 integration."
-          : `Your website had ${formatNumber(
-              ga4Data.activeUsers.currMonth
-            )} active users with ${(
-              ga4Data.engagementRate.currMonth * 100
-            ).toFixed(1)}% engagement rate. ${
-              ga4Data.conversions.currMonth
-            } goal completions this month.`;
       case "consideration":
         return gbpLoading
           ? "Loading business profile data..."
@@ -343,23 +225,12 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   const handleFetchAIReadyData = async () => {
     setIsFetchingAIData(true);
     setAiDataStatus({
-      ga4: "loading",
       gbp: "loading",
-      gsc: "loading",
       clarity: "loading",
     });
 
     try {
       await Promise.allSettled([
-        (async () => {
-          try {
-            await fetchGA4AIData();
-            setAiDataStatus((prev) => ({ ...prev, ga4: "success" }));
-          } catch (error) {
-            console.error("GA4 AI Data Error:", error);
-            setAiDataStatus((prev) => ({ ...prev, ga4: "error" }));
-          }
-        })(),
         (async () => {
           try {
             if (authDomain?.gbp_accountId && authDomain?.gbp_locationId) {
@@ -374,15 +245,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
           } catch (error) {
             console.error("GBP AI Data Error:", error);
             setAiDataStatus((prev) => ({ ...prev, gbp: "error" }));
-          }
-        })(),
-        (async () => {
-          try {
-            await fetchGSCAIData();
-            setAiDataStatus((prev) => ({ ...prev, gsc: "success" }));
-          } catch (error) {
-            console.error("GSC AI Data Error:", error);
-            setAiDataStatus((prev) => ({ ...prev, gsc: "error" }));
           }
         })(),
         (async () => {
@@ -408,10 +270,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   // Check if current stage has error
   const hasCurrentStageError = () => {
     switch (activeTabId) {
-      case "awareness":
-        return gscError;
-      case "research":
-        return ga4Error;
       case "consideration":
         return gbpError;
       case "decision":
@@ -466,33 +324,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
               Engine Status:
             </span>
 
-            {/* GA4 Status */}
-            <span
-              className={`flex items-center gap-2 ${
-                aiDataStatus.ga4 === "loading"
-                  ? "text-blue-500"
-                  : aiDataStatus.ga4 === "success" ||
-                    integrationStatus.ga4.connected
-                  ? "text-green-600"
-                  : aiDataStatus.ga4 === "error" || integrationStatus.ga4.error
-                  ? "text-red-500"
-                  : "text-slate-400"
-              }`}
-            >
-              {aiDataStatus.ga4 === "loading" ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : aiDataStatus.ga4 === "success" ||
-                integrationStatus.ga4.connected ? (
-                <CheckCircle2 size={14} />
-              ) : aiDataStatus.ga4 === "error" ||
-                integrationStatus.ga4.error ? (
-                <XCircle size={14} />
-              ) : (
-                <CheckCircle2 size={14} />
-              )}
-              GA4
-            </span>
-
             {/* GBP Status */}
             <span
               className={`flex items-center gap-2 ${
@@ -518,33 +349,6 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
                 <CheckCircle2 size={14} />
               )}
               GBP
-            </span>
-
-            {/* GSC Status */}
-            <span
-              className={`flex items-center gap-2 ${
-                aiDataStatus.gsc === "loading"
-                  ? "text-blue-500"
-                  : aiDataStatus.gsc === "success" ||
-                    integrationStatus.gsc.connected
-                  ? "text-green-600"
-                  : aiDataStatus.gsc === "error" || integrationStatus.gsc.error
-                  ? "text-red-500"
-                  : "text-slate-400"
-              }`}
-            >
-              {aiDataStatus.gsc === "loading" ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : aiDataStatus.gsc === "success" ||
-                integrationStatus.gsc.connected ? (
-                <CheckCircle2 size={14} />
-              ) : aiDataStatus.gsc === "error" ||
-                integrationStatus.gsc.error ? (
-                <XCircle size={14} />
-              ) : (
-                <CheckCircle2 size={14} />
-              )}
-              GSC
             </span>
 
             {/* Clarity Status */}

@@ -8,7 +8,7 @@ export interface AgentResult {
   id: number;
   status: "pending" | "approved" | "rejected";
   domain: string;
-  google_account_id: number;
+  organization_id: number;
   agent_response?: AgentResponse;
   created_at: string;
   approved_by?: string;
@@ -23,10 +23,10 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-async function getLatestAgentData(googleAccountId: number) {
+async function getLatestAgentData(organizationId: number) {
   try {
     return await apiGet({
-      path: baseurl + `/latest/${googleAccountId}`,
+      path: baseurl + `/latest/${organizationId}`,
     });
   } catch (err) {
     console.log(err);

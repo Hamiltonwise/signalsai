@@ -54,10 +54,10 @@ export function AdminLogin() {
 
       if (res.success && res.token) {
         localStorage.setItem("auth_token", res.token);
-        if (res.user?.googleAccountId) {
+        if (res.user?.organizationId) {
           localStorage.setItem(
-            "google_account_id",
-            res.user.googleAccountId.toString()
+            "organization_id",
+            res.user.organizationId.toString()
           );
         }
 

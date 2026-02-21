@@ -156,10 +156,6 @@ export const MissingScopeBanner: React.FC<MissingScopeBannerProps> = ({
 
   const scopeNames = missingScopes.map((scope) => {
     switch (scope) {
-      case "ga4":
-        return "Google Analytics";
-      case "gsc":
-        return "Search Console";
       case "gbp":
         return "Business Profile";
       default:

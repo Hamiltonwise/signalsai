@@ -31,6 +31,7 @@ export interface AuthContextType {
   // Onboarding State (centralized to avoid duplicate API calls)
   onboardingCompleted: boolean | null;
   hasProperties: boolean;
+  hasGoogleConnection: boolean;
 
   // Functions
   handleDomainChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;

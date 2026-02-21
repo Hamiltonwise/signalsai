@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOnboarding } from "../../hooks/useOnboarding";
+import { useAuth } from "../../hooks/useAuth";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { Step0UserInfo } from "./Step0_UserInfo";
 import { Step1PracticeInfo } from "./Step1_PracticeInfo";
@@ -44,6 +45,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     completeOnboarding,
   } = useOnboarding();
 
+  const { hasGoogleConnection } = useAuth();
   const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
 
   // Handle onboarding completion
@@ -216,6 +218,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   state={state}
                   zip={zip}
                   selectedGbpLocations={selectedGbpLocations}
+                  hasGoogleConnection={hasGoogleConnection}
                   onPracticeNameChange={setPracticeName}
                   onStreetChange={setStreet}
                   onCityChange={setCity}

@@ -68,6 +68,7 @@ interface Step1PracticeInfoProps {
   state: string;
   zip: string;
   selectedGbpLocations: GBPSelection[];
+  hasGoogleConnection: boolean;
   onPracticeNameChange: (value: string) => void;
   onStreetChange: (value: string) => void;
   onCityChange: (value: string) => void;
@@ -86,6 +87,7 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
   state,
   zip,
   selectedGbpLocations,
+  hasGoogleConnection,
   onPracticeNameChange,
   onStreetChange,
   onCityChange,
@@ -514,138 +516,152 @@ export const Step1PracticeInfo: React.FC<Step1PracticeInfoProps> = ({
           <div>
             <h3 className="text-sm font-medium text-alloro-navy">Google Business Profile</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Connect your GBP locations to get started faster. You can also set this up later in Settings.
+              {hasGoogleConnection
+                ? "Connect your GBP locations to get started faster. You can also set this up later in Settings."
+                : "Connect your Google account in Settings to select GBP locations."}
             </p>
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleOpenGbpModal}
-              className={`w-full px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 font-medium ${
-                hasGbpSelected
-                  ? "bg-alloro-orange text-white border-alloro-orange hover:bg-alloro-orange/90"
-                  : "bg-white border-slate-300 text-alloro-navy hover:border-alloro-orange/50 hover:bg-alloro-orange/5"
-              }`}
-            >
-              {hasGbpSelected ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  {selectedGbpLocations.length} location{selectedGbpLocations.length !== 1 ? "s" : ""} selected
-                </>
-              ) : (
-                <>
-                  <MapPin className="w-4 h-4" />
-                  Select GBP Locations
-                </>
-              )}
-            </button>
 
-            {/* Inline GBP Popup */}
-            {gbpModalOpen && (
-              <div className="absolute z-50 w-full bottom-full mb-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-                {/* Popup Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                  <span className="text-sm font-semibold text-alloro-navy">Select GBP Locations</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGbpModalOpen(false);
-                      setGbpError(null);
-                    }}
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+          {hasGoogleConnection ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handleOpenGbpModal}
+                className={`w-full px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 font-medium ${
+                  hasGbpSelected
+                    ? "bg-alloro-orange text-white border-alloro-orange hover:bg-alloro-orange/90"
+                    : "bg-white border-slate-300 text-alloro-navy hover:border-alloro-orange/50 hover:bg-alloro-orange/5"
+                }`}
+              >
+                {hasGbpSelected ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    {selectedGbpLocations.length} location{selectedGbpLocations.length !== 1 ? "s" : ""} selected
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4" />
+                    Select GBP Locations
+                  </>
+                )}
+              </button>
 
-                {/* Popup Content */}
-                <div className="max-h-56 overflow-y-auto">
-                  {gbpLoading ? (
-                    <div className="flex items-center justify-center gap-2 py-8">
-                      <Loader2 className="w-5 h-5 text-alloro-orange animate-spin" />
-                      <span className="text-sm text-slate-500">Loading locations...</span>
-                    </div>
-                  ) : gbpError ? (
-                    <div className="px-4 py-6 text-center">
-                      <p className="text-sm text-red-600 mb-2">{gbpError}</p>
-                      <button
-                        type="button"
-                        onClick={handleOpenGbpModal}
-                        className="text-sm text-alloro-orange hover:underline font-medium"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  ) : gbpLocations.length === 0 ? (
-                    <div className="px-4 py-6 text-center">
-                      <p className="text-sm text-slate-500">No GBP locations found for your account.</p>
-                      <p className="text-xs text-slate-400 mt-1">You can set this up later in Settings.</p>
-                    </div>
-                  ) : (
-                    gbpLocations.map((loc) => {
-                      const isSelected = gbpSelectedIds.has(loc.id);
-                      return (
-                        <button
-                          key={loc.id}
-                          type="button"
-                          onClick={() => toggleGbpLocation(loc.id)}
-                          disabled={gbpSaving}
-                          className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-slate-50 last:border-b-0 ${
-                            isSelected
-                              ? "bg-alloro-orange/5"
-                              : "hover:bg-slate-50"
-                          } ${gbpSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                          <div
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isSelected
-                                ? "bg-alloro-orange border-alloro-orange"
-                                : "border-slate-300"
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-alloro-navy truncate">{loc.name}</p>
-                            {loc.address && (
-                              <p className="text-xs text-slate-400 truncate">{loc.address}</p>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Popup Footer */}
-                {!gbpLoading && !gbpError && gbpLocations.length > 0 && (
-                  <div className="px-4 py-3 border-t border-slate-100">
+              {/* Inline GBP Popup */}
+              {gbpModalOpen && (
+                <div className="absolute z-50 w-full bottom-full mb-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                  {/* Popup Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <span className="text-sm font-semibold text-alloro-navy">Select GBP Locations</span>
                     <button
                       type="button"
-                      onClick={handleGbpConfirm}
-                      disabled={gbpSaving || gbpSelectedIds.size === 0}
-                      className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                        gbpSelectedIds.size > 0 && !gbpSaving
-                          ? "bg-alloro-orange text-white hover:bg-alloro-orange/90"
-                          : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                      }`}
+                      onClick={() => {
+                        setGbpModalOpen(false);
+                        setGbpError(null);
+                      }}
+                      className="text-slate-400 hover:text-slate-600 transition-colors"
                     >
-                      {gbpSaving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          Confirm {gbpSelectedIds.size > 0 ? `(${gbpSelectedIds.size})` : ""}
-                        </>
-                      )}
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+
+                  {/* Popup Content */}
+                  <div className="max-h-56 overflow-y-auto">
+                    {gbpLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-8">
+                        <Loader2 className="w-5 h-5 text-alloro-orange animate-spin" />
+                        <span className="text-sm text-slate-500">Loading locations...</span>
+                      </div>
+                    ) : gbpError ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-sm text-red-600 mb-2">{gbpError}</p>
+                        <button
+                          type="button"
+                          onClick={handleOpenGbpModal}
+                          className="text-sm text-alloro-orange hover:underline font-medium"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : gbpLocations.length === 0 ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-sm text-slate-500">No GBP locations found for your account.</p>
+                        <p className="text-xs text-slate-400 mt-1">You can set this up later in Settings.</p>
+                      </div>
+                    ) : (
+                      gbpLocations.map((loc) => {
+                        const isSelected = gbpSelectedIds.has(loc.id);
+                        return (
+                          <button
+                            key={loc.id}
+                            type="button"
+                            onClick={() => toggleGbpLocation(loc.id)}
+                            disabled={gbpSaving}
+                            className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors border-b border-slate-50 last:border-b-0 ${
+                              isSelected
+                                ? "bg-alloro-orange/5"
+                                : "hover:bg-slate-50"
+                            } ${gbpSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            <div
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                isSelected
+                                  ? "bg-alloro-orange border-alloro-orange"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-alloro-navy truncate">{loc.name}</p>
+                              {loc.address && (
+                                <p className="text-xs text-slate-400 truncate">{loc.address}</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Popup Footer */}
+                  {!gbpLoading && !gbpError && gbpLocations.length > 0 && (
+                    <div className="px-4 py-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={handleGbpConfirm}
+                        disabled={gbpSaving || gbpSelectedIds.size === 0}
+                        className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                          gbpSelectedIds.size > 0 && !gbpSaving
+                            ? "bg-alloro-orange text-white hover:bg-alloro-orange/90"
+                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {gbpSaving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            Confirm {gbpSelectedIds.size > 0 ? `(${gbpSelectedIds.size})` : ""}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-full px-4 py-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center">
+              <p className="text-sm text-slate-500">
+                No Google account connected.
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                You can connect your Google account later in Settings to select GBP locations.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

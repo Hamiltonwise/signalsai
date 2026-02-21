@@ -18,6 +18,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const baseClasses =
     "flex items-center justify-center gap-3 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -59,7 +60,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
   return (
     <div className="space-y-3">
       <button
-        onClick={handleConnect}
+        onClick={() => setShowConfirm(true)}
         disabled={isLoading}
         className={`${baseClasses} ${variantClasses[variant]} ${
           sizeClasses[size]
@@ -79,6 +80,41 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
           </>
         )}
       </button>
+
+      {/* Confirmation Dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <GoogleIcon className="w-6 h-6" />
+              <h3 className="text-lg font-bold text-alloro-navy">
+                Connect Google Account
+              </h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-6">
+              Are you sure you want to connect your Google Business Profile
+              account? You'll be redirected to Google to authorize access.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirm(false);
+                  handleConnect();
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-alloro-orange text-white font-medium hover:bg-alloro-orange/90 transition-colors"
+              >
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">

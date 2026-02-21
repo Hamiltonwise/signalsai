@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const cached = localStorage.getItem("hasProperties");
     return cached !== "false"; // Default to true unless explicitly false
   });
+  const [hasGoogleConnection, setHasGoogleConnection] = useState<boolean>(false);
 
   // Load user properties from the onboarding API (JWT provides auth context)
   const loadUserProperties = async () => {
@@ -38,6 +39,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const isCompleted = status.success && status.onboardingCompleted === true;
       setOnboardingCompleted(isCompleted);
       localStorage.setItem("onboardingCompleted", String(isCompleted));
+
+      // Track Google connection status
+      setHasGoogleConnection(!!status.hasGoogleConnection);
 
       if (status.success && status.onboardingCompleted) {
         // Load user profile from backend response
@@ -106,6 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshUserProperties: loadUserProperties,
     onboardingCompleted,
     hasProperties,
+    hasGoogleConnection,
     setOnboardingCompleted,
     setHasProperties,
   };

@@ -34,17 +34,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoadingUserProperties(true);
     try {
       const status = await onboarding.getOnboardingStatus();
+      console.log("[AuthContext] onboarding status API response:", JSON.stringify(status));
 
       // Update centralized onboarding state
+      // Guard: never downgrade from true → false (race condition after completeOnboarding)
       const isCompleted = status.success && status.onboardingCompleted === true;
-      setOnboardingCompleted(isCompleted);
-      localStorage.setItem("onboardingCompleted", String(isCompleted));
+      setOnboardingCompleted((prev) => (prev === true && !isCompleted) ? true : isCompleted);
+      if (isCompleted) {
+        localStorage.setItem("onboardingCompleted", "true");
+      }
 
       // Track Google connection status
       setHasGoogleConnection(!!status.hasGoogleConnection);
 
-      if (status.success && status.onboardingCompleted) {
-        // Load user profile from backend response
+      if (status.success) {
+        // Always set userProfile when status is available — needed for
+        // onboarding resume logic (organizationId) even before completion.
         setUserProfile({
           firstName: status.profile?.firstName || null,
           lastName: status.profile?.lastName || null,
@@ -54,28 +59,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           organizationId: status.organizationId || null,
         });
 
-        // Only set selectedDomain and hasProperties if propertyIds exist
-        if (status.propertyIds) {
-          const userMapping: DomainMapping = {
-            domain:
-              status.profile?.domainName ||
-              "Your Practice",
-            displayName:
-              status.profile?.practiceName ||
-              "Your Practice",
-            gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
-            gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
-          };
-          setSelectedDomain(userMapping);
+        if (status.onboardingCompleted) {
+          // Only set selectedDomain and hasProperties if propertyIds exist
+          if (status.propertyIds) {
+            const userMapping: DomainMapping = {
+              domain:
+                status.profile?.domainName ||
+                "Your Practice",
+              displayName:
+                status.profile?.practiceName ||
+                "Your Practice",
+              gbp_accountId: status.propertyIds.gbp?.[0]?.accountId || "",
+              gbp_locationId: status.propertyIds.gbp?.[0]?.locationId || "",
+            };
+            setSelectedDomain(userMapping);
 
-          const hasProps = !!(
-            status.propertyIds.gbp && status.propertyIds.gbp.length > 0
-          );
-          setHasProperties(hasProps);
-          localStorage.setItem("hasProperties", String(hasProps));
+            const hasProps = !!(
+              status.propertyIds.gbp && status.propertyIds.gbp.length > 0
+            );
+            setHasProperties(hasProps);
+            localStorage.setItem("hasProperties", String(hasProps));
+          } else {
+            setHasProperties(false);
+            localStorage.setItem("hasProperties", "false");
+          }
         } else {
-          setHasProperties(false);
-          localStorage.setItem("hasProperties", "false");
+          setSelectedDomain(null);
         }
       } else {
         setSelectedDomain(null);
@@ -83,6 +92,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Failed to load user properties:", error);
       setSelectedDomain(null);
+      // If the API call fails, assume onboarding not complete
+      // so the user sees the onboarding flow instead of a blank screen
+      setOnboardingCompleted(false);
+      localStorage.setItem("onboardingCompleted", "false");
     } finally {
       setIsLoadingUserProperties(false);
     }

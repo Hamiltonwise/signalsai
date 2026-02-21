@@ -1,24 +1,35 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import googleAuth from "../api/google-auth";
+
+// Popup dimensions and timeout
+const POPUP_WIDTH = 500;
+const POPUP_HEIGHT = 600;
+const POPUP_TIMEOUT = 300000; // 5 minutes
 
 interface GoogleConnectButtonProps {
   className?: string;
   variant?: "primary" | "outline" | "minimal";
   size?: "sm" | "md" | "lg";
+  onSuccess?: () => void;
 }
 
 /**
  * Google Connect Button — initiates Google OAuth for GBP connection (NOT for login).
- * Used in settings/onboarding to connect a Google account for GBP data access.
+ * Uses popup pattern (window.open) so the user stays on the current page.
+ * After successful OAuth, calls onSuccess so the parent can react (e.g. open GBP selector).
  */
 export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
   className = "",
   variant = "primary",
   size = "md",
+  onSuccess,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const popupRef = useRef<Window | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const baseClasses =
     "flex items-center justify-center gap-3 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
@@ -37,6 +48,28 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
     lg: "px-6 py-4 text-lg",
   };
 
+  const centerPopup = (width: number, height: number) => {
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    return `left=${left},top=${top},width=${width},height=${height}`;
+  };
+
+  const closePopup = useCallback(() => {
+    try {
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+      }
+    } catch {
+      // COOP policy may block access
+    }
+    popupRef.current = null;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
   const handleConnect = async () => {
     if (isLoading) return;
     setIsLoading(true);
@@ -44,16 +77,94 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
 
     try {
       const response = await googleAuth.getOAuthUrl();
-      if (response.success && response.authUrl) {
-        // Redirect to Google OAuth for GBP connection
-        window.location.href = response.authUrl;
-      } else {
+      if (!response.success || !response.authUrl) {
         setError(response.message || "Failed to start Google connection");
+        setIsLoading(false);
+        return;
       }
+
+      // Open OAuth in popup — user stays on current page
+      const popupFeatures = [
+        centerPopup(POPUP_WIDTH, POPUP_HEIGHT),
+        "resizable=yes",
+        "scrollbars=yes",
+        "status=no",
+        "toolbar=no",
+        "menubar=no",
+        "location=no",
+      ].join(",");
+
+      popupRef.current = window.open(
+        response.authUrl,
+        "google_oauth_connect",
+        popupFeatures
+      );
+
+      if (!popupRef.current) {
+        setError("Popup was blocked. Please allow popups for this site.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Set timeout for popup
+      timeoutRef.current = setTimeout(() => {
+        closePopup();
+        setIsLoading(false);
+      }, POPUP_TIMEOUT);
+
+      // Listen for success/error messages from popup
+      const handleMessage = (event: MessageEvent) => {
+        const allowedOrigins = [
+          window.location.origin,
+          "http://localhost:3000",
+          "http://localhost:5173",
+          "http://localhost:5174",
+        ];
+
+        if (!allowedOrigins.includes(event.origin)) {
+          return;
+        }
+
+        if (event.data.type === "GOOGLE_OAUTH_SUCCESS") {
+          console.log("[GoogleConnect] OAuth success");
+          closePopup();
+          setIsLoading(false);
+          window.removeEventListener("message", handleMessage);
+
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else if (event.data.type === "GOOGLE_OAUTH_ERROR") {
+          console.error("[GoogleConnect] OAuth error:", event.data.error);
+          closePopup();
+          setIsLoading(false);
+          setError("Google connection failed. Please try again.");
+          window.removeEventListener("message", handleMessage);
+        }
+      };
+
+      window.addEventListener("message", handleMessage);
+
+      // Monitor popup for manual closure
+      const checkClosed = () => {
+        try {
+          if (popupRef.current?.closed) {
+            setIsLoading(false);
+            closePopup();
+            window.removeEventListener("message", handleMessage);
+            return;
+          }
+        } catch {
+          // COOP policy may block access
+        }
+        setTimeout(checkClosed, 1000);
+      };
+
+      checkClosed();
     } catch {
       setError("Failed to connect. Please try again.");
-    } finally {
       setIsLoading(false);
+      closePopup();
     }
   };
 
@@ -81,9 +192,9 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
         )}
       </button>
 
-      {/* Confirmation Dialog */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      {/* Confirmation Dialog — portal to body so it covers the full screen */}
+      {showConfirm && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
             <div className="flex items-center gap-3 mb-3">
               <GoogleIcon className="w-6 h-6" />
@@ -93,7 +204,7 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
             </div>
             <p className="text-sm text-slate-500 mb-6">
               Are you sure you want to connect your Google Business Profile
-              account? You'll be redirected to Google to authorize access.
+              account? A popup will open for you to authorize access.
             </p>
             <div className="flex gap-3">
               <button
@@ -113,7 +224,8 @@ export const GoogleConnectButton: React.FC<GoogleConnectButtonProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {error && (

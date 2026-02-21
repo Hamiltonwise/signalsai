@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOnboarding } from "../../hooks/useOnboarding";
 import { useAuth } from "../../hooks/useAuth";
@@ -17,8 +17,10 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
 }) => {
   const {
     currentStep,
+    setCurrentStep,
     totalSteps,
     error,
+    isSavingProfile,
     firstName,
     lastName,
     businessPhone,
@@ -40,15 +42,41 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     selectedGbpLocations,
     fetchAvailableGBP,
     saveGbpSelections,
+    saveProfileAndCreateOrg,
     nextStep,
     previousStep,
     completeOnboarding,
   } = useOnboarding();
 
-  const { hasGoogleConnection } = useAuth();
+  const { hasGoogleConnection, refreshUserProperties, userProfile } = useAuth();
   const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
+  const [autoOpenGbp, setAutoOpenGbp] = useState(false);
 
-  // Handle onboarding completion
+  // Resume logic: if org already exists (Step 2 was completed), skip to Step 3
+  useEffect(() => {
+    if (userProfile?.organizationId && currentStep < 3) {
+      console.log("[Onboarding] Org exists, resuming at Step 3");
+      setCurrentStep(3);
+    }
+  }, [userProfile?.organizationId]);
+
+  // Called when Google OAuth popup succeeds — refresh auth state then auto-open GBP selector
+  const handleGoogleConnected = async () => {
+    await refreshUserProperties();
+    setAutoOpenGbp(true);
+  };
+
+  // Step 2: Save profile + create org, then advance to Step 3
+  const handleSaveProfileAndAdvance = async () => {
+    const orgId = await saveProfileAndCreateOrg();
+    if (orgId) {
+      // Refresh auth so the new organizationId is available for Step 3 API calls
+      await refreshUserProperties();
+      nextStep();
+    }
+  };
+
+  // Step 3: Mark onboarding complete
   const handleComplete = async () => {
     setIsCompletingOnboarding(true);
     const success = await completeOnboarding();
@@ -58,16 +86,15 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
         if (onComplete) {
           onComplete();
         } else {
-          // Fallback: reload the page
           window.location.reload();
         }
-      }, 2000); // Show "preparing dashboard" for 2 seconds
+      }, 2000);
     } else {
       setIsCompletingOnboarding(false);
     }
   };
 
-  // Fade animation variants (cleaner, content appears with card)
+  // Fade animation variants
   const fadeVariants = {
     enter: {
       opacity: 0,
@@ -81,14 +108,6 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
       opacity: 0,
       y: -10,
     },
-  };
-
-  const handleNextStep = () => {
-    nextStep();
-  };
-
-  const handlePreviousStep = () => {
-    previousStep();
   };
 
   // Show "Preparing your dashboard" after completion
@@ -197,7 +216,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                 ease: "easeOut",
               }}
             >
-              {/* Profile Steps (1-3) */}
+              {/* Step 1: User Info */}
               {currentStep === 1 && (
                 <Step0UserInfo
                   firstName={firstName}
@@ -206,10 +225,11 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   onFirstNameChange={setFirstName}
                   onLastNameChange={setLastName}
                   onBusinessPhoneChange={setBusinessPhone}
-                  onNext={handleNextStep}
+                  onNext={nextStep}
                 />
               )}
 
+              {/* Step 2: Practice Info + Domain */}
               {currentStep === 2 && (
                 <Step1PracticeInfo
                   practiceName={practiceName}
@@ -217,26 +237,32 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   city={city}
                   state={state}
                   zip={zip}
-                  selectedGbpLocations={selectedGbpLocations}
-                  hasGoogleConnection={hasGoogleConnection}
+                  domainName={domainName}
                   onPracticeNameChange={setPracticeName}
                   onStreetChange={setStreet}
                   onCityChange={setCity}
                   onStateChange={setState}
                   onZipChange={setZip}
-                  onGbpSelect={saveGbpSelections}
-                  fetchAvailableGBP={fetchAvailableGBP}
-                  onNext={handleNextStep}
-                  onBack={handlePreviousStep}
+                  onDomainNameChange={setDomainName}
+                  onNext={handleSaveProfileAndAdvance}
+                  onBack={previousStep}
+                  isSaving={isSavingProfile}
                 />
               )}
 
+              {/* Step 3: Google Connect + GBP Selector */}
               {currentStep === 3 && (
                 <Step2DomainInfo
-                  domainName={domainName}
-                  onDomainNameChange={setDomainName}
+                  hasGoogleConnection={hasGoogleConnection}
+                  selectedGbpLocations={selectedGbpLocations}
+                  onGbpSelect={saveGbpSelections}
+                  fetchAvailableGBP={fetchAvailableGBP}
+                  onGoogleConnected={handleGoogleConnected}
+                  autoOpenGbp={autoOpenGbp}
+                  onAutoOpenGbpHandled={() => setAutoOpenGbp(false)}
                   onNext={handleComplete}
-                  onBack={handlePreviousStep}
+                  onBack={previousStep}
+                  isCompleting={isCompletingOnboarding}
                 />
               )}
             </motion.div>

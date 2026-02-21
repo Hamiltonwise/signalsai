@@ -37,8 +37,53 @@ async function getAvailableProperties() {
 }
 
 /**
- * Save user's selected properties
- * @param properties Object containing gbp selections
+ * Save profile data and create/update organization (Step 2).
+ * Does NOT mark onboarding as complete.
+ */
+async function saveProfile(data: {
+  profile: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    practiceName: string;
+    operationalJurisdiction: string;
+    domainName: string;
+  };
+}) {
+  try {
+    return await apiPost({
+      path: baseurl + `/save-profile`,
+      passedData: data,
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Mark onboarding as complete (Step 3 finalization).
+ */
+async function completeOnboarding() {
+  try {
+    return await apiPost({
+      path: baseurl + `/complete`,
+      passedData: {},
+    });
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      errorMessage: "Technical error, contact developer",
+    };
+  }
+}
+
+/**
+ * Save user's selected properties (legacy endpoint)
  */
 async function saveProperties(data: {
   profile: {
@@ -231,6 +276,8 @@ async function checkDomain(domain: string) {
 const onboarding = {
   getOnboardingStatus,
   getAvailableProperties,
+  saveProfile,
+  completeOnboarding,
   saveProperties,
   getWizardStatus,
   completeWizard,

@@ -64,14 +64,14 @@ export function SetupProgressWizard() {
   const steps = [
     {
       number: 1,
-      title: "Connect Google Accounts",
+      title: "Connect Google Business Profile",
       completed: progress.step1_api_connected,
-      link: "Go to Integrations",
+      link: "Go to Settings",
       onClick: goToIntegrations,
     },
     {
       number: 2,
-      title: "Upload your first PMS data",
+      title: "Upload your PMS data",
       completed: progress.step2_pms_uploaded,
       link: "Go to Referrals Hub",
       onClick: goToReferralsHub,

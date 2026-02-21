@@ -25,6 +25,10 @@ export default function SignIn() {
       const response = await authPassword.login(email, password);
 
       if (response.success) {
+        // Clear stale onboarding state from any previous session
+        localStorage.removeItem("onboardingCompleted");
+        localStorage.removeItem("hasProperties");
+
         localStorage.setItem("auth_token", response.token);
         if (response.user?.role) {
           localStorage.setItem("user_role", response.user.role);

@@ -46,6 +46,10 @@ export default function VerifyEmail() {
       const response = await authPassword.verifyEmail(email, code);
 
       if (response.success) {
+        // Clear stale onboarding state from any previous session
+        localStorage.removeItem("onboardingCompleted");
+        localStorage.removeItem("hasProperties");
+
         localStorage.setItem("auth_token", response.token);
         if (response.user?.role) {
           localStorage.setItem("user_role", response.user.role);

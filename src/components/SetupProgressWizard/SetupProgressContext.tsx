@@ -9,6 +9,7 @@ import {
 } from "react";
 import onboarding from "../../api/onboarding";
 import { fireConfetti } from "../../lib/confetti";
+import { useAuth } from "../../hooks/useAuth";
 
 interface SetupProgress {
   step1_api_connected: boolean; // All 3 scopes granted AND all 3 services connected
@@ -64,6 +65,7 @@ function saveProgressToStorage(progress: SetupProgress): void {
 }
 
 export function SetupProgressProvider({ children }: { children: ReactNode }) {
+  const { hasGoogleConnection, hasProperties } = useAuth();
   const [progress, setProgress] = useState<SetupProgress>(getStoredProgress);
   const [isLoading, setIsLoading] = useState(true);
   const [justCompletedStep, setJustCompletedStep] = useState<number | null>(
@@ -192,6 +194,13 @@ export function SetupProgressProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("pms:job-uploaded", handlePmsUpload);
     };
   }, [refreshProgress, markStep2Complete]);
+
+  // Auto-detect: mark step 1 complete when Google/GBP is connected
+  useEffect(() => {
+    if ((hasGoogleConnection || hasProperties) && !progress.step1_api_connected) {
+      markStep1Complete();
+    }
+  }, [hasGoogleConnection, hasProperties, progress.step1_api_connected, markStep1Complete]);
 
   // Fire confetti when a step is completed (handled here so it works even if wizard UI is hidden)
   useEffect(() => {

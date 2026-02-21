@@ -22,7 +22,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 // Onboarding Components
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
-import { useIsWizardActive, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
+import { useIsWizardActive, useIsWizardLoading, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
 
 export default function Dashboard() {
   // Domain selection and auth hooks - now includes centralized onboarding state
@@ -37,6 +37,7 @@ export default function Dashboard() {
     isLoadingUserProperties,
   } = useAuth();
   const isWizardActive = useIsWizardActive();
+  const isWizardLoading = useIsWizardLoading();
   const recheckWizardStatus = useRecheckWizardStatus();
 
   // Modal state management
@@ -80,30 +81,39 @@ export default function Dashboard() {
   // AuthContext now handles this centrally - see AuthContext.tsx loadUserProperties()
   // This eliminates one of the duplicate /api/onboarding/status calls
 
+  // Transition flag: prevents empty state flash between onboarding complete and wizard start
+  const [isTransitioningToWizard, setIsTransitioningToWizard] = useState(false);
+
   // Handler for when onboarding is completed
   const handleOnboardingComplete = async () => {
-    console.log("[Dashboard] Onboarding completed, showing loading screen");
-    // Set to null to show loading screen
-    setOnboardingCompleted(null);
+    console.log("[Dashboard] Onboarding completed");
 
-    // Wait a moment for the backend to fully complete
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Mark onboarding as complete immediately so the Dashboard renders
+    // (not null — null would fall through to the onboarding fallback)
+    setOnboardingCompleted(true);
+    localStorage.setItem("onboardingCompleted", "true");
 
-    // Refresh user properties from database - this also updates onboarding state in AuthContext
+    // After simplified onboarding, properties are NOT connected yet
+    setHasProperties(false);
+    localStorage.setItem("hasProperties", "false");
+
+    // Prevent empty state flash while wizard loads
+    setIsTransitioningToWizard(true);
+
+    // Run both concurrently — wizard check doesn't depend on property refresh
     try {
-      await refreshUserProperties();
-      console.log("[Dashboard] User properties refreshed from database");
-
-      // After simplified onboarding, properties are NOT connected yet
-      setHasProperties(false);
-      localStorage.setItem("hasProperties", "false");
-
-      // Start the 22-step wizard tour immediately after onboarding
-      console.log("[Dashboard] Starting wizard tour after onboarding");
-      await recheckWizardStatus();
+      await Promise.all([
+        refreshUserProperties().then(() =>
+          console.log("[Dashboard] User properties refreshed from database")
+        ),
+        recheckWizardStatus().then(() =>
+          console.log("[Dashboard] Wizard status checked")
+        ),
+      ]);
     } catch (error) {
-      console.error("Failed to refresh user properties:", error);
-      setOnboardingCompleted(true); // Assume success on error
+      console.error("Failed post-onboarding setup:", error);
+    } finally {
+      setIsTransitioningToWizard(false);
     }
   };
 
@@ -118,6 +128,20 @@ export default function Dashboard() {
     window.location.href = "/signin";
     return null;
   }
+
+  // Debug: trace which branch renders
+  const renderBranch =
+    !ready || checkingOnboarding ? "LOADING"
+    : clientLoading ? "CLIENT_LOADING"
+    : clientError ? "CLIENT_ERROR"
+    : !clientId ? "NO_CLIENT"
+    : onboardingCompleted === false ? "ONBOARDING"
+    : onboardingCompleted === true
+      ? (!hasProperties && !isWizardActive && !isTransitioningToWizard && !isWizardLoading ? "EMPTY_STATE" : "DASHBOARD")
+    : "FALLBACK_ONBOARDING";
+  console.log("[Dashboard] render branch:", renderBranch, {
+    onboardingCompleted, hasProperties, isWizardActive, isWizardLoading, isTransitioningToWizard
+  });
 
   return (
     <div className="w-full max-w-[1600px] mx-auto min-h-screen flex flex-col bg-alloro-bg font-body text-alloro-navy">
@@ -188,7 +212,7 @@ export default function Dashboard() {
           <OnboardingContainer onComplete={handleOnboardingComplete} />
         </div>
       ) : onboardingCompleted === true ? (
-        !hasProperties && !isWizardActive ? (
+        !hasProperties && !isWizardActive && !isTransitioningToWizard && !isWizardLoading ? (
           // Empty State - Creative 2-step onboarding flow
           <div className="flex-1 flex flex-col items-center justify-center p-8">
             <div className="max-w-2xl w-full">
@@ -397,7 +421,12 @@ export default function Dashboard() {
             />
           </div>
         )
-      ) : null}
+      ) : (
+        // Fallback: onboardingCompleted is null after loading finished — show onboarding
+        <div className="p-8">
+          <OnboardingContainer onComplete={handleOnboardingComplete} />
+        </div>
+      )}
     </div>
   );
 }

@@ -187,6 +187,14 @@ export default function SignIn() {
             {/* Links */}
             <div className="text-center space-y-2 pt-2">
               <p className="text-sm text-slate-500">
+                <Link
+                  to="/forgot-password"
+                  className="text-alloro-orange hover:text-alloro-orange/80 transition-colors font-medium"
+                >
+                  Forgot your password?
+                </Link>
+              </p>
+              <p className="text-sm text-slate-500">
                 Don't have an account?{" "}
                 <Link
                   to="/signup"

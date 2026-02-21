@@ -30,11 +30,32 @@ async function resendVerification(email: string) {
   });
 }
 
+async function forgotPassword(email: string) {
+  return apiPost({
+    path: `${baseurl}/forgot-password`,
+    passedData: { email },
+  });
+}
+
+async function resetPassword(
+  email: string,
+  code: string,
+  password: string,
+  confirmPassword: string
+) {
+  return apiPost({
+    path: `${baseurl}/reset-password`,
+    passedData: { email, code, password, confirmPassword },
+  });
+}
+
 const authPassword = {
   register,
   verifyEmail,
   login,
   resendVerification,
+  forgotPassword,
+  resetPassword,
 };
 
 export default authPassword;

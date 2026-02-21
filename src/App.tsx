@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import SignIn from "./pages/Signin";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
 import NewAccountOnboarding from "./pages/NewAccountOnboarding";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
@@ -93,6 +94,14 @@ function App() {
               <Route
                 path="/verify-email"
                 element={<VerifyEmail />}
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicRoute>
+                    <ForgotPassword />
+                  </PublicRoute>
+                }
               />
               {/* GBP connection onboarding - protected but without PageWrapper (standalone page) */}
               <Route

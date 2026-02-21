@@ -12,10 +12,13 @@ const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
 const getCommonHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {};
 
-  // Use priority item for pilot support (sessionStorage first, then localStorage)
+  // Check auth_token (email/password login) first, then token (pilot mode)
+  const authToken = getPriorityItem("auth_token");
   const token = getPriorityItem("token");
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const jwt = authToken || token;
+
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`;
   }
 
   return headers;
@@ -38,11 +41,14 @@ export async function apiGet({
       headers,
     });
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    if (err?.response?.data) {
+      return err.response.data;
+    }
     return {
       successful: false,
-      errorMessage: "Technical error, contact developer",
+      errorMessage: "An error occurred. Please try again.",
     };
   }
 }
@@ -93,11 +99,14 @@ export async function apiPost({
       headers,
     });
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    if (err?.response?.data) {
+      return err.response.data;
+    }
     return {
       successful: false,
-      errorMessage: "Technical error, contact developer",
+      errorMessage: "An error occurred. Please try again.",
     };
   }
 }
@@ -133,11 +142,14 @@ export async function apiPatch({
       headers,
     });
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    if (err?.response?.data) {
+      return err.response.data;
+    }
     return {
       successful: false,
-      errorMessage: "Technical error, contact developer",
+      errorMessage: "An error occurred. Please try again.",
     };
   }
 }
@@ -173,11 +185,14 @@ export async function apiPut({
       headers,
     });
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    if (err?.response?.data) {
+      return err.response.data;
+    }
     return {
       successful: false,
-      errorMessage: "Technical error, contact developer",
+      errorMessage: "An error occurred. Please try again.",
     };
   }
 }
@@ -189,11 +204,14 @@ export async function apiDelete({ path }: { path: string }) {
     });
 
     return data;
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
+    if (err?.response?.data) {
+      return err.response.data;
+    }
     return {
       successful: false,
-      errorMessage: "Technical error, contact developer",
+      errorMessage: "An error occurred. Please try again.",
     };
   }
 }

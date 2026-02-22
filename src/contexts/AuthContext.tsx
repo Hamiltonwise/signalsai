@@ -11,6 +11,11 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Helper to detect pilot mode - checks sessionStorage for pilot session indicators
+function isPilotSession(): boolean {
+  return sessionStorage.getItem("pilot_mode") === "true" || !!sessionStorage.getItem("token");
+}
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [selectedDomain, setSelectedDomain] = useState<DomainMapping | null>(
     null
@@ -19,7 +24,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Centralized onboarding state - avoids duplicate API calls from Dashboard
+  // In pilot mode, always start as null (unknown) and let API determine state
+  // This prevents showing admin's cached state in pilot window
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(() => {
+    const isPilot = isPilotSession();
+    if (isPilot) {
+      // Never seed from cache in pilot — always wait for API response
+      return null;
+    }
     const cached = localStorage.getItem("onboardingCompleted");
     return cached === "true" ? true : cached === "false" ? false : null;
   });
@@ -40,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Guard: never downgrade from true → false (race condition after completeOnboarding)
       const isCompleted = status.success && status.onboardingCompleted === true;
       setOnboardingCompleted((prev) => (prev === true && !isCompleted) ? true : isCompleted);
-      if (isCompleted) {
+      if (isCompleted && !isPilotSession()) {
         localStorage.setItem("onboardingCompleted", "true");
       }
 
@@ -95,7 +107,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If the API call fails, assume onboarding not complete
       // so the user sees the onboarding flow instead of a blank screen
       setOnboardingCompleted(false);
-      localStorage.setItem("onboardingCompleted", "false");
+      if (!isPilotSession()) {
+        localStorage.setItem("onboardingCompleted", "false");
+      }
     } finally {
       setIsLoadingUserProperties(false);
     }

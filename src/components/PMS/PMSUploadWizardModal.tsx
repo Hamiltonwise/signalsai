@@ -20,6 +20,7 @@ interface PMSUploadWizardModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: string;
+  locationId?: number | null;
   onSuccess?: () => void;
 }
 
@@ -40,6 +41,7 @@ export const PMSUploadWizardModal: React.FC<PMSUploadWizardModalProps> = ({
   isOpen,
   onClose,
   clientId,
+  locationId,
   onSuccess,
 }) => {
   const [step, setStep] = useState<WizardStep>("gate");
@@ -111,6 +113,7 @@ export const PMSUploadWizardModal: React.FC<PMSUploadWizardModalProps> = ({
         domain: clientId,
         file,
         pmsType: "auto-detect",
+        locationId,
       });
 
       if (result.success) {
@@ -186,6 +189,7 @@ export const PMSUploadWizardModal: React.FC<PMSUploadWizardModalProps> = ({
         isOpen={isOpen}
         onClose={handleClose}
         clientId={clientId}
+        locationId={locationId}
         onSuccess={handleManualEntrySuccess}
       />
     );

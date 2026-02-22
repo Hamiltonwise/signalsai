@@ -230,7 +230,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       }
 
       try {
-        const response = await fetchPmsKeyData(organizationId);
+        const response = await fetchPmsKeyData(organizationId, locationId);
 
         if (!isMountedRef.current) {
           return;
@@ -274,7 +274,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }
       }
     },
-    [organizationId, isWizardActive],
+    [organizationId, locationId, isWizardActive],
   );
 
   useEffect(() => {
@@ -480,7 +480,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       console.log("🔍 Initial check for active automation on mount");
 
       try {
-        const response = await fetchActiveAutomationJobs(organizationId);
+        const response = await fetchActiveAutomationJobs(organizationId, locationId);
 
         if (response.success && response.data?.jobs?.length) {
           const activeJob = response.data.jobs[0];
@@ -518,7 +518,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     };
 
     checkForActiveAutomation();
-  }, [organizationId, isWizardActive]); // Run once on mount when organizationId is available
+  }, [organizationId, locationId, isWizardActive]); // Run when organizationId/locationId are available
 
   // Fetch automation status when processing is pending
   // Skip during wizard mode
@@ -536,7 +536,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     console.log("🔍 loadAutomationStatus: fetching for org", organizationId);
 
     try {
-      const response = await fetchActiveAutomationJobs(organizationId);
+      const response = await fetchActiveAutomationJobs(organizationId, locationId);
 
       console.log("🔍 fetchActiveAutomationJobs response:", {
         success: response.success,
@@ -598,7 +598,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       console.error("❌ Failed to fetch automation status:", err);
       setAutomationStatus(null);
     }
-  }, [domain, loadReferralData, loadKeyData, isWizardActive]);
+  }, [domain, organizationId, locationId, loadReferralData, loadKeyData, isWizardActive]);
 
   // Poll for automation status when referralPending is true OR when there's an active automation
   // This ensures real-time updates regardless of how the user got to this page
@@ -676,7 +676,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   // Uses sequential polling: wait for response, then wait 10 seconds before next request
   // Skip during wizard mode
   useEffect(() => {
-    if (!domain || isWizardActive) return;
+    if (!domain || isWizardActive || !organizationId) return;
 
     let isCancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -685,7 +685,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       if (isCancelled) return;
 
       try {
-        const response = await fetchActiveAutomationJobs(organizationId);
+        const response = await fetchActiveAutomationJobs(organizationId, locationId);
 
         if (response.success && response.data?.jobs?.length) {
           const activeJob = response.data.jobs[0];
@@ -1736,6 +1736,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         isOpen={showUploadWizard}
         onClose={() => setShowUploadWizard(false)}
         clientId={domain || ""}
+        locationId={locationId}
         onSuccess={handleUploadWizardSuccess}
       />
 
@@ -1744,6 +1745,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         isOpen={showTemplateUpload}
         onClose={() => setShowTemplateUpload(false)}
         clientId={domain || ""}
+        locationId={locationId}
         onSuccess={handleUploadWizardSuccess}
       />
 
@@ -1752,6 +1754,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         isOpen={showDirectUpload}
         onClose={() => setShowDirectUpload(false)}
         clientId={domain || ""}
+        locationId={locationId}
         onSuccess={handleUploadWizardSuccess}
       />
 
@@ -1760,6 +1763,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         isOpen={showManualEntry}
         onClose={() => setShowManualEntry(false)}
         clientId={domain || ""}
+        locationId={locationId}
         onSuccess={handleUploadWizardSuccess}
       />
     </div>

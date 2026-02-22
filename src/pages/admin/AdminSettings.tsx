@@ -45,7 +45,7 @@ export default function AdminSettings() {
     const load = async () => {
       try {
         setLoading(true);
-        const result = await fetchSetting("websites", "editing_system_prompt");
+        const result = await fetchSetting("websites", "admin_editing_system_prompt");
         setPrompt(result.data.value);
         setOriginalPrompt(result.data.value);
       } catch {
@@ -67,7 +67,7 @@ export default function AdminSettings() {
       setError(null);
       const result = await updateSetting(
         "websites",
-        "editing_system_prompt",
+        "admin_editing_system_prompt",
         prompt
       );
       setOriginalPrompt(result.data.value);

@@ -1,4 +1,4 @@
-const API_BASE = "/api/notifications";
+import { apiGet, apiPatch, apiDelete } from "./index";
 
 export interface Notification {
   id: number;
@@ -21,25 +21,20 @@ export interface NotificationsResponse {
 }
 
 /**
- * Fetch notifications for logged-in client
+ * Fetch notifications for logged-in client.
+ * organizationId is resolved server-side from the JWT token via RBAC middleware.
  */
 export const fetchNotifications = async (
-  organizationId: number,
+  _organizationId: number,
   locationId?: number | null
 ): Promise<NotificationsResponse> => {
-  const params = new URLSearchParams({
-    googleAccountId: String(organizationId),
-  });
+  const params = new URLSearchParams();
   if (locationId) {
     params.append("locationId", String(locationId));
   }
-  const response = await fetch(`${API_BASE}?${params.toString()}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch notifications: ${response.statusText}`);
-  }
-
-  return response.json();
+  const qs = params.toString();
+  const path = `/notifications${qs ? `?${qs}` : ""}`;
+  return apiGet({ path });
 };
 
 /**
@@ -47,66 +42,31 @@ export const fetchNotifications = async (
  */
 export const markNotificationRead = async (
   notificationId: number,
-  organizationId: number
+  _organizationId: number
 ): Promise<{ success: boolean; message: string }> => {
-  const response = await fetch(`${API_BASE}/${notificationId}/read`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ googleAccountId: organizationId }),
+  return apiPatch({
+    path: `/notifications/${notificationId}/read`,
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to mark notification as read");
-  }
-
-  return response.json();
 };
 
 /**
  * Mark all notifications as read
  */
 export const markAllNotificationsRead = async (
-  organizationId: number
+  _organizationId: number
 ): Promise<{ success: boolean; message: string; count: number }> => {
-  const response = await fetch(`${API_BASE}/mark-all-read`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ googleAccountId: organizationId }),
+  return apiPatch({
+    path: `/notifications/mark-all-read`,
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(
-      error.message || "Failed to mark all notifications as read"
-    );
-  }
-
-  return response.json();
 };
 
 /**
  * Delete all notifications for a user
  */
 export const deleteAllNotifications = async (
-  organizationId: number
+  _organizationId: number
 ): Promise<{ success: boolean; message: string; count: number }> => {
-  const response = await fetch(`${API_BASE}/delete-all`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ googleAccountId: organizationId }),
+  return apiDelete({
+    path: `/notifications/delete-all`,
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to delete all notifications");
-  }
-
-  return response.json();
 };

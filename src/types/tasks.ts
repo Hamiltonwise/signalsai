@@ -18,6 +18,7 @@ export type AgentType =
 export interface ActionItem {
   id: number;
   organization_id?: number;
+  location_name?: string | null;
   title: string;
   description?: string;
   category: ActionItemCategory;
@@ -73,6 +74,7 @@ export interface UpdateActionItemRequest {
 
 export interface FetchActionItemsRequest {
   organization_id?: number;
+  location_id?: number;
   category?: ActionItemCategory;
   status?: ActionItemStatus;
   is_approved?: boolean;

@@ -1,4 +1,4 @@
-import { apiGet } from "./index";
+import { apiGet, apiPost, apiPut, apiDelete } from "./index";
 
 export interface GooglePropertyInfo {
   type: string;
@@ -30,8 +30,8 @@ interface LocationsResponse {
  */
 export async function getLocations(): Promise<Location[]> {
   const response = await apiGet({ path: "/locations" });
-  const data = response.data as LocationsResponse;
-  return data.locations || [];
+  // apiGet already unwraps axios { data } — response IS the body
+  return response.locations || [];
 }
 
 /**
@@ -39,6 +39,70 @@ export async function getLocations(): Promise<Location[]> {
  */
 export async function getPrimaryLocation(): Promise<Location | null> {
   const response = await apiGet({ path: "/locations/primary" });
-  const data = response.data as { success: boolean; location: Location };
-  return data.location || null;
+  return response.location || null;
+}
+
+export interface GBPSelection {
+  accountId: string;
+  locationId: string;
+  displayName: string;
+}
+
+/**
+ * Create a new location with a required GBP profile.
+ */
+export async function createLocation(data: {
+  name: string;
+  domain?: string;
+  gbp: GBPSelection;
+}): Promise<Location> {
+  const response = await apiPost({
+    path: "/locations",
+    passedData: data,
+  });
+  return response.location;
+}
+
+/**
+ * Update location metadata (name, domain, is_primary).
+ */
+export async function updateLocation(
+  locationId: number,
+  data: { name?: string; domain?: string; is_primary?: boolean }
+): Promise<Location> {
+  const response = await apiPut({
+    path: `/locations/${locationId}`,
+    passedData: data,
+  });
+  return response.location;
+}
+
+/**
+ * Delete a location (cannot remove the last one).
+ */
+export async function deleteLocation(locationId: number): Promise<void> {
+  await apiDelete({ path: `/locations/${locationId}` });
+}
+
+/**
+ * Set or change the GBP profile for a location.
+ */
+export async function updateLocationGBP(
+  locationId: number,
+  gbp: GBPSelection
+): Promise<Location> {
+  const response = await apiPut({
+    path: `/locations/${locationId}/gbp`,
+    passedData: gbp,
+  });
+  return response.location;
+}
+
+/**
+ * Disconnect GBP from a location.
+ */
+export async function disconnectLocationGBP(
+  locationId: number
+): Promise<void> {
+  await apiDelete({ path: `/locations/${locationId}/gbp` });
 }

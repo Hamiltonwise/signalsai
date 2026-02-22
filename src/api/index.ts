@@ -8,14 +8,28 @@ const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
 /**
  * Helper function to get common headers for API requests.
  * JWT is the sole authentication mechanism — sent via Authorization header.
+ *
+ * In pilot mode the sessionStorage token must be used exclusively.
+ * localStorage is shared across same-origin windows, so without this
+ * guard the admin's auth_token bleeds into the pilot window.
  */
 const getCommonHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {};
 
-  // Check auth_token (email/password login) first, then token (pilot mode)
-  const authToken = getPriorityItem("auth_token");
-  const token = getPriorityItem("token");
-  const jwt = authToken || token;
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+
+  if (isPilot) {
+    // Pilot mode — use ONLY the sessionStorage token, never localStorage
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    // Normal mode — auth_token (email/password) with getPriorityItem fallback
+    jwt = getPriorityItem("auth_token") || getPriorityItem("token");
+  }
 
   if (jwt) {
     headers.Authorization = `Bearer ${jwt}`;

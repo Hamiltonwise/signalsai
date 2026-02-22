@@ -50,6 +50,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
     localStorage.setItem(STORAGE_KEY, String(location.id));
   }
 
+  const refreshLocations = useCallback(async () => {
+    await loadLocations();
+  }, [loadLocations]);
+
   return (
     <LocationContext.Provider
       value={{
@@ -57,6 +61,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         selectedLocation,
         setSelectedLocation,
         isLoading,
+        refreshLocations,
       }}
     >
       {children}

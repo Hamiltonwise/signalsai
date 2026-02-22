@@ -40,6 +40,7 @@ interface PMSManualEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: string; // domain
+  locationId?: number | null;
   onSuccess?: () => void;
 }
 
@@ -106,6 +107,7 @@ export const PMSManualEntryModal: React.FC<PMSManualEntryModalProps> = ({
   isOpen,
   onClose,
   clientId,
+  locationId,
   onSuccess,
 }) => {
   // Initialize with previous month and empty sources
@@ -357,6 +359,7 @@ export const PMSManualEntryModal: React.FC<PMSManualEntryModalProps> = ({
       const result = await submitManualPMSData({
         domain: clientId,
         monthlyData: backendData,
+        locationId,
       });
 
       if (result.success) {

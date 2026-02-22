@@ -909,7 +909,7 @@ export function PMSAutomationCards() {
                               : "Unassigned"}
                           </h3>
                           <p className="text-sm text-gray-500 mt-0.5">
-                            Job #{job.id}
+                            Job #{job.id}{job.location_name ? ` · ${job.location_name}` : ""}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">

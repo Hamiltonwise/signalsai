@@ -518,7 +518,6 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
     isWizardActive && wizardDemoData
       ? {
           id: 1,
-          domain: "example-practice.com",
           specialty: "Orthodontics",
           location: "San Francisco, CA",
           gbpLocationId: "demo-location",

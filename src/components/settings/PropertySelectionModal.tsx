@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check, Loader2, Search } from "lucide-react";
 
@@ -43,13 +43,21 @@ export const PropertySelectionModal: React.FC<PropertySelectionModalProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Stabilize initialSelections reference to prevent infinite re-render loop
+  // when callers pass a new [] literal on every render
+  const stableInitialSelections = useMemo(
+    () => initialSelections,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(initialSelections)]
+  );
+
   // Sync initial selections when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedIds(initialSelections);
+      setSelectedIds(stableInitialSelections);
       setSearchQuery("");
     }
-  }, [isOpen, initialSelections]);
+  }, [isOpen, stableInitialSelections]);
 
   const handleItemClick = (item: PropertyItem) => {
     if (isSaving) return;

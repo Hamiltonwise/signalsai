@@ -238,9 +238,6 @@ export function TaskDetailsModal({
               <h2 className="text-2xl font-bold text-alloro-navy font-heading">
                 {parseHighlightTags(task.title, "underline")}
               </h2>
-              <p className="mt-1 text-sm text-slate-500 font-medium">
-                {task.domain_name}
-              </p>
             </div>
             <button
               onClick={onClose}

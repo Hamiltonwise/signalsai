@@ -126,6 +126,7 @@ export interface PmsJob {
   is_approved: boolean;
   is_client_approved: boolean;
   organization_id?: number | null;
+  location_name?: string | null;
   automation_status_detail?: AutomationStatusDetail | null;
 }
 
@@ -171,6 +172,7 @@ export interface PMSUploadRequest {
   domain: string;
   file: File;
   pmsType?: string;
+  locationId?: number | null;
 }
 
 export interface PMSUploadResponse {
@@ -208,6 +210,7 @@ export interface ManualMonthEntry {
 export interface PMSManualEntryRequest {
   domain: string;
   monthlyData: ManualMonthEntry[];
+  locationId?: number | null;
 }
 
 export interface PmsKeyDataMonth {
@@ -299,6 +302,9 @@ export async function uploadPMSData(
     if (request.pmsType) {
       formData.append("pmsType", request.pmsType);
     }
+    if (request.locationId) {
+      formData.append("locationId", String(request.locationId));
+    }
 
     // Use apiPost with FormData support
     const result = await apiPost({
@@ -335,6 +341,7 @@ export async function submitManualPMSData(
         domain: request.domain,
         manualData: request.monthlyData,
         entryType: "manual",
+        locationId: request.locationId || undefined,
       },
       additionalHeaders: {
         Accept: "application/json",
@@ -423,11 +430,15 @@ export async function deletePmsJob(jobId: number) {
  * Fetch PMS key data aggregation for an organization.
  */
 export async function fetchPmsKeyData(
-  organizationId?: number
+  organizationId?: number,
+  locationId?: number | null
 ): Promise<PmsKeyDataResponse> {
-  const query = organizationId ? `?organization_id=${organizationId}` : "";
+  const params = new URLSearchParams();
+  if (organizationId) params.set("organization_id", String(organizationId));
+  if (locationId) params.set("location_id", String(locationId));
+  const query = params.toString();
   return apiGet({
-    path: `/pms/keyData${query}`,
+    path: `/pms/keyData${query ? `?${query}` : ""}`,
   }) as Promise<PmsKeyDataResponse>;
 }
 
@@ -450,11 +461,15 @@ export async function fetchAutomationStatus(
  * Fetch all active (non-completed) automation jobs
  */
 export async function fetchActiveAutomationJobs(
-  organizationId?: number
+  organizationId?: number,
+  locationId?: number | null
 ): Promise<ActiveAutomationJobsResponse> {
-  const query = organizationId ? `?organization_id=${organizationId}` : "";
+  const params = new URLSearchParams();
+  if (organizationId) params.set("organization_id", String(organizationId));
+  if (locationId) params.set("location_id", String(locationId));
+  const query = params.toString();
   return apiGet({
-    path: `/pms/automation/active${query}`,
+    path: `/pms/automation/active${query ? `?${query}` : ""}`,
   }) as Promise<ActiveAutomationJobsResponse>;
 }
 

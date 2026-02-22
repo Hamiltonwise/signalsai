@@ -207,7 +207,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
       setPmsError(null);
 
       try {
-        const response = await fetchPmsKeyData(organizationId);
+        const response = await fetchPmsKeyData(organizationId, locationId);
         if (response?.success && response.data) {
           setPmsData(response.data);
         } else {
@@ -225,7 +225,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
     };
 
     loadPmsData();
-  }, [userProfile?.domainName, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   // Fetch ranking data - skip during wizard mode (use demo data instead)
   useEffect(() => {
@@ -516,7 +516,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
 
     setPmsLoading(true);
     try {
-      const response = await fetchPmsKeyData(organizationId);
+      const response = await fetchPmsKeyData(organizationId, locationId);
       if (response?.success && response.data) {
         setPmsData(response.data);
       }
@@ -525,7 +525,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
     } finally {
       setPmsLoading(false);
     }
-  }, [userProfile?.domainName]);
+  }, [organizationId, locationId]);
 
   // Function to reload ranking data
   const reloadRankingData = useCallback(async () => {

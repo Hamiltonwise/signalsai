@@ -15,10 +15,12 @@ import {
   Globe,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { fetchClientTasks } from "../api/tasks";
 import { fetchNotifications } from "../api/notifications";
 import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
 import { useLocationContext } from "../contexts/locationContext";
+import { LocationSwitcher } from "./LocationSwitcher";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 
 type UserRole = "admin" | "manager" | "viewer";
@@ -193,21 +195,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => clearInterval(interval);
   }, [loadNotificationCount]);
 
-  // Fetch subscription tier (for DFY Website menu)
+  // Fetch subscription tier (for DFY Website menu).
+  // Uses direct axios call to silently handle 401/403 (role mismatch in pilot mode).
   useEffect(() => {
     const fetchOrgTier = async () => {
       const organizationId = userProfile?.organizationId;
       if (!organizationId) return;
 
       try {
-        const response = await fetch(`/api/user/website`);
-        if (response.ok) {
-          const data = await response.json();
-          // If API returns data, org has DFY tier
+        const jwt = getPriorityItem("auth_token") || getPriorityItem("token");
+        const headers: Record<string, string> = {};
+        if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+        const { data } = await axios.get("/api/user/website", { headers });
+        if (data && !data.error) {
           setSubscriptionTier(data.status === "PREPARING" || data.project ? "DFY" : null);
         }
-      } catch (err) {
-        // Silent fail - just won't show menu item
+      } catch {
+        // Silent fail — 401/403 expected for viewer role, just won't show menu item
       }
     };
 
@@ -505,8 +510,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
-        {/* Footer / Account - matches newdesign exactly */}
-        <div className="p-8 mt-auto">
+        {/* Location Switcher - above profile card */}
+        <LocationSwitcher />
+
+        {/* Footer / Account */}
+        <div className="px-8 pt-2 pb-8 mt-auto">
           <div
             className="bg-white/5 border border-white/5 rounded-2xl p-5 transition-all hover:bg-alloro-sidehover cursor-pointer group"
             onClick={() => handleNavigate("/settings")}

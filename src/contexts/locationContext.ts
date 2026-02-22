@@ -6,6 +6,7 @@ export interface LocationContextType {
   selectedLocation: Location | null;
   setSelectedLocation: (location: Location) => void;
   isLoading: boolean;
+  refreshLocations: () => Promise<void>;
 }
 
 export const LocationContext = createContext<LocationContextType | null>(null);

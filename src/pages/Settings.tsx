@@ -4,46 +4,27 @@ import {
   Globe,
   MapPin,
   Mail,
-  LayoutGrid,
   Users,
   Link2,
   Shield,
   Lock,
   Activity,
   Phone,
-  ChevronRight,
   Edit3,
   Check,
   X,
-  AlertTriangle,
-  Loader2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { PropertySelectionModal } from "../components/settings/PropertySelectionModal";
-import { ConfirmModal } from "../components/settings/ConfirmModal";
 import { UsersTab } from "../components/settings/UsersTab";
+import { PropertiesTab } from "../components/settings/PropertiesTab";
 import { MissingScopeBanner } from "../components/settings/MissingScopeBanner";
-import { DisconnectedServicesBanner } from "../components/settings/DisconnectedServicesBanner";
 import { PMSUploadBanner } from "../components/settings/PMSUploadBanner";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
 import { fetchPmsKeyData } from "../api/pms";
 import { getPriorityItem } from "../hooks/useLocalStorage";
-import { apiGet, apiPost } from "../api";
-import { useSetupProgressSafe } from "../components/SetupProgressWizard/SetupProgressContext";
+import { apiGet } from "../api";
 
 type UserRole = "admin" | "manager" | "viewer";
-
-interface Property {
-  propertyId?: string;
-  siteUrl?: string;
-  accountId?: string;
-  locationId?: string;
-  displayName: string;
-}
-
-interface PropertiesState {
-  gbp: Property[] | [];
-}
 
 interface ScopeStatus {
   granted: boolean;
@@ -180,12 +161,8 @@ const EditableInfoRow = ({
 };
 
 export const Settings: React.FC = () => {
-  const { userProfile, selectedDomain, setHasProperties } = useAuth();
-  const setupProgress = useSetupProgressSafe();
+  const { userProfile, selectedDomain } = useAuth();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
-  const [properties, setProperties] = useState<PropertiesState>({
-    gbp: [],
-  });
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
@@ -204,32 +181,13 @@ export const Settings: React.FC = () => {
   });
   const [isProfileSaving, setIsProfileSaving] = useState(false);
 
-  // Modal State
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"gbp">("gbp");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [availableProperties, setAvailableProperties] = useState<any[]>([]);
-  const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [initialSelections, setInitialSelections] = useState<string[]>([]);
-
-  // Confirm Modal State
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [disconnectType, setDisconnectType] = useState<
-    "gbp" | null
-  >(null);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
-
-  // Per-card loading states
-  const [loadingCards, setLoadingCards] = useState<Record<string, boolean>>({});
-
   useEffect(() => {
     const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
-    fetchProperties();
     fetchProfile();
     fetchScopes();
     fetchPmsStatus();
+    setIsLoading(false);
   }, []);
 
   // Fetch PMS data status to check if user has uploaded any data
@@ -272,9 +230,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleGrantAccessComplete = () => {
-    // Refresh scopes after granting access
     fetchScopes();
-    fetchProperties();
   };
 
   const fetchProfile = async () => {
@@ -304,208 +260,6 @@ export const Settings: React.FC = () => {
       setIsProfileSaving(false);
     }
   };
-
-  const canManageConnections = userRole === "admin";
-
-  const fetchProperties = async () => {
-    try {
-      const response = await apiGet({ path: "/settings/properties" });
-
-      if (response.success) {
-        setProperties(response.properties);
-      }
-    } catch (err) {
-      console.error("Failed to fetch properties:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConnect = async (type: "gbp") => {
-    setModalType(type);
-    setModalOpen(true);
-    setLoadingAvailable(true);
-    setAvailableProperties([]);
-    setIsSaving(false);
-
-    const selections: string[] = [];
-    setInitialSelections(selections);
-
-    try {
-      const response = await apiGet({
-        path: `/settings/properties/available/${type}`,
-      });
-
-      if (response.success) {
-        const available = response.properties;
-        setAvailableProperties(available);
-
-        if (type === "gbp" && properties.gbp.length > 0) {
-          const gbpIds = properties.gbp.map((p) => p.locationId);
-
-          const matchedIds = available
-            .filter((item: { locationId: string }) =>
-              gbpIds.includes(item.locationId),
-            )
-            .map((item: { id: string }) => item.id);
-          setInitialSelections(matchedIds);
-        }
-      }
-    } catch (err) {
-      console.error(`Failed to fetch available ${type} properties:`, err);
-    } finally {
-      setLoadingAvailable(false);
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSelectProperty = async (_item: any) => {
-    setIsSaving(true);
-    setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
-    setModalOpen(false); // Close modal immediately for better UX
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data: any = {};
-
-      await apiPost({
-        path: "/settings/properties/update",
-        passedData: { type: modalType, data, action: "connect" },
-      });
-
-      // Fetch updated properties and check if all are now connected
-      const response = await apiGet({ path: "/settings/properties" });
-      if (response.success) {
-        const props = response.properties;
-        setProperties({
-          gbp: props.gbp || [],
-        });
-
-        // Check if all services are now connected
-        const allConnected =
-          props?.gbp && props.gbp.length > 0;
-        if (allConnected && missingScopeCount === 0) {
-          setupProgress?.markStep1Complete();
-        }
-        // Update AuthContext hasProperties so Dashboard shows content instead of empty state
-        if (allConnected) {
-          setHasProperties(true);
-          localStorage.setItem("hasProperties", "true");
-        }
-      }
-    } catch (err) {
-      console.error("Failed to connect property:", err);
-    } finally {
-      setIsSaving(false);
-      setLoadingCards((prev) => ({ ...prev, [modalType]: false }));
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleMultiSelectProperty = async (items: any[]) => {
-    setIsSaving(true);
-    setLoadingCards((prev) => ({ ...prev, [modalType]: true }));
-    setModalOpen(false); // Close modal immediately for better UX
-    try {
-      const data = items.map((item) => ({
-        accountId: item.accountId,
-        locationId: item.locationId,
-        displayName: item.name,
-      }));
-
-      await apiPost({
-        path: "/settings/properties/update",
-        passedData: { type: modalType, data, action: "connect" },
-      });
-
-      // Fetch updated properties and check if all are now connected
-      const response = await apiGet({ path: "/settings/properties" });
-      if (response.success) {
-        const props = response.properties;
-        setProperties({
-          gbp: props.gbp || [],
-        });
-
-        // Check if all services are now connected
-        const allConnected =
-          props?.gbp && props.gbp.length > 0;
-        if (allConnected && missingScopeCount === 0) {
-          setupProgress?.markStep1Complete();
-        }
-        // Update AuthContext hasProperties so Dashboard shows content instead of empty state
-        if (allConnected) {
-          setHasProperties(true);
-          localStorage.setItem("hasProperties", "true");
-        }
-      }
-    } catch (err) {
-      console.error("Failed to connect properties:", err);
-    } finally {
-      setIsSaving(false);
-      setLoadingCards((prev) => ({ ...prev, [modalType]: false }));
-    }
-  };
-
-  const initiateDisconnect = (type: "gbp") => {
-    setDisconnectType(type);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmDisconnect = async () => {
-    if (!disconnectType) return;
-
-    setIsDisconnecting(true);
-    setLoadingCards((prev) => ({ ...prev, [disconnectType]: true }));
-    setConfirmOpen(false); // Close modal immediately for better UX
-    try {
-      await apiPost({
-        path: "/settings/properties/update",
-        passedData: { type: disconnectType, action: "disconnect" },
-      });
-
-      // Fetch updated properties
-      const response = await apiGet({ path: "/settings/properties" });
-      if (response.success) {
-        const props = response.properties;
-        setProperties({
-          gbp: props.gbp || [],
-        });
-
-        // Mark step 1 as incomplete since a service was disconnected
-        setupProgress?.markStep1Incomplete();
-      }
-      setDisconnectType(null);
-    } catch (err) {
-      console.error("Failed to disconnect property:", err);
-    } finally {
-      setIsDisconnecting(false);
-      if (disconnectType) {
-        setLoadingCards((prev) => ({ ...prev, [disconnectType]: false }));
-      }
-    }
-  };
-
-  // Check if a scope is granted
-  const isScopeGranted = (serviceId: string): boolean => {
-    if (!scopesStatus) return true; // Assume granted if we don't have scope info yet
-    const scopeKey = serviceId as keyof ScopesState;
-    return scopesStatus[scopeKey]?.granted ?? true;
-  };
-
-  // Integration definitions
-  const integrations = [
-    {
-      id: "gbp",
-      name: "Google Business Profile",
-      icon: "/google-business-profile.png",
-      connected: properties.gbp && properties.gbp.length > 0,
-      lastSync:
-        properties.gbp && properties.gbp.length > 0
-          ? "1 hour ago"
-          : "Not connected",
-      locations: properties.gbp,
-      scopeGranted: isScopeGranted("gbp"),
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
@@ -702,23 +456,11 @@ export const Settings: React.FC = () => {
                 </motion.div>
               </section>
 
-              {/* Right Column - Integrations */}
+              {/* Right Column - Locations & Integrations */}
               <section
                 data-wizard-target="settings-integrations"
                 className="xl:col-span-7 space-y-6"
               >
-                <div className="flex items-end justify-between px-1">
-                  <div>
-                    <h2 className="text-lg font-black text-alloro-navy tracking-tight mb-1">
-                      Business Profile Integration
-                    </h2>
-                    <p className="text-slate-500 text-sm">
-                      Connect your Google Business Profile to unlock reviews,
-                      rankings, and insights
-                    </p>
-                  </div>
-                </div>
-
                 {/* Missing Scopes Banner */}
                 {missingScopeCount > 0 && (
                   <MissingScopeBanner
@@ -728,175 +470,11 @@ export const Settings: React.FC = () => {
                   />
                 )}
 
-                {/* Disconnected Services Banner - show when scopes granted but services not connected */}
-                {missingScopeCount === 0 &&
-                  (() => {
-                    const disconnected: string[] = [];
-                    if (!properties.gbp || properties.gbp.length === 0)
-                      disconnected.push("gbp");
+                {/* PMS Upload Banner */}
+                {hasPmsData === false && <PMSUploadBanner />}
 
-                    if (disconnected.length > 0) {
-                      return (
-                        <DisconnectedServicesBanner
-                          disconnectedServices={disconnected}
-                        />
-                      );
-                    }
-                    return null;
-                  })()}
-
-                {/* PMS Upload Banner - show when all services connected but no PMS data */}
-                {missingScopeCount === 0 &&
-                  properties.gbp &&
-                  properties.gbp.length > 0 &&
-                  hasPmsData === false && <PMSUploadBanner />}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {integrations.map((app, index) => (
-                    <motion.div
-                      key={app.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`rounded-[2rem] border p-5 shadow-premium group transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 text-left relative ${
-                        !app.scopeGranted
-                          ? "bg-red-50/60 border-red-200 hover:border-red-300"
-                          : app.connected
-                            ? "bg-white border-black/5 hover:border-alloro-orange/20"
-                            : "bg-white border-black/5 hover:border-alloro-orange/20"
-                      }`}
-                    >
-                      {/* Loading Overlay */}
-                      {loadingCards[app.id] && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                          <div className="flex flex-col items-center gap-3">
-                            <Loader2
-                              size={32}
-                              className="animate-spin text-alloro-orange"
-                            />
-                            <span className="text-sm font-medium text-alloro-navy">
-                              Updating...
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Missing Scope Warning Banner on Card */}
-                      {!app.scopeGranted && (
-                        <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-[9px] font-black uppercase tracking-widest py-2 px-4 rounded-t-[2rem] flex items-center gap-2 justify-center">
-                          <AlertTriangle size={12} />
-                          API Access Not Granted
-                        </div>
-                      )}
-
-                      <div
-                        className={`flex items-center justify-between mb-10 ${!app.scopeGranted ? "mt-6" : ""}`}
-                      >
-                        <div
-                          className={`w-16 h-16 rounded-2xl bg-alloro-bg flex items-center justify-center p-3 border shadow-inner-soft group-hover:bg-white transition-all duration-500 overflow-hidden ${!app.scopeGranted ? "border-red-200 opacity-60" : "border-black/5"}`}
-                        >
-                          <img
-                            src={app.icon}
-                            alt={app.name}
-                            className="w-full h-full object-contain transition-all duration-700 group-hover:scale-110"
-                          />
-                        </div>
-                        {!app.scopeGranted ? (
-                          <span className="px-4 py-1.5 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-200 flex items-center gap-2 shadow-sm">
-                            <AlertTriangle size={12} />
-                            No Access
-                          </span>
-                        ) : app.connected ? (
-                          <span className="px-4 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-widest rounded-xl border border-green-100 flex items-center gap-2 shadow-sm">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{" "}
-                            Connected
-                          </span>
-                        ) : (
-                          <span className="px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 shadow-sm">
-                            Disconnected
-                          </span>
-                        )}
-                      </div>
-                      <h3
-                        className={`font-black text-xl font-heading tracking-tight mb-2 truncate leading-tight transition-colors ${!app.scopeGranted ? "text-red-800" : "text-alloro-navy group-hover:text-alloro-orange"}`}
-                      >
-                        {app.name}
-                      </h3>
-                      <p
-                        className={`text-[11px] font-black uppercase tracking-widest mb-10 leading-none ${!app.scopeGranted ? "text-red-500" : "text-slate-400"}`}
-                      >
-                        {!app.scopeGranted
-                          ? "Requires API permission"
-                          : app.connected
-                            ? "Active"
-                            : "Not connected"}
-                      </p>
-
-                      {canManageConnections ? (
-                        <div className="flex flex-col gap-3">
-                          {app.scopeGranted ? (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleConnect(app.id as "gbp")
-                                }
-                                className="text-alloro-navy/30 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-alloro-orange transition-all group/btn w-fit"
-                              >
-                                {app.connected
-                                  ? "Update Connection"
-                                  : "Connect Property"}
-                                <ChevronRight
-                                  size={16}
-                                  className="group-hover/btn:translate-x-1 transition-transform"
-                                />
-                              </button>
-
-                              {app.connected && (
-                                <button
-                                  onClick={() =>
-                                    initiateDisconnect(
-                                      app.id as "gbp",
-                                    )
-                                  }
-                                  className="text-red-300 text-[10px] font-black flex items-center gap-3 uppercase tracking-[0.25em] hover:text-red-500 transition-all w-fit mt-1"
-                                >
-                                  Disconnect
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <p className="text-red-600 text-xs">
-                              Grant API access using the banner above to enable
-                              this integration.
-                            </p>
-                          )}
-                        </div>
-                      ) : null}
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="space-y-8">
-                  <div className="relative p-12 lg:p-16 bg-white/50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center text-center shadow-inner-soft group hover:border-alloro-orange/30 hover:bg-white transition-all duration-700 cursor-pointer">
-                    {/* Coming Soon Badge */}
-                    <span className="absolute top-4 right-4 px-3 py-1 bg-alloro-orange/10 text-alloro-orange text-[10px] font-black uppercase tracking-widest rounded-full border border-alloro-orange/20">
-                      Coming Soon
-                    </span>
-                    <div className="w-20 h-20 rounded-[1.5rem] bg-white shadow-premium flex items-center justify-center mb-8 border border-black/5 text-slate-200 group-hover:scale-110 group-hover:text-alloro-orange transition-all duration-500">
-                      <LayoutGrid size={36} />
-                    </div>
-                    <p className="text-slate-400 text-base font-bold max-w-sm leading-relaxed mb-10 tracking-tight opacity-70">
-                      Integrate your{" "}
-                      <span className="text-alloro-navy">
-                        CRM, Patient Management, or Marketing
-                      </span>{" "}
-                      platforms to ingest more clinical and financial data.
-                    </p>
-                    <button className="px-12 py-5 bg-white border border-black/5 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-alloro-navy hover:border-alloro-orange/20 hover:text-alloro-orange transition-all shadow-premium active:scale-95">
-                      Connect New Link
-                    </button>
-                  </div>
-                </div>
+                {/* Location-centric properties management */}
+                <PropertiesTab />
               </section>
             </div>
           )}
@@ -913,33 +491,6 @@ export const Settings: React.FC = () => {
           </footer>
         </main>
       </div>
-
-      {/* Property Selection Modal */}
-      <PropertySelectionModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={`Select ${modalType.toUpperCase()} Property`}
-        items={availableProperties}
-        onSelect={handleSelectProperty}
-        onMultiSelect={handleMultiSelectProperty}
-        isLoading={loadingAvailable}
-        isSaving={isSaving}
-        type={modalType}
-        initialSelections={initialSelections}
-        multiSelect={modalType === "gbp"}
-      />
-
-      {/* Confirm Modal */}
-      <ConfirmModal
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleConfirmDisconnect}
-        title="Disconnect Property?"
-        message={`Are you sure you want to disconnect your ${disconnectType?.toUpperCase()} property? This will stop data tracking.`}
-        confirmText="Disconnect"
-        isLoading={isDisconnecting}
-        type="danger"
-      />
 
     </div>
   );

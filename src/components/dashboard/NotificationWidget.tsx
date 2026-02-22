@@ -19,11 +19,13 @@ import {
 
 interface NotificationWidgetProps {
   organizationId: number | null;
+  locationId?: number | null;
   onNotificationRead?: () => void;
 }
 
 export function NotificationWidget({
   organizationId,
+  locationId,
   onNotificationRead,
 }: NotificationWidgetProps) {
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ export function NotificationWidget({
     }
 
     try {
-      const data = await fetchNotifications(organizationId);
+      const data = await fetchNotifications(organizationId, locationId);
 
       if (data.success) {
         // Get first unread notification (they're ordered by created_at DESC)
@@ -61,7 +63,7 @@ export function NotificationWidget({
   // Initial fetch
   useEffect(() => {
     fetchLatestUnread();
-  }, [organizationId]);
+  }, [organizationId, locationId]);
 
   // Get navigation path based on notification type
   const getNotificationPath = (type: string) => {

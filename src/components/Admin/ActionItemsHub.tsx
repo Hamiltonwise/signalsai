@@ -1041,13 +1041,14 @@ export function ActionItemsHub() {
 
                     {/* Metadata row */}
                     <div className="flex flex-wrap items-center gap-3 text-sm">
-                      {/* Organization */}
+                      {/* Organization + Location */}
                       <div className="flex items-center gap-1.5 text-gray-600">
                         <Building2 className="h-3.5 w-3.5 text-gray-400" />
                         <span className="font-medium">
                           {task.organization_id
                             ? organizations.find((o) => o.id === task.organization_id)?.name || `Org #${task.organization_id}`
                             : "Unassigned"}
+                          {task.location_name ? ` · ${task.location_name}` : ""}
                         </span>
                       </div>
 

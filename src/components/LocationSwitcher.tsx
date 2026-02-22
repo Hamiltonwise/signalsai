@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { MapPin, Check, ChevronDown } from "lucide-react";
 import { useLocationContext } from "../contexts/locationContext";
 
 /**
  * Location switcher dropdown for multi-location organizations.
- * Hidden when organization has only one location.
+ * Styled for the dark sidebar. Hidden when organization has only one location.
  */
 export function LocationSwitcher() {
   const { locations, selectedLocation, setSelectedLocation } = useLocationContext();
@@ -28,90 +29,53 @@ export function LocationSwitcher() {
   if (locations.length <= 1) return null;
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative px-8 mb-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-alloro-navy bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-white/70 bg-white/5 border border-white/5 rounded-2xl hover:bg-alloro-sidehover hover:text-white transition-all"
       >
-        <svg
-          className="w-4 h-4 text-gray-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-        <span className="max-w-[180px] truncate">
+        <MapPin size={16} className="text-alloro-orange flex-shrink-0" />
+        <span className="flex-1 text-left truncate text-[13px]">
           {selectedLocation?.name || "Select Location"}
         </span>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <ChevronDown
+          size={14}
+          className={`text-white/30 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <div className="py-1">
-            {locations.map((location) => (
-              <button
-                key={location.id}
-                onClick={() => {
-                  setSelectedLocation(location);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                  selectedLocation?.id === location.id
-                    ? "text-alloro-orange font-medium"
-                    : "text-gray-700"
-                }`}
-              >
-                {selectedLocation?.id === location.id && (
-                  <svg
-                    className="w-4 h-4 text-alloro-orange flex-shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                )}
-                {selectedLocation?.id !== location.id && (
-                  <span className="w-4" />
-                )}
-                <span className="truncate">{location.name}</span>
-                {location.is_primary && (
-                  <span className="ml-auto text-xs text-gray-400 flex-shrink-0">
-                    Primary
-                  </span>
-                )}
-              </button>
-            ))}
+        <div className="absolute left-8 right-8 bottom-full mb-1 bg-alloro-sidebg border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+          <div className="py-1 max-h-48 overflow-y-auto scrollbar-thin">
+            {locations.map((location) => {
+              const isSelected = selectedLocation?.id === location.id;
+              return (
+                <button
+                  key={location.id}
+                  onClick={() => {
+                    setSelectedLocation(location);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors ${
+                    isSelected
+                      ? "text-alloro-orange bg-white/5"
+                      : "text-white/50 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {isSelected ? (
+                    <Check size={14} className="text-alloro-orange flex-shrink-0" />
+                  ) : (
+                    <span className="w-3.5" />
+                  )}
+                  <span className="truncate">{location.name}</span>
+                  {location.is_primary && (
+                    <span className="ml-auto text-[9px] font-black text-white/20 uppercase tracking-widest flex-shrink-0">
+                      Primary
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { LocationSwitcher } from "./LocationSwitcher";
 import { useAuth } from "../hooks/useAuth";
 import { useSession } from "../contexts/sessionContext";
 
@@ -11,17 +10,11 @@ interface PageWrapperProps {
 }
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
-  const { userProfile, selectedDomain } = useAuth();
+  const { userProfile, selectedDomain, onboardingCompleted } = useAuth();
   const { disconnect } = useSession();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Determine onboarding status from localStorage to avoid flashes
-  const onboardingCompleted =
-    localStorage.getItem("onboardingCompleted") === "true";
-
-  // This logic is extracted from Dashboard.tsx to ensure consistent mobile header
 
   return (
     <div className="flex bg-alloro-bg min-h-screen font-body text-alloro-navy relative overflow-x-hidden selection:bg-alloro-orange selection:text-white">
@@ -50,7 +43,6 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <LocationSwitcher />
           <button
             onClick={() => navigate("/notifications")}
             className="p-2 text-slate-400 hover:text-alloro-orange transition-colors relative"
@@ -77,10 +69,6 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
 
       {/* Main Content Area - responsive padding applied here */}
       <main className="flex-1 w-full lg:pl-72 pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300">
-        {/* Desktop location switcher bar - hidden on mobile (shown in mobile header instead) */}
-        <div className="hidden lg:flex items-center justify-end px-8 py-3">
-          <LocationSwitcher />
-        </div>
         {children}
       </main>
     </div>

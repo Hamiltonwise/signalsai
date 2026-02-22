@@ -1,380 +1,466 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { motion } from "framer-motion";
-import { MapPin, CheckCircle2, XCircle } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { apiGet } from "../../api";
+import { MapPin, Plus, Star, Trash2, RefreshCw, Pencil } from "lucide-react";
 import { PropertySelectionModal } from "./PropertySelectionModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
+import { useLocationContext } from "../../contexts/locationContext";
+import {
+  getLocations,
+  deleteLocation,
+  createLocation,
+  updateLocation,
+  updateLocationGBP,
+  type Location,
+  type GBPSelection,
+} from "../../api/locations";
 
 type UserRole = "admin" | "manager" | "viewer";
 
-interface Property {
-  propertyId?: string;
-  siteUrl?: string;
-  accountId?: string;
-  locationId?: string;
-  displayName: string;
-}
-
-interface PropertiesState {
-  gbp: Property[] | [];
-}
-
 export const PropertiesTab: React.FC = () => {
-  const [properties, setProperties] = useState<PropertiesState>({
-    gbp: [],
-  });
+  const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const { refreshLocations } = useLocationContext();
 
-  // Modal State
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"gbp">("gbp");
-  const [availableProperties, setAvailableProperties] = useState<any[]>([]);
+  // GBP selection modal
+  const [gbpModalOpen, setGbpModalOpen] = useState(false);
+  const [availableGBP, setAvailableGBP] = useState<any[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [initialSelections, setInitialSelections] = useState<string[]>([]);
+  const [gbpTargetLocationId, setGbpTargetLocationId] = useState<number | null>(null);
 
-  // Confirm Modal State
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [disconnectType, setDisconnectType] = useState<
-    "gbp" | null
-  >(null);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  // Add location wizard
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [addStep, setAddStep] = useState<"name" | "gbp">("name");
+
+  // Delete confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Inline name editing
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState("");
 
   useEffect(() => {
-    // Get user role
     const role = getPriorityItem("user_role") as UserRole | null;
     setUserRole(role);
-    fetchProperties();
+    loadData();
   }, []);
 
   const canManageConnections = userRole === "admin";
 
-  const fetchProperties = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const response = await axios.get("/api/settings/properties");
-
-      if (response.data.success) {
-        setProperties(response.data.properties);
-      }
+      setIsLoading(true);
+      const locs = await getLocations();
+      setLocations(locs);
     } catch (err) {
-      console.error("Failed to fetch properties:", err);
+      console.error("Failed to fetch locations:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleConnect = async (type: "gbp") => {
-    setModalType(type);
-    setModalOpen(true);
+  // Fetch available GBP profiles from Google API
+  const fetchAvailableGBP = async () => {
     setLoadingAvailable(true);
-    setAvailableProperties([]);
-    setIsSaving(false);
-
-    const selections: string[] = [];
-    setInitialSelections(selections);
-
+    setAvailableGBP([]);
     try {
-      const response = await axios.get(
-        `/api/settings/properties/available/${type}`
-      );
-
-      if (response.data.success) {
-        const available = response.data.properties;
-        setAvailableProperties(available);
-
-        // Post-fetch selection matching for GBP
-        if (type === "gbp" && properties.gbp.length > 0) {
-          const gbpIds = properties.gbp.map((p) => p.locationId);
-          // Find available items where locationId matches
-          const matchedIds = available
-            .filter((item: any) => gbpIds.includes(item.locationId))
-            .map((item: any) => item.id);
-          setInitialSelections(matchedIds);
-        }
+      const data = await apiGet({ path: "/settings/properties/available/gbp" });
+      if (data?.success) {
+        setAvailableGBP(data.properties);
       }
     } catch (err) {
-      console.error(`Failed to fetch available ${type} properties:`, err);
+      console.error("Failed to fetch available GBP properties:", err);
     } finally {
       setLoadingAvailable(false);
     }
   };
 
-  const handleSelectProperty = async (_item: any) => {
-    // Single select handler
-    setIsSaving(true);
-    try {
-      const data: any = {};
-
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" }
-      );
-
-      setModalOpen(false);
-      fetchProperties(); // Reload to show new state
-    } catch (err) {
-      console.error("Failed to connect property:", err);
-    } finally {
-      setIsSaving(false);
-    }
+  // ---- Change GBP for existing location ----
+  const handleChangeGBP = async (locationId: number) => {
+    setGbpTargetLocationId(locationId);
+    setGbpModalOpen(true);
+    await fetchAvailableGBP();
   };
 
-  const handleMultiSelectProperty = async (items: any[]) => {
-    // Multi select handler (GBP)
+  const handleGBPSelected = async (item: any) => {
+    if (!gbpTargetLocationId) return;
     setIsSaving(true);
     try {
-      // Map items to the storage format
-      const data = items.map((item) => ({
+      await updateLocationGBP(gbpTargetLocationId, {
         accountId: item.accountId,
         locationId: item.locationId,
         displayName: item.name,
-      }));
-
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: modalType, data, action: "connect" }
-      );
-
-      setModalOpen(false);
-      fetchProperties();
+      });
+      setGbpModalOpen(false);
+      setGbpTargetLocationId(null);
+      await loadData();
+      await refreshLocations();
     } catch (err) {
-      console.error("Failed to connect properties:", err);
+      console.error("Failed to update GBP:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const initiateDisconnect = (type: "gbp") => {
-    setDisconnectType(type);
-    setConfirmOpen(true);
+  // ---- Add location wizard ----
+  const openAddLocation = () => {
+    setNewLocationName("");
+    setAddStep("name");
+    setAddModalOpen(true);
   };
 
-  const handleConfirmDisconnect = async () => {
-    if (!disconnectType) return;
+  const handleAddNameSubmit = async () => {
+    if (!newLocationName.trim()) return;
+    setAddStep("gbp");
+    setGbpTargetLocationId(null); // null = creating new
+    await fetchAvailableGBP();
+  };
 
-    setIsDisconnecting(true);
+  const handleAddGBPSelected = async (item: any) => {
+    setIsSaving(true);
     try {
-      await axios.post(
-        "/api/settings/properties/update",
-        { type: disconnectType, action: "disconnect" }
-      );
-
-      fetchProperties(); // Reload
-      setConfirmOpen(false);
-      setDisconnectType(null);
+      await createLocation({
+        name: newLocationName.trim(),
+        gbp: {
+          accountId: item.accountId,
+          locationId: item.locationId,
+          displayName: item.name,
+        },
+      });
+      setAddModalOpen(false);
+      await loadData();
+      await refreshLocations();
     } catch (err) {
-      console.error("Failed to disconnect property:", err);
+      console.error("Failed to create location:", err);
     } finally {
-      setIsDisconnecting(false);
+      setIsSaving(false);
     }
   };
 
-  if (isLoading)
-    return (
-      <div className="space-y-6 animate-pulse">
-        {/* Integration Card Skeleton 1 */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-slate-200 rounded-xl" />
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-5 w-40 bg-slate-200 rounded" />
-                  <div className="h-6 w-24 bg-slate-200 rounded-full" />
-                </div>
-                <div className="h-4 w-56 bg-slate-200 rounded" />
-              </div>
-            </div>
-            <div className="h-10 w-24 bg-slate-200 rounded-xl" />
-          </div>
-        </div>
+  // ---- Delete location ----
+  const initiateDelete = (locationId: number) => {
+    setDeleteTargetId(locationId);
+    setDeleteConfirmOpen(true);
+  };
 
-        {/* Integration Card Skeleton 2 */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-          <div className="flex items-start justify-between">
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
+    try {
+      await deleteLocation(deleteTargetId);
+      setDeleteConfirmOpen(false);
+      setDeleteTargetId(null);
+      await loadData();
+      await refreshLocations();
+    } catch (err) {
+      console.error("Failed to delete location:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // ---- Set as primary ----
+  const handleSetPrimary = async (locationId: number) => {
+    try {
+      await updateLocation(locationId, { is_primary: true });
+      await loadData();
+      await refreshLocations();
+    } catch (err) {
+      console.error("Failed to set primary:", err);
+    }
+  };
+
+  // ---- Inline name edit ----
+  const startNameEdit = (loc: Location) => {
+    setEditingNameId(loc.id);
+    setEditingNameValue(loc.name);
+  };
+
+  const saveNameEdit = async () => {
+    if (!editingNameId || !editingNameValue.trim()) return;
+    try {
+      await updateLocation(editingNameId, { name: editingNameValue.trim() });
+      setEditingNameId(null);
+      await loadData();
+      await refreshLocations();
+    } catch (err) {
+      console.error("Failed to update name:", err);
+    }
+  };
+
+  // ---- Loading skeleton ----
+  if (isLoading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6"
+          >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-slate-200 rounded-xl" />
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-5 w-48 bg-slate-200 rounded" />
-                  <div className="h-6 w-28 bg-slate-200 rounded-full" />
-                </div>
+              <div className="w-10 h-10 bg-slate-200 rounded-xl" />
+              <div className="flex-1">
+                <div className="h-5 w-48 bg-slate-200 rounded mb-2" />
                 <div className="h-4 w-64 bg-slate-200 rounded" />
               </div>
             </div>
-            <div className="h-10 w-24 bg-slate-200 rounded-xl" />
           </div>
-          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <div className="h-4 w-48 bg-slate-200 rounded mb-2" />
-            <div className="h-3 w-64 bg-slate-200 rounded" />
-          </div>
-        </div>
-
-        {/* Integration Card Skeleton 3 */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-slate-200 rounded-xl" />
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-5 w-44 bg-slate-200 rounded" />
-                  <div className="h-6 w-24 bg-slate-200 rounded-full" />
-                </div>
-                <div className="h-4 w-52 bg-slate-200 rounded" />
-              </div>
-            </div>
-            <div className="h-10 w-24 bg-slate-200 rounded-xl" />
-          </div>
-        </div>
+        ))}
       </div>
     );
-
-  const integrations = [
-    {
-      type: "gbp" as const,
-      title: "Google Business Profile",
-      description: "Manage your business locations and local SEO",
-      icon: MapPin,
-      iconColor: "text-green-500",
-      iconBg: "bg-green-50",
-      connected: properties.gbp && properties.gbp.length > 0,
-      property: null,
-      locations: properties.gbp,
-      idLabel: "Location ID",
-    },
-  ];
+  }
 
   return (
     <div className="space-y-6">
-      {integrations.map((integration, index) => (
-        <motion.div
-          key={integration.type}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1 }}
-          className="bg-white rounded-[28px] border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden"
-        >
-          {/* Card Header */}
-          <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div
-                className={`p-3.5 rounded-2xl ${integration.iconBg} flex-shrink-0`}
+      {/* Section Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-black text-alloro-navy font-heading tracking-tight">
+            Locations
+          </h3>
+          <p className="text-slate-400 text-[12px] mt-1 font-semibold">
+            Manage your business locations and their Google Business Profiles
+          </p>
+        </div>
+        {canManageConnections && (
+          <button
+            onClick={openAddLocation}
+            className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white bg-alloro-orange rounded-xl hover:bg-alloro-orange/90 transition-colors shadow-lg active:scale-95"
+          >
+            <Plus size={14} />
+            Add Location
+          </button>
+        )}
+      </div>
+
+      {/* Location Cards */}
+      {locations.length === 0 ? (
+        <div className="bg-white rounded-[28px] border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-12 text-center">
+          <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-500 font-semibold">No locations configured</p>
+          <p className="text-slate-400 text-sm mt-1">
+            Add your first location to get started
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {locations.map((loc, index) => {
+            const gbpProp = loc.googleProperties?.[0];
+            return (
+              <motion.div
+                key={loc.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-[28px] border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden"
               >
-                <integration.icon
-                  className={`w-6 h-6 ${integration.iconColor}`}
-                />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-lg font-black text-alloro-navy font-heading tracking-tight">
-                    {integration.title}
-                  </h3>
-                  {integration.connected ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-green-50 text-green-700 border border-green-200">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Connected
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200">
-                      <XCircle className="w-3 h-3" />
-                      Not Connected
-                    </span>
-                  )}
-                </div>
-                <p className="text-slate-400 text-[12px] mt-1.5 font-semibold">
-                  {integration.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto">
-              {integration.connected ? (
-                canManageConnections ? (
-                  <>
-                    <button
-                      onClick={() => handleConnect(integration.type)}
-                      className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-alloro-orange bg-alloro-orange/10 rounded-xl hover:bg-alloro-orange/20 transition-colors flex-1 sm:flex-none"
-                    >
-                      Change
-                    </button>
-                    <button
-                      onClick={() => initiateDisconnect(integration.type)}
-                      className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors flex-1 sm:flex-none"
-                    >
-                      {integration.type === "gbp"
-                        ? "Disconnect All"
-                        : "Disconnect"}
-                    </button>
-                  </>
-                ) : null
-              ) : canManageConnections ? (
-                <button
-                  onClick={() => handleConnect(integration.type)}
-                  className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-alloro-orange rounded-xl hover:bg-blue-700 transition-colors shadow-lg w-full sm:w-auto active:scale-95"
-                >
-                  Connect
-                </button>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Connected Property Details */}
-          {integration.connected && (
-            <div className="px-6 sm:px-8 pb-6 sm:pb-8">
-              {integration.type === "gbp" && integration.locations ? (
-                <div className="space-y-3">
-                  {integration.locations.map((loc: Property, idx: number) => (
-                    <div
-                      key={idx}
-                      className="p-4 bg-slate-50 rounded-[16px] border border-slate-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
-                          <MapPin className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <span className="text-sm font-black text-alloro-navy block tracking-tight">
-                            {loc.displayName}
+                <div className="p-6 sm:p-8">
+                  {/* Location Header Row */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="p-3 rounded-2xl bg-green-50 flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-green-500" />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        {editingNameId === loc.id ? (
+                          <input
+                            value={editingNameValue}
+                            onChange={(e) =>
+                              setEditingNameValue(e.target.value)
+                            }
+                            onBlur={saveNameEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveNameEdit();
+                              if (e.key === "Escape")
+                                setEditingNameId(null);
+                            }}
+                            autoFocus
+                            className="text-lg font-black text-alloro-navy font-heading tracking-tight border-b-2 border-alloro-orange outline-none bg-transparent"
+                          />
+                        ) : (
+                          <h4
+                            className="text-lg font-black text-alloro-navy font-heading tracking-tight cursor-pointer hover:text-alloro-orange transition-colors group flex items-center gap-1.5"
+                            onClick={() =>
+                              canManageConnections && startNameEdit(loc)
+                            }
+                          >
+                            {loc.name}
+                            {canManageConnections && (
+                              <Pencil
+                                size={12}
+                                className="opacity-0 group-hover:opacity-40 transition-opacity"
+                              />
+                            )}
+                          </h4>
+                        )}
+                        {loc.is_primary && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200">
+                            <Star size={10} className="fill-amber-500" />
+                            Primary
                           </span>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                            Location ID: {loc.locationId}
-                          </span>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </motion.div>
-      ))}
 
+                    {/* Action Buttons */}
+                    {canManageConnections && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleChangeGBP(loc.id)}
+                          className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-alloro-orange bg-alloro-orange/10 rounded-xl hover:bg-alloro-orange/20 transition-colors"
+                        >
+                          <RefreshCw size={12} className="inline mr-1.5" />
+                          {gbpProp ? "Change GBP" : "Connect GBP"}
+                        </button>
+                        {!loc.is_primary && (
+                          <button
+                            onClick={() => handleSetPrimary(loc.id)}
+                            className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                          >
+                            Set Primary
+                          </button>
+                        )}
+                        {locations.length > 1 && (
+                          <button
+                            onClick={() => initiateDelete(loc.id)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                            title="Remove location"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* GBP Info — full width below header */}
+                  {gbpProp ? (
+                    <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <p className="text-sm font-bold text-alloro-navy">
+                        {gbpProp.display_name}
+                      </p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                        Location ID: {gbpProp.external_id}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm mt-4">
+                      No GBP profile connected
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Change GBP Modal */}
       <PropertySelectionModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={`Select ${modalType.toUpperCase()} Property`}
-        items={availableProperties}
-        onSelect={handleSelectProperty}
-        onMultiSelect={handleMultiSelectProperty}
+        isOpen={gbpModalOpen}
+        onClose={() => {
+          setGbpModalOpen(false);
+          setGbpTargetLocationId(null);
+        }}
+        title="Select GBP Profile"
+        items={availableGBP}
+        onSelect={handleGBPSelected}
         isLoading={loadingAvailable}
         isSaving={isSaving}
-        type={modalType}
-        initialSelections={initialSelections}
-        multiSelect={modalType === "gbp"}
+        type="gbp"
+        multiSelect={false}
       />
 
+      {/* Add Location Modal — only shown during name step */}
+      <AnimatePresence>
+        {addModalOpen && addStep === "name" && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-alloro-navy/50 backdrop-blur-sm"
+              onClick={() => setAddModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative bg-white rounded-[28px] shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-8">
+                <h3 className="text-lg font-black text-alloro-navy font-heading mb-1">
+                  Add New Location
+                </h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  Enter the name for your new location
+                </p>
+                <input
+                  value={newLocationName}
+                  onChange={(e) => setNewLocationName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddNameSubmit();
+                  }}
+                  placeholder="e.g. Downtown Office"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-alloro-navy font-semibold focus:outline-none focus:ring-2 focus:ring-alloro-orange/30 focus:border-alloro-orange"
+                />
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={() => setAddModalOpen(false)}
+                    className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddNameSubmit}
+                    disabled={!newLocationName.trim()}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-alloro-orange rounded-xl hover:bg-alloro-orange/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next: Select GBP
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Location - GBP Selection (shown in step 2) */}
+      <PropertySelectionModal
+        isOpen={addStep === "gbp" && addModalOpen}
+        onClose={() => {
+          setAddModalOpen(false);
+          setAddStep("name");
+        }}
+        title={`Select GBP for "${newLocationName}"`}
+        items={availableGBP}
+        onSelect={handleAddGBPSelected}
+        isLoading={loadingAvailable}
+        isSaving={isSaving}
+        type="gbp"
+        multiSelect={false}
+      />
+
+      {/* Delete Confirmation */}
       <ConfirmModal
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleConfirmDisconnect}
-        title="Disconnect Property?"
-        message={`Are you sure you want to disconnect your ${disconnectType?.toUpperCase()} property? This will stop data tracking.`}
-        confirmText="Disconnect"
-        isLoading={isDisconnecting}
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setDeleteTargetId(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Remove Location?"
+        message="This will remove the location and disconnect its GBP profile. Existing data (tasks, reports, etc.) will no longer be associated with this location."
+        confirmText="Remove"
+        isLoading={isDeleting}
         type="danger"
       />
     </div>

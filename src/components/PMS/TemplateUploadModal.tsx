@@ -16,6 +16,7 @@ interface TemplateUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: string;
+  locationId?: number | null;
   onSuccess?: () => void;
 }
 
@@ -27,6 +28,7 @@ export const TemplateUploadModal: React.FC<TemplateUploadModalProps> = ({
   isOpen,
   onClose,
   clientId,
+  locationId,
   onSuccess,
 }) => {
   const [file, setFile] = useState<File | null>(null);
@@ -96,6 +98,7 @@ export const TemplateUploadModal: React.FC<TemplateUploadModalProps> = ({
         domain: clientId,
         file,
         pmsType: "auto-detect",
+        locationId,
       });
 
       if (result.success) {

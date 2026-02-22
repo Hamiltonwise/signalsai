@@ -84,7 +84,7 @@ export interface AutomationStatusResponse {
   success: boolean;
   data?: {
     jobId: number;
-    domain: string;
+    organization_id: number | null;
     jobStatus: string;
     isAdminApproved: boolean;
     isClientApproved: boolean;
@@ -100,7 +100,7 @@ export interface ActiveAutomationJobsResponse {
   data?: {
     jobs: Array<{
       jobId: number;
-      domain: string;
+      organization_id: number | null;
       jobStatus: string;
       isAdminApproved: boolean;
       isClientApproved: boolean;
@@ -125,7 +125,7 @@ export interface PmsJob {
   timestamp: string;
   is_approved: boolean;
   is_client_approved: boolean;
-  domain?: string | null;
+  organization_id?: number | null;
   automation_status_detail?: AutomationStatusDetail | null;
 }
 
@@ -133,7 +133,7 @@ export interface FetchPmsJobsParams {
   page?: number;
   status?: string[];
   isApproved?: boolean;
-  domain?: string;
+  organization_id?: number;
 }
 
 export interface FetchPmsJobsResponse {
@@ -150,7 +150,7 @@ export interface FetchPmsJobsResponse {
     filters?: {
       statuses?: string[];
       isApproved?: boolean;
-      domain?: string;
+      organization_id?: number;
     };
   };
   error?: string;
@@ -229,7 +229,7 @@ export interface PmsKeyDataSource {
 export interface PmsKeyDataResponse {
   success: boolean;
   data?: {
-    domain: string;
+    organizationId: number;
     months: PmsKeyDataMonth[];
     sources: PmsKeyDataSource[];
     totals: {
@@ -272,8 +272,8 @@ export async function fetchPmsJobs(
     query.set("isApproved", params.isApproved ? "1" : "0");
   }
 
-  if (params.domain) {
-    query.set("domain", params.domain);
+  if (params.organization_id) {
+    query.set("organization_id", String(params.organization_id));
   }
 
   const queryString = query.toString();
@@ -420,12 +420,12 @@ export async function deletePmsJob(jobId: number) {
 }
 
 /**
- * Fetch PMS key data aggregation for a given domain.
+ * Fetch PMS key data aggregation for an organization.
  */
 export async function fetchPmsKeyData(
-  domain?: string
+  organizationId?: number
 ): Promise<PmsKeyDataResponse> {
-  const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+  const query = organizationId ? `?organization_id=${organizationId}` : "";
   return apiGet({
     path: `/pms/keyData${query}`,
   }) as Promise<PmsKeyDataResponse>;
@@ -450,9 +450,9 @@ export async function fetchAutomationStatus(
  * Fetch all active (non-completed) automation jobs
  */
 export async function fetchActiveAutomationJobs(
-  domain?: string
+  organizationId?: number
 ): Promise<ActiveAutomationJobsResponse> {
-  const query = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+  const query = organizationId ? `?organization_id=${organizationId}` : "";
   return apiGet({
     path: `/pms/automation/active${query}`,
   }) as Promise<ActiveAutomationJobsResponse>;
@@ -470,7 +470,7 @@ export interface RetryStepResponse {
   data?: {
     jobId: number;
     stepRetried: RetryableStep;
-    domain?: string;
+    organization_id?: number;
   };
   error?: string;
 }

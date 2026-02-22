@@ -43,6 +43,7 @@ const pulseAnimationStyle = `
 
 interface TasksViewProps {
   organizationId: number | null;
+  locationId?: number | null;
 }
 
 interface TaskCardProps {
@@ -278,7 +279,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   );
 };
 
-export function TasksView({ organizationId }: TasksViewProps) {
+export function TasksView({ organizationId, locationId }: TasksViewProps) {
   const location = useLocation();
   const isWizardActive = useIsWizardActive();
   const [tasks, setTasks] = useState<GroupedActionItems | null>(null);
@@ -454,7 +455,7 @@ export function TasksView({ organizationId }: TasksViewProps) {
     }
 
     loadTasks();
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   const loadTasks = async () => {
     if (!organizationId) return;
@@ -462,7 +463,7 @@ export function TasksView({ organizationId }: TasksViewProps) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchClientTasks(organizationId);
+      const response = await fetchClientTasks(organizationId, locationId);
       setTasks(response.tasks);
     } catch (err) {
       console.error("Failed to fetch tasks:", err);

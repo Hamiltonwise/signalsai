@@ -7,7 +7,6 @@ const baseurl = "/agents";
 export interface AgentResult {
   id: number;
   status: "pending" | "approved" | "rejected";
-  domain: string;
   organization_id: number;
   agent_response?: AgentResponse;
   created_at: string;
@@ -23,10 +22,11 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-async function getLatestAgentData(organizationId: number) {
+async function getLatestAgentData(organizationId: number, locationId?: number | null) {
   try {
+    const locationParam = locationId ? `?locationId=${locationId}` : "";
     return await apiGet({
-      path: baseurl + `/latest/${organizationId}`,
+      path: baseurl + `/latest/${organizationId}${locationParam}`,
     });
   } catch (err) {
     console.log(err);

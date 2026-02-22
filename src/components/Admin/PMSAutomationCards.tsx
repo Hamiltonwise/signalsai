@@ -7,7 +7,7 @@ import {
   Trash2,
   ChevronDown,
   Cpu,
-  Globe,
+  Building2,
   Filter,
   Check,
   Clock,
@@ -23,6 +23,7 @@ import {
   type PmsJob,
   type AutomationStatusDetail,
 } from "../../api/pms";
+import { fetchOrganizations } from "../../api/agentOutputs";
 import { PMSAutomationProgressDropdown } from "./PMSAutomationProgressDropdown";
 import { PMSDataViewer } from "../PMS/PMSDataViewer";
 import {
@@ -333,8 +334,8 @@ export function PMSAutomationCards() {
   });
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>("all");
-  const [domainFilter, setDomainFilter] = useState<string>("all");
-  const [availableDomains, setAvailableDomains] = useState<string[]>([]);
+  const [organizationFilter, setOrganizationFilter] = useState<string>("all");
+  const [organizations, setOrganizations] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingJobId, setApprovingJobId] = useState<number | null>(null);
@@ -378,7 +379,7 @@ export function PMSAutomationCards() {
             approvalFilter === "all"
               ? undefined
               : approvalFilter === "approved",
-          domain: domainFilter === "all" ? undefined : domainFilter,
+          organization_id: organizationFilter === "all" ? undefined : parseInt(organizationFilter, 10),
         })) as any;
 
         if (response?.success && response.data) {
@@ -410,18 +411,6 @@ export function PMSAutomationCards() {
 
             return next;
           });
-          setAvailableDomains((previous) => {
-            const domainSet = new Set(previous);
-            incomingJobs.forEach((job) => {
-              if (job.domain) {
-                domainSet.add(job.domain);
-              }
-            });
-            if (domainFilter !== "all") {
-              domainSet.add(domainFilter);
-            }
-            return Array.from(domainSet).sort((a, b) => a.localeCompare(b));
-          });
           setError(null);
           setLastUpdated(new Date());
         } else {
@@ -451,12 +440,27 @@ export function PMSAutomationCards() {
         isFetchingRef.current = false;
       }
     },
-    [approvalFilter, domainFilter, pagination.page, statusFilter]
+    [approvalFilter, organizationFilter, pagination.page, statusFilter]
   );
 
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  // Load organizations for filter dropdown
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      try {
+        const response = await fetchOrganizations();
+        if (response.success && response.organizations) {
+          setOrganizations(response.organizations);
+        }
+      } catch (err) {
+        console.error("Failed to load organizations for filter", err);
+      }
+    };
+    loadOrganizations();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -478,8 +482,8 @@ export function PMSAutomationCards() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handleDomainFilterChange = (value: string) => {
-    setDomainFilter(value);
+  const handleOrganizationFilterChange = (value: string) => {
+    setOrganizationFilter(value);
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -770,16 +774,16 @@ export function PMSAutomationCards() {
             }))}
           />
           <FilterDropdown
-            value={domainFilter}
-            onChange={(value) => handleDomainFilterChange(value)}
-            label="Domain"
-            icon={<Globe className="w-3 h-3" />}
-            placeholder="All Domains"
+            value={organizationFilter}
+            onChange={(value) => handleOrganizationFilterChange(value)}
+            label="Organization"
+            icon={<Building2 className="w-3 h-3" />}
+            placeholder="All Organizations"
             options={[
-              { value: "all", label: "All Domains" },
-              ...availableDomains.map((domain) => ({
-                value: domain,
-                label: domain,
+              { value: "all", label: "All Organizations" },
+              ...organizations.map((org) => ({
+                value: String(org.id),
+                label: org.name,
               })),
             ]}
           />
@@ -900,7 +904,9 @@ export function PMSAutomationCards() {
                       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-                            {job.domain || "Unknown Domain"}
+                            {job.organization_id
+                              ? organizations.find((o) => o.id === job.organization_id)?.name || `Organization #${job.organization_id}`
+                              : "Unassigned"}
                           </h3>
                           <p className="text-sm text-gray-500 mt-0.5">
                             Job #{job.id}
@@ -1086,7 +1092,7 @@ export function PMSAutomationCards() {
           isOpen={true}
           jobId={activeModalJob.id}
           title="Review PMS Response Data"
-          subtitle={`${activeModalJob.domain || "Unknown Domain"} • ${
+          subtitle={`${activeModalJob.organization_id ? (organizations.find((o) => o.id === activeModalJob.organization_id)?.name || `Org #${activeModalJob.organization_id}`) : "Unassigned"} • ${
             APPROVAL_TEXT[activeModalJob.is_approved ? "locked" : "pending"]
           }`}
           initialData={activeModalJob.response_log}

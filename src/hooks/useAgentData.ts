@@ -21,7 +21,7 @@ interface AgentResult {
   resultId: number;
 }
 
-export function useAgentData(organizationId: number | null) {
+export function useAgentData(organizationId: number | null, locationId?: number | null) {
   const [data, setData] = useState<AgentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function useAgentData(organizationId: number | null) {
 
     try {
       setLoading(true);
-      const json = await agents.getLatestAgentData(organizationId);
+      const json = await agents.getLatestAgentData(organizationId, locationId);
 
       if (json.successful === false) {
         throw new Error(json.errorMessage || "Failed to fetch agent data");
@@ -62,7 +62,7 @@ export function useAgentData(organizationId: number | null) {
 
   useEffect(() => {
     fetchData();
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   return { data, loading, error, refetch: fetchData };
 }

@@ -77,6 +77,7 @@ interface NonDoctorReferral {
 interface ReferralEngineDashboardProps {
   data?: ReferralEngineData;
   organizationId?: number | null;
+  locationId?: number | null;
   hideHeader?: boolean;
 }
 
@@ -210,8 +211,9 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
         setLoading(true);
         setError(null);
 
+        const locParam = props.locationId ? `?locationId=${props.locationId}` : "";
         const response = await fetch(
-          `/api/agents/getLatestReferralEngineOutput/${props.organizationId}`
+          `/api/agents/getLatestReferralEngineOutput/${props.organizationId}${locParam}`
         );
 
         if (!response.ok) {
@@ -246,7 +248,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
     };
 
     fetchReferralEngineData();
-  }, [props.organizationId]);
+  }, [props.organizationId, props.locationId]);
 
   const data = props.data ?? fetchedData;
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { LocationSwitcher } from "./LocationSwitcher";
 import { useAuth } from "../hooks/useAuth";
 import { useSession } from "../contexts/sessionContext";
 
@@ -49,13 +50,12 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          <LocationSwitcher />
           <button
             onClick={() => navigate("/notifications")}
             className="p-2 text-slate-400 hover:text-alloro-orange transition-colors relative"
           >
             <Bell size={20} />
-            {/* Replace with dynamic unread count later if needed */}
-            {/* <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span> */}
           </button>
           <button
             onClick={() => navigate("/settings")}
@@ -77,6 +77,10 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
 
       {/* Main Content Area - responsive padding applied here */}
       <main className="flex-1 w-full lg:pl-72 pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300">
+        {/* Desktop location switcher bar - hidden on mobile (shown in mobile header instead) */}
+        <div className="hidden lg:flex items-center justify-end px-8 py-3">
+          <LocationSwitcher />
+        </div>
         {children}
       </main>
     </div>

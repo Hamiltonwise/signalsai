@@ -23,16 +23,15 @@ import {
   updateTaskCategory,
   archiveTask,
   unarchiveTask,
-  fetchClients,
   bulkArchiveTasks,
   bulkUnarchiveTasks,
   bulkApproveTasks,
   bulkUpdateStatus,
 } from "../../api/tasks";
+import { fetchOrganizations } from "../../api/agentOutputs";
 import type {
   ActionItem,
   FetchActionItemsRequest,
-  ClientOption,
   AgentType,
 } from "../../types/tasks";
 import { CreateTaskModal } from "./CreateTaskModal";
@@ -375,7 +374,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
 export function ActionItemsHub() {
   const [tasks, setTasks] = useState<ActionItem[]>([]);
-  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [organizations, setOrganizations] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -424,14 +423,14 @@ export function ActionItemsHub() {
     limit: pageSize,
     offset: 0,
   });
-  const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [selectedOrganization, setSelectedOrganization] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedAgentType, setSelectedAgentType] = useState<string>("all");
   const [selectedApproval, setSelectedApproval] = useState<string>("all");
 
   useEffect(() => {
-    loadClients();
+    loadOrganizations();
   }, []);
 
   useEffect(() => {
@@ -447,12 +446,14 @@ export function ActionItemsHub() {
     return () => clearInterval(intervalId);
   }, [filters]);
 
-  const loadClients = async () => {
+  const loadOrganizations = async () => {
     try {
-      const response = await fetchClients();
-      setClients(response.clients);
+      const response = await fetchOrganizations();
+      if (response.success && response.organizations) {
+        setOrganizations(response.organizations);
+      }
     } catch (err) {
-      console.error("Failed to load clients:", err);
+      console.error("Failed to load organizations:", err);
     }
   };
 
@@ -481,8 +482,8 @@ export function ActionItemsHub() {
       offset: 0,
     };
 
-    if (selectedClient !== "all") {
-      newFilters.domain_name = selectedClient;
+    if (selectedOrganization !== "all") {
+      newFilters.organization_id = parseInt(selectedOrganization, 10);
     }
     if (selectedStatus !== "all") {
       newFilters.status = selectedStatus as
@@ -506,7 +507,7 @@ export function ActionItemsHub() {
   };
 
   const resetFilters = () => {
-    setSelectedClient("all");
+    setSelectedOrganization("all");
     setSelectedStatus("all");
     setSelectedCategory("all");
     setSelectedAgentType("all");
@@ -859,15 +860,15 @@ export function ActionItemsHub() {
       <FilterBar>
         <div className="flex flex-wrap items-end gap-3">
           <FilterDropdown
-            value={selectedClient}
-            onChange={(value) => setSelectedClient(value)}
-            label="Client"
-            placeholder="All Clients"
+            value={selectedOrganization}
+            onChange={(value) => setSelectedOrganization(value)}
+            label="Organization"
+            placeholder="All Organizations"
             options={[
-              { value: "all", label: "All Clients" },
-              ...clients.map((client) => ({
-                value: client.domain_name,
-                label: client.domain_name,
+              { value: "all", label: "All Organizations" },
+              ...organizations.map((org) => ({
+                value: String(org.id),
+                label: org.name,
               })),
             ]}
           />
@@ -1040,10 +1041,14 @@ export function ActionItemsHub() {
 
                     {/* Metadata row */}
                     <div className="flex flex-wrap items-center gap-3 text-sm">
-                      {/* Client */}
+                      {/* Organization */}
                       <div className="flex items-center gap-1.5 text-gray-600">
                         <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="font-medium">{task.domain_name}</span>
+                        <span className="font-medium">
+                          {task.organization_id
+                            ? organizations.find((o) => o.id === task.organization_id)?.name || `Org #${task.organization_id}`
+                            : "Unassigned"}
+                        </span>
                       </div>
 
                       {/* Date */}
@@ -1209,7 +1214,7 @@ export function ActionItemsHub() {
           setShowCreateModal(false);
           loadTasks();
         }}
-        clients={clients}
+        organizations={organizations}
       />
 
       {/* Task Details Modal */}

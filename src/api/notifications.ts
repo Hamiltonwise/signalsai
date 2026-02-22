@@ -2,8 +2,7 @@ const API_BASE = "/api/notifications";
 
 export interface Notification {
   id: number;
-  google_account_id?: number;
-  domain_name: string;
+  organization_id?: number;
   title: string;
   message?: string;
   type: "task" | "pms" | "agent" | "system";
@@ -25,11 +24,16 @@ export interface NotificationsResponse {
  * Fetch notifications for logged-in client
  */
 export const fetchNotifications = async (
-  organizationId: number
+  organizationId: number,
+  locationId?: number | null
 ): Promise<NotificationsResponse> => {
-  const response = await fetch(
-    `${API_BASE}?googleAccountId=${organizationId}`
-  );
+  const params = new URLSearchParams({
+    googleAccountId: String(organizationId),
+  });
+  if (locationId) {
+    params.append("locationId", String(locationId));
+  }
+  const response = await fetch(`${API_BASE}?${params.toString()}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch notifications: ${response.statusText}`);

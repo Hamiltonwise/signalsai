@@ -8,7 +8,7 @@ import type {
   GBPAIReadyData,
 } from "../hooks/useGBP";
 import { GBPContext } from "./GBPContext";
-import { useAuth } from "../hooks/useAuth";
+import { useLocationContext } from "./locationContext";
 
 interface GBPProviderProps {
   children: ReactNode;
@@ -39,8 +39,8 @@ export const GBPProvider: React.FC<GBPProviderProps> = ({ children }) => {
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [locationsError, setLocationsError] = useState<string | null>(null);
 
-  // Get domain/sites state from AuthContext
-  const { selectedDomain } = useAuth();
+  // Derive GBP credentials from the selected location's google properties
+  const { selectedLocation } = useLocationContext();
 
   const fetchAIReadyData = async (
     accountId: string,
@@ -136,12 +136,15 @@ export const GBPProvider: React.FC<GBPProviderProps> = ({ children }) => {
     }
   };
 
-  // Auto-fetch GBP data when domain changes
+  // Auto-fetch GBP data when selected location changes
   useEffect(() => {
-    if (selectedDomain?.gbp_accountId && selectedDomain?.gbp_locationId) {
-      fetchGBPData(selectedDomain.gbp_accountId, selectedDomain.gbp_locationId);
+    const gbpProp = selectedLocation?.googleProperties?.find(
+      (p) => p.type === "gbp"
+    );
+    if (gbpProp?.account_id && gbpProp?.external_id) {
+      fetchGBPData(gbpProp.account_id, gbpProp.external_id);
     }
-  }, [selectedDomain]);
+  }, [selectedLocation]);
 
   const contextValue: GBPContextType = {
     gbpData,

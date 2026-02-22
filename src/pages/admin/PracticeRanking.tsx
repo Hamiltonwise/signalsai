@@ -23,8 +23,10 @@ import {
   BarChart3,
   Check,
   Building,
+  Building2,
   Target,
 } from "lucide-react";
+import { fetchOrganizations } from "../../api/agentOutputs";
 import { toast } from "react-hot-toast";
 import {
   AdminPageHeader,
@@ -85,7 +87,6 @@ interface RankingJob {
   id: number;
   organizationId?: number;
   organization_id?: number;
-  domain: string;
   specialty: string;
   location: string | null;
   rankKeywords?: string | null;
@@ -144,7 +145,6 @@ interface BatchStatus {
 
 interface RankingResult {
   id: number;
-  domain: string;
   specialty: string;
   location: string | null;
   rankKeywords?: string | null;
@@ -291,7 +291,7 @@ interface RankingTask {
 // Group structure for display - flat batch list
 interface BatchGroup {
   batchId: string;
-  domain: string;
+  organization_id: number | null;
   jobs: RankingJob[];
   status: "processing" | "completed" | "failed" | "pending";
   createdAt: Date;
@@ -458,11 +458,19 @@ export function PracticeRanking() {
   const [deletingJob, setDeletingJob] = useState<number | null>(null);
   const [deletingBatch, setDeletingBatch] = useState<string | null>(null);
   const [refreshingCompetitors, setRefreshingCompetitors] = useState(false);
+  const [organizations, setOrganizations] = useState<{ id: number; name: string }[]>([]);
+  const [organizationFilter, setOrganizationFilter] = useState<string>("");
 
   // Get selected account data
   const selectedAccountData = accounts.find(
     (a) => String(a.id) === String(selectedAccount)
   );
+
+  // Helper to get organization name by ID
+  const getOrgName = (orgId: number | null | undefined): string => {
+    if (!orgId) return "Unknown Organization";
+    return organizations.find((o) => o.id === orgId)?.name || `Org #${orgId}`;
+  };
 
   // Group jobs by batch - flat list sorted by date (newest first)
   const groupedBatches = useMemo((): BatchGroup[] => {
@@ -475,7 +483,7 @@ export function PracticeRanking() {
         if (!batchMap.has(job.batch_id)) {
           batchMap.set(job.batch_id, {
             batchId: job.batch_id,
-            domain: job.domain,
+            organization_id: job.organization_id ?? null,
             jobs: [],
             status: "pending",
             createdAt: jobDate,
@@ -541,8 +549,13 @@ export function PracticeRanking() {
 
   useEffect(() => {
     fetchAccounts();
-    fetchJobs();
+    fetchOrganizations().then((res) => setOrganizations(res.organizations || [])).catch(() => {});
   }, []);
+
+  // Re-fetch jobs when organization filter changes
+  useEffect(() => {
+    fetchJobs();
+  }, [organizationFilter]);
 
   // When account is selected, initialize location forms
   useEffect(() => {
@@ -594,7 +607,12 @@ export function PracticeRanking() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      const response = await fetch("/api/admin/practice-ranking/list", {
+      const params = new URLSearchParams();
+      if (organizationFilter) {
+        params.set("organization_id", organizationFilter);
+      }
+      const url = `/api/admin/practice-ranking/list${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -1224,8 +1242,25 @@ export function PracticeRanking() {
               analyses
             </p>
           </div>
-          {/* Legend */}
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+          <div className="flex items-center gap-4">
+            {/* Organization Filter */}
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-gray-400" />
+              <select
+                value={organizationFilter}
+                onChange={(e) => setOrganizationFilter(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange"
+              >
+                <option value="">All Organizations</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={String(org.id)}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Legend */}
+            <div className="flex items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-500" />
               <span>Completed</span>
@@ -1237,6 +1272,7 @@ export function PracticeRanking() {
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-red-500" />
               <span>Failed</span>
+            </div>
             </div>
           </div>
         </div>
@@ -1265,7 +1301,7 @@ export function PracticeRanking() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">
-                        {getWeekLabel(batch.createdAt)}: {batch.domain}
+                        {getWeekLabel(batch.createdAt)}: {getOrgName(batch.organization_id)}
                       </span>
                     </div>
                     <div className="mt-0.5 text-xs text-gray-400">
@@ -1438,7 +1474,7 @@ function JobRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h4 className="font-medium text-gray-900 text-sm">
-              {job.gbp_location_name || job.domain}
+              {job.gbp_location_name || job.specialty}
             </h4>
             <Badge variant="default">{job.specialty}</Badge>
             {job.location && (
@@ -1945,7 +1981,7 @@ function RankingResultsView({
             <tbody>
               {(() => {
                 const clientEntry = {
-                  name: result.gbpLocationName || result.domain,
+                  name: result.gbpLocationName || result.specialty,
                   rankScore: Number(result.rankScore),
                   rankPosition: result.rankPosition,
                   totalReviews:

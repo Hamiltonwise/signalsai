@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useLocationContext } from "../contexts/locationContext";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -28,6 +29,7 @@ import { ConfirmModal } from "../components/settings/ConfirmModal";
 export const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const { selectedLocation } = useLocationContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -35,6 +37,7 @@ export const Notifications: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const organizationId = userProfile?.organizationId ?? null;
+  const locationId = selectedLocation?.id ?? null;
 
   // Set page title
   useEffect(() => {
@@ -50,7 +53,7 @@ export const Notifications: React.FC = () => {
 
     const loadNotifications = async () => {
       try {
-        const data = await fetchNotifications(organizationId);
+        const data = await fetchNotifications(organizationId, locationId);
         setNotifications(data.notifications);
       } catch (error) {
         console.error("Error fetching notifications:", error);
@@ -80,7 +83,7 @@ export const Notifications: React.FC = () => {
       clearInterval(interval);
       markAllReadOnLeave();
     };
-  }, [organizationId]);
+  }, [organizationId, locationId]);
 
   // Get navigation path based on notification type
   const getNotificationPath = (type: string) => {

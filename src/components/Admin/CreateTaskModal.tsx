@@ -1,23 +1,23 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { createTask } from "../../api/tasks";
-import type { ClientOption, ActionItemCategory } from "../../types/tasks";
+import type { ActionItemCategory } from "../../types/tasks";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  clients: ClientOption[];
+  organizations: { id: number; name: string }[];
 }
 
 export function CreateTaskModal({
   isOpen,
   onClose,
   onSuccess,
-  clients,
+  organizations,
 }: CreateTaskModalProps) {
   const [formData, setFormData] = useState({
-    domain_name: "",
+    organization_id: "",
     title: "",
     description: "",
     category: "ALLORO" as ActionItemCategory,
@@ -30,8 +30,8 @@ export function CreateTaskModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.domain_name || !formData.title) {
-      setError("Client and title are required");
+    if (!formData.organization_id || !formData.title) {
+      setError("Organization and title are required");
       return;
     }
 
@@ -40,7 +40,7 @@ export function CreateTaskModal({
       setError(null);
 
       await createTask({
-        domain_name: formData.domain_name,
+        organization_id: parseInt(formData.organization_id, 10),
         title: formData.title,
         description: formData.description || undefined,
         category: formData.category,
@@ -50,7 +50,7 @@ export function CreateTaskModal({
 
       // Reset form
       setFormData({
-        domain_name: "",
+        organization_id: "",
         title: "",
         description: "",
         category: "ALLORO",
@@ -106,24 +106,24 @@ export function CreateTaskModal({
               </div>
             )}
 
-            {/* Client Selector */}
+            {/* Organization Selector */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Client <span className="text-red-500">*</span>
+                Organization <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.domain_name}
+                value={formData.organization_id}
                 onChange={(e) =>
-                  setFormData({ ...formData, domain_name: e.target.value })
+                  setFormData({ ...formData, organization_id: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
                 disabled={submitting}
               >
-                <option value="">Select a client...</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.domain_name}>
-                    {client.domain_name}
+                <option value="">Select an organization...</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={String(org.id)}>
+                    {org.name}
                   </option>
                 ))}
               </select>

@@ -17,11 +17,10 @@ import {
 import { motion } from "framer-motion";
 import { useGBP } from "../../hooks/useGBP";
 import { useClarity } from "../../hooks/useClarity";
-import { useAuth } from "../../hooks/useAuth";
+import { useLocationContext } from "../../contexts/locationContext";
 
 interface VitalSignsCardsProps {
   className?: string;
-  selectedDomain: string;
 }
 
 // Stage configuration
@@ -70,10 +69,7 @@ const getIcon = (name: string, size = 24, className = "") => {
 
 export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
   className = "",
-  selectedDomain,
 }) => {
-  // selectedDomain is passed for context - data fetching is handled by hooks
-  console.debug("VitalSignsCards selectedDomain:", selectedDomain);
 
   const [activeTabId, setActiveTabId] = useState("consideration");
   const [isFetchingAIData, setIsFetchingAIData] = useState(false);
@@ -98,7 +94,7 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
     error: clarityError,
     fetchAIReadyClarityData: fetchClarityAIData,
   } = useClarity();
-  const { selectedDomain: authDomain } = useAuth();
+  const { selectedLocation } = useLocationContext();
 
   const activeIndex = STAGES.findIndex((s) => s.id === activeTabId);
   const activeStage = STAGES[activeIndex];
@@ -233,11 +229,11 @@ export const VitalSignsCards: React.FC<VitalSignsCardsProps> = ({
       await Promise.allSettled([
         (async () => {
           try {
-            if (authDomain?.gbp_accountId && authDomain?.gbp_locationId) {
-              await fetchGBPAIData(
-                authDomain.gbp_accountId,
-                authDomain.gbp_locationId
-              );
+            const gbpProp = selectedLocation?.googleProperties?.find(
+              (p) => p.type === "gbp"
+            );
+            if (gbpProp?.account_id && gbpProp?.external_id) {
+              await fetchGBPAIData(gbpProp.account_id, gbpProp.external_id);
               setAiDataStatus((prev) => ({ ...prev, gbp: "success" }));
             } else {
               setAiDataStatus((prev) => ({ ...prev, gbp: "error" }));

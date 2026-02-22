@@ -17,7 +17,6 @@ export type AgentType =
 
 export interface ActionItem {
   id: number;
-  domain_name: string;
   organization_id?: number;
   title: string;
   description?: string;
@@ -53,8 +52,7 @@ export interface ActionItemsResponse {
 }
 
 export interface CreateActionItemRequest {
-  domain_name: string;
-  organization_id?: number;
+  organization_id: number;
   title: string;
   description?: string;
   category: ActionItemCategory;
@@ -74,7 +72,6 @@ export interface UpdateActionItemRequest {
 }
 
 export interface FetchActionItemsRequest {
-  domain_name?: string;
   organization_id?: number;
   category?: ActionItemCategory;
   status?: ActionItemStatus;
@@ -86,14 +83,3 @@ export interface FetchActionItemsRequest {
   date_to?: string;
 }
 
-export interface ClientOption {
-  id: number;
-  domain_name: string;
-  email: string;
-}
-
-export interface ClientsResponse {
-  success: boolean;
-  clients: ClientOption[];
-  total: number;
-}

@@ -17,6 +17,7 @@ import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
 import { ClarityProvider } from "./contexts/ClarityContext.tsx";
 import { SessionProvider } from "./contexts/SessionProvider.tsx";
+import { LocationProvider } from "./contexts/LocationProvider.tsx";
 import { OnboardingWizardProvider } from "./contexts/OnboardingWizardContext.tsx";
 import { WizardController } from "./components/onboarding-wizard";
 import {
@@ -33,9 +34,11 @@ import { PilotBanner } from "./components/Admin/PilotBanner";
 function AppProviders({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
-      <GBPProvider>
-        <ClarityProvider>{children}</ClarityProvider>
-      </GBPProvider>
+      <LocationProvider>
+        <GBPProvider>
+          <ClarityProvider>{children}</ClarityProvider>
+        </GBPProvider>
+      </LocationProvider>
     </SessionProvider>
   );
 }

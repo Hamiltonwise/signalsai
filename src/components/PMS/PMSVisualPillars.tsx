@@ -53,6 +53,7 @@ import { getPriorityItem } from "../../hooks/useLocalStorage";
 interface PMSVisualPillarsProps {
   domain?: string;
   organizationId?: number | null;
+  locationId?: number | null;
   hasProperties?: boolean;
 }
 
@@ -149,6 +150,7 @@ const MetricCard = ({
 export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   domain,
   organizationId,
+  locationId,
   hasProperties = true,
 }) => {
   const navigate = useNavigate();
@@ -202,8 +204,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   const canUploadPMS = hasRolePermission && (hasProperties || isWizardActive);
 
   const storageKey = useMemo(
-    () => `pmsProcessing:${domain || "unknown"}`,
-    [domain],
+    () => `pmsProcessing:${organizationId || "unknown"}`,
+    [organizationId],
   );
 
   const isMountedRef = useRef(false);
@@ -216,8 +218,8 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         return;
       }
 
-      // Guard: Skip loading if domain is not available
-      if (!domain) {
+      // Guard: Skip loading if organizationId is not available
+      if (!organizationId) {
         setIsLoading(false);
         return;
       }
@@ -228,7 +230,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       }
 
       try {
-        const response = await fetchPmsKeyData(domain);
+        const response = await fetchPmsKeyData(organizationId);
 
         if (!isMountedRef.current) {
           return;
@@ -238,7 +240,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
           // Only log if not silent mode (to reduce console noise during polling)
           if (!silent) {
             console.log("📊 loadKeyData response:", {
-              domain,
+              organizationId,
               monthsCount: response.data.months?.length,
               sourcesCount: response.data.sources?.length,
               stats: response.data.stats,
@@ -272,7 +274,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         }
       }
     },
-    [domain, isWizardActive],
+    [organizationId, isWizardActive],
   );
 
   useEffect(() => {
@@ -319,17 +321,17 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
 
   // Sync loading state - handle both wizard mode AND normal mode
   // When wizard is active, show demo data immediately (no loading)
-  // When wizard is NOT active but domain is missing, don't show loading forever
+  // When wizard is NOT active but organizationId is missing, don't show loading forever
   useEffect(() => {
     if (isWizardActive) {
       // Wizard mode: immediately show demo data
       setIsLoading(false);
-    } else if (!domain) {
-      // No domain yet but not in wizard: don't stay stuck loading forever
-      // The parent (Dashboard.tsx) shows its own skeleton when domain is undefined
+    } else if (!organizationId) {
+      // No org yet but not in wizard: don't stay stuck loading forever
+      // The parent (Dashboard.tsx) shows its own skeleton when org is undefined
       setIsLoading(false);
     }
-  }, [isWizardActive, domain]);
+  }, [isWizardActive, organizationId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -425,8 +427,9 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     setReferralLoading(true);
 
     try {
+      const locParam = locationId ? `?locationId=${locationId}` : "";
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
+        `/api/agents/getLatestReferralEngineOutput/${organizationId}${locParam}`,
       );
 
       if (!response.ok) {
@@ -459,7 +462,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     } finally {
       setReferralLoading(false);
     }
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   useEffect(() => {
     loadReferralData();
@@ -472,12 +475,12 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     if (isWizardActive) return;
 
     const checkForActiveAutomation = async () => {
-      if (!domain) return;
+      if (!organizationId) return;
 
       console.log("🔍 Initial check for active automation on mount");
 
       try {
-        const response = await fetchActiveAutomationJobs(domain);
+        const response = await fetchActiveAutomationJobs(organizationId);
 
         if (response.success && response.data?.jobs?.length) {
           const activeJob = response.data.jobs[0];
@@ -515,7 +518,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
     };
 
     checkForActiveAutomation();
-  }, [domain, isWizardActive]); // Run once on mount when domain is available
+  }, [organizationId, isWizardActive]); // Run once on mount when organizationId is available
 
   // Fetch automation status when processing is pending
   // Skip during wizard mode
@@ -524,16 +527,16 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       return;
     }
 
-    if (!domain) {
-      console.log("🔍 loadAutomationStatus: no domain");
+    if (!organizationId) {
+      console.log("🔍 loadAutomationStatus: no organizationId");
       setAutomationStatus(null);
       return;
     }
 
-    console.log("🔍 loadAutomationStatus: fetching for domain", domain);
+    console.log("🔍 loadAutomationStatus: fetching for org", organizationId);
 
     try {
-      const response = await fetchActiveAutomationJobs(domain);
+      const response = await fetchActiveAutomationJobs(organizationId);
 
       console.log("🔍 fetchActiveAutomationJobs response:", {
         success: response.success,
@@ -682,7 +685,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
       if (isCancelled) return;
 
       try {
-        const response = await fetchActiveAutomationJobs(domain);
+        const response = await fetchActiveAutomationJobs(organizationId);
 
         if (response.success && response.data?.jobs?.length) {
           const activeJob = response.data.jobs[0];

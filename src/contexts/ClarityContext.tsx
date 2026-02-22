@@ -6,7 +6,7 @@ import type {
   ClarityAIReadyData,
 } from "../hooks/useClarity";
 import { ClarityContext } from "./ClarityContext";
-import { useAuth } from "../hooks/useAuth";
+import { useLocationContext } from "./locationContext";
 
 interface ClarityProviderProps {
   children: ReactNode;
@@ -27,16 +27,17 @@ export const ClarityProvider: React.FC<ClarityProviderProps> = ({
   const [aiData, setAiData] = useState<ClarityAIReadyData | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // Get domain state from AuthContext
-  const { selectedDomain } = useAuth();
+  // Derive domain from selected location
+  const { selectedLocation } = useLocationContext();
+  const locationDomain = selectedLocation?.domain;
 
   const fetchAIReadyClarityData = async () => {
-    if (!selectedDomain?.domain) return;
+    if (!locationDomain) return;
 
     try {
       setAiDataLoading(true);
       setAiError(null);
-      const result = await clarity.getAIReadyData(selectedDomain.domain);
+      const result = await clarity.getAIReadyData(locationDomain);
 
       if (result.successful !== false) {
         setAiData(result as ClarityAIReadyData);
@@ -55,12 +56,12 @@ export const ClarityProvider: React.FC<ClarityProviderProps> = ({
   };
 
   const fetchClarityData = async () => {
-    if (!selectedDomain?.domain) return;
+    if (!locationDomain) return;
 
     try {
       setIsLoading(true);
       setError(null);
-      const result = await clarity.getKeyData(selectedDomain.domain);
+      const result = await clarity.getKeyData(locationDomain);
 
       if (result.successful !== false) {
         setClarityData({
@@ -80,12 +81,12 @@ export const ClarityProvider: React.FC<ClarityProviderProps> = ({
     }
   };
 
-  // Auto-fetch Clarity data when domain changes
+  // Auto-fetch Clarity data when selected location changes
   useEffect(() => {
-    if (selectedDomain?.domain) {
+    if (locationDomain) {
       fetchClarityData();
     }
-  }, [selectedDomain]);
+  }, [locationDomain]);
 
   const contextValue: ClarityContextType = {
     clarityData,

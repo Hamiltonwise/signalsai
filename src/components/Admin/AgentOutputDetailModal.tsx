@@ -125,7 +125,9 @@ export function AgentOutputDetailModal({
             <h2 className="text-2xl font-bold text-gray-900">
               {formatAgentType(output.agent_type)} Output
             </h2>
-            <p className="mt-1 text-sm text-gray-500">{output.domain}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {output.organization_id ? `Organization #${output.organization_id}` : "System"}
+            </p>
           </div>
           <button
             onClick={onClose}

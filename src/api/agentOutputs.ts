@@ -2,7 +2,7 @@ import type {
   AgentOutputsResponse,
   AgentOutputDetailResponse,
   FetchAgentOutputsRequest,
-  DomainsResponse,
+  OrganizationsResponse,
   AgentTypesResponse,
   AgentOutputStatsResponse,
   ArchiveResponse,
@@ -55,13 +55,13 @@ export const fetchAgentOutputDetail = async (
 };
 
 /**
- * Get unique domains for filter dropdown
+ * Get organizations for filter dropdown
  */
-export const fetchDomains = async (): Promise<DomainsResponse> => {
-  const response = await fetch(`${API_BASE}/domains`);
+export const fetchOrganizations = async (): Promise<OrganizationsResponse> => {
+  const response = await fetch(`${API_BASE}/organizations`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch domains: ${response.statusText}`);
+    throw new Error(`Failed to fetch organizations: ${response.statusText}`);
   }
 
   return response.json();

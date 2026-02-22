@@ -72,7 +72,6 @@ interface ClientGbpData {
 
 interface RankingResult {
   id: number;
-  domain: string;
   specialty: string;
   location: string | null;
   gbpLocationId?: string | null;
@@ -189,6 +188,7 @@ interface RankingTask {
 
 interface RankingsDashboardProps {
   organizationId: number | null;
+  locationId?: number | null;
 }
 
 // KPICard Component - Matching newdesign
@@ -274,7 +274,7 @@ const KPICard = ({
   </div>
 );
 
-export function RankingsDashboard({ organizationId }: RankingsDashboardProps) {
+export function RankingsDashboard({ organizationId, locationId }: RankingsDashboardProps) {
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
   const wizardDemoData = useWizardDemoData();
@@ -299,7 +299,7 @@ export function RankingsDashboard({ organizationId }: RankingsDashboardProps) {
     } else {
       setLoading(false);
     }
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   const fetchLatestRankings = async () => {
     try {
@@ -308,7 +308,7 @@ export function RankingsDashboard({ organizationId }: RankingsDashboardProps) {
 
       // Fetch the latest rankings for all locations of this google account
       const response = await fetch(
-        `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
+        `/api/practice-ranking/latest?googleAccountId=${organizationId}${locationId ? `&locationId=${locationId}` : ""}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -704,7 +704,7 @@ export function RankingsDashboard({ organizationId }: RankingsDashboardProps) {
               const isSelected =
                 (ranking.gbpLocationId || ranking.id.toString()) ===
                 selectedLocationId;
-              const locationName = ranking.gbpLocationName || ranking.domain;
+              const locationName = ranking.gbpLocationName || ranking.specialty;
               const clientRating =
                 ranking.rankingFactors?.star_rating?.value ??
                 ranking.rawData?.client_gbp?.averageRating ??
@@ -956,22 +956,27 @@ function PerformanceDashboard({
             <tbody className="divide-y divide-slate-100">
               {(() => {
                 // Build display list: top competitors + client
-                const domainBase = result.domain
-                  .split(".")[0]
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]/g, "");
                 const clientPosition = result.rankPosition;
 
-                // Filter out the client from competitors
+                // Filter out the client from competitors using GBP location name
+                const clientNameBase = (
+                  result.gbpLocationName ||
+                  result.rawData?.client_gbp?.gbpLocationName ||
+                  ""
+                )
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]/g, "");
+
                 const isClientMatch = (name: string) => {
+                  if (!clientNameBase) return false;
                   const normalizedName = name
                     .toLowerCase()
                     .replace(/[^a-z0-9]/g, "");
                   return (
-                    normalizedName.includes(domainBase) ||
-                    domainBase.includes(normalizedName) ||
-                    (domainBase.length > 5 &&
-                      normalizedName.includes(domainBase.slice(0, 6)))
+                    normalizedName.includes(clientNameBase) ||
+                    clientNameBase.includes(normalizedName) ||
+                    (clientNameBase.length > 5 &&
+                      normalizedName.includes(clientNameBase.slice(0, 6)))
                   );
                 };
 
@@ -983,7 +988,7 @@ function PerformanceDashboard({
                   result.gbpLocationName ||
                   result.rawData?.client_gbp?._raw?.locations?.[0]
                     ?.displayName ||
-                  result.domain;
+                  result.specialty;
 
                 const clientEntry = {
                   name: clientDisplayName,

@@ -18,6 +18,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { fetchClientTasks } from "../api/tasks";
 import { fetchNotifications } from "../api/notifications";
 import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../contexts/locationContext";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 
 type UserRole = "admin" | "manager" | "viewer";
@@ -116,6 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
+  const { selectedLocation } = useLocationContext();
+  const locationId = selectedLocation?.id ?? null;
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -135,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!organizationId || !onboardingCompleted) return;
 
     try {
-      const response = await fetchClientTasks(organizationId);
+      const response = await fetchClientTasks(organizationId, locationId);
       if (response?.success && response.tasks) {
         // Count only pending USER tasks
         const pendingUserTasks =
@@ -147,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } catch (err) {
       console.error("Failed to fetch task count for sidebar:", err);
     }
-  }, [userProfile?.organizationId, onboardingCompleted]);
+  }, [userProfile?.organizationId, onboardingCompleted, locationId]);
 
   // Initial load of task count
   useEffect(() => {
@@ -172,14 +175,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!organizationId || !onboardingCompleted) return;
 
     try {
-      const response = await fetchNotifications(organizationId);
+      const response = await fetchNotifications(organizationId, locationId);
       if (response?.success) {
         setUnreadNotificationCount(response.unreadCount || 0);
       }
     } catch (err) {
       console.error("Failed to fetch notification count for sidebar:", err);
     }
-  }, [userProfile?.organizationId, onboardingCompleted]);
+  }, [userProfile?.organizationId, onboardingCompleted, locationId]);
 
   // Initial load and periodic refresh of notification count
   useEffect(() => {

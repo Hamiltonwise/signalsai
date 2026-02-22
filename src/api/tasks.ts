@@ -5,7 +5,6 @@ import type {
   CreateActionItemRequest,
   UpdateActionItemRequest,
   FetchActionItemsRequest,
-  ClientsResponse,
 } from "../types/tasks";
 
 const API_BASE = "/api/tasks";
@@ -14,11 +13,16 @@ const API_BASE = "/api/tasks";
  * Fetch tasks for logged-in client (grouped by category)
  */
 export const fetchClientTasks = async (
-  organizationId: number
+  organizationId: number,
+  locationId?: number | null
 ): Promise<GroupedActionItemsResponse> => {
-  const response = await fetch(
-    `${API_BASE}?googleAccountId=${organizationId}`
-  );
+  const params = new URLSearchParams({
+    googleAccountId: String(organizationId),
+  });
+  if (locationId) {
+    params.append("locationId", String(locationId));
+  }
+  const response = await fetch(`${API_BASE}?${params.toString()}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch tasks: ${response.statusText}`);
@@ -178,19 +182,6 @@ export const unarchiveTask = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || "Failed to unarchive task");
-  }
-
-  return response.json();
-};
-
-/**
- * Get list of available clients for task creation
- */
-export const fetchClients = async (): Promise<ClientsResponse> => {
-  const response = await fetch(`${API_BASE}/clients`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch clients: ${response.statusText}`);
   }
 
   return response.json();

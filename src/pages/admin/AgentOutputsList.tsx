@@ -10,7 +10,7 @@ import {
   Trash2,
   Database,
   Bot,
-  Globe,
+  Building2,
   Filter,
   CheckCircle,
   Circle,
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import {
   fetchAgentOutputs,
-  fetchDomains,
+  fetchOrganizations,
   fetchAgentTypes,
   archiveAgentOutput,
   unarchiveAgentOutput,
@@ -167,7 +167,7 @@ const AnimatedDropdown: React.FC<AnimatedDropdownProps> = ({
  */
 export default function AgentOutputsList() {
   const [outputs, setOutputs] = useState<AgentOutput[]>([]);
-  const [domains, setDomains] = useState<string[]>([]);
+  const [organizations, setOrganizations] = useState<{ id: number; name: string }[]>([]);
   const [agentTypes, setAgentTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -193,12 +193,12 @@ export default function AgentOutputsList() {
     page: 1,
     limit: 50,
   });
-  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [selectedOrganization, setSelectedOrganization] = useState<string>("all");
   const [selectedAgentType, setSelectedAgentType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   useEffect(() => {
-    loadDomains();
+    loadOrganizations();
     loadAgentTypes();
   }, []);
 
@@ -206,12 +206,12 @@ export default function AgentOutputsList() {
     loadOutputs();
   }, [filters]);
 
-  const loadDomains = async () => {
+  const loadOrganizations = async () => {
     try {
-      const response = await fetchDomains();
-      setDomains(response.domains);
+      const response = await fetchOrganizations();
+      setOrganizations(response.organizations);
     } catch (err) {
-      console.error("Failed to load domains:", err);
+      console.error("Failed to load organizations:", err);
     }
   };
 
@@ -252,8 +252,8 @@ export default function AgentOutputsList() {
       limit: 50,
     };
 
-    if (selectedDomain !== "all") {
-      newFilters.domain = selectedDomain;
+    if (selectedOrganization !== "all") {
+      newFilters.organization_id = parseInt(selectedOrganization, 10);
     }
     if (selectedAgentType !== "all") {
       newFilters.agent_type = selectedAgentType as AgentOutputType;
@@ -266,7 +266,7 @@ export default function AgentOutputsList() {
   };
 
   const resetFilters = () => {
-    setSelectedDomain("all");
+    setSelectedOrganization("all");
     setSelectedAgentType("all");
     setSelectedStatus("all");
     setFilters({ page: 1, limit: 50 });
@@ -553,14 +553,14 @@ export default function AgentOutputsList() {
       <FilterBar>
         <div className="flex flex-wrap items-end gap-3">
           <AnimatedDropdown
-            value={selectedDomain}
-            onChange={(value) => setSelectedDomain(value)}
-            label="Domain"
-            icon={<Globe className="w-3 h-3" />}
-            placeholder="All Domains"
+            value={selectedOrganization}
+            onChange={(value) => setSelectedOrganization(value)}
+            label="Organization"
+            icon={<Building2 className="w-3 h-3" />}
+            placeholder="All Organizations"
             options={[
-              { value: "all", label: "All Domains" },
-              ...domains.map((domain) => ({ value: domain, label: domain })),
+              { value: "all", label: "All Organizations" },
+              ...organizations.map((org) => ({ value: String(org.id), label: org.name })),
             ]}
           />
           <AnimatedDropdown
@@ -710,7 +710,9 @@ export default function AgentOutputsList() {
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-                          {output.domain}
+                          {output.organization_id
+                            ? organizations.find((o) => o.id === output.organization_id)?.name ?? `Org #${output.organization_id}`
+                            : "System"}
                         </h3>
                         <p className="text-sm text-gray-500 mt-0.5">
                           {formatAgentType(output.agent_type)}

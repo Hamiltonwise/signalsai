@@ -435,8 +435,8 @@ export function AgentInsights() {
                       {extractWeekDates(result)}
                     </div>
 
-                    {/* Domain */}
-                    <div className="text-sm text-gray-700">{result.domain}</div>
+                    {/* Organization */}
+                    <div className="text-sm text-gray-700">Org #{result.organization_id}</div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-2">

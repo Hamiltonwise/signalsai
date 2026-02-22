@@ -15,9 +15,6 @@ export type AgentOutputType =
 export interface AgentOutput {
   id: number;
   organization_id: number | null;
-  /** @deprecated Use organization_id. Kept for backward compat during migration. */
-  google_account_id?: number | null;
-  domain: string;
   agent_type: AgentOutputType;
   date_start: string;
   date_end: string;
@@ -47,7 +44,7 @@ export interface AgentOutputDetailResponse {
 }
 
 export interface FetchAgentOutputsRequest {
-  domain?: string;
+  organization_id?: number;
   agent_type?: AgentOutputType | "all";
   status?: AgentOutputStatus | "all";
   date_from?: string;
@@ -56,9 +53,9 @@ export interface FetchAgentOutputsRequest {
   limit?: number;
 }
 
-export interface DomainsResponse {
+export interface OrganizationsResponse {
   success: boolean;
-  domains: string[];
+  organizations: { id: number; name: string }[];
 }
 
 export interface AgentTypesResponse {

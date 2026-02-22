@@ -39,7 +39,6 @@ import {
 interface RankingResult {
   id: number;
   organizationId: number;
-  domain: string;
   specialty: string;
   location: string;
   gbpAccountId: string | null;
@@ -62,6 +61,7 @@ interface RankingResult {
 
 interface DashboardOverviewProps {
   organizationId?: number | null;
+  locationId?: number | null;
 }
 
 /* --- Helper Components - matches newdesign exactly --- */
@@ -133,10 +133,10 @@ const formatCurrency = (value: number | null | undefined): string => {
   })}`;
 };
 
-export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
+export function DashboardOverview({ organizationId, locationId }: DashboardOverviewProps) {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { data, error, refetch } = useAgentData(organizationId || null);
+  const { data, error, refetch } = useAgentData(organizationId || null, locationId);
 
   // Onboarding wizard state - shows demo data when wizard is active
   const isWizardActive = useIsWizardActive();
@@ -198,8 +198,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     }
 
     const loadPmsData = async () => {
-      const domain = userProfile?.domainName;
-      if (!domain) {
+      if (!organizationId) {
         setPmsLoading(false);
         return;
       }
@@ -208,7 +207,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
       setPmsError(null);
 
       try {
-        const response = await fetchPmsKeyData(domain);
+        const response = await fetchPmsKeyData(organizationId);
         if (response?.success && response.data) {
           setPmsData(response.data);
         } else {
@@ -246,7 +245,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
 
       try {
         const response = await fetch(
-          `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
+          `/api/practice-ranking/latest?googleAccountId=${organizationId}${locationId ? `&locationId=${locationId}` : ""}`,
         );
 
         if (!response.ok) {
@@ -277,7 +276,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     };
 
     loadRankingData();
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   // Fetch tasks data - skip during wizard mode (use demo data instead)
   useEffect(() => {
@@ -296,7 +295,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
       setTasksError(null);
 
       try {
-        const response = await fetchClientTasks(organizationId);
+        const response = await fetchClientTasks(organizationId, locationId);
         if (response?.success && response.tasks) {
           const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
           const opportunityTasks = allTasks.filter(
@@ -317,7 +316,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     };
 
     loadTasks();
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   // Fetch Referral Engine data - skip during wizard mode (use demo data instead)
   useEffect(() => {
@@ -335,8 +334,9 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
       setReferralLoading(true);
 
       try {
+        const locParam = locationId ? `?locationId=${locationId}` : "";
         const response = await fetch(
-          `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
+          `/api/agents/getLatestReferralEngineOutput/${organizationId}${locParam}`,
         );
 
         if (!response.ok) {
@@ -371,7 +371,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     };
 
     loadReferralData();
-  }, [organizationId, isWizardActive]);
+  }, [organizationId, locationId, isWizardActive]);
 
   // Calculate PMS metrics from latest month
   const calculatePmsMetrics = () => {
@@ -512,12 +512,11 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
 
   // Function to reload PMS data
   const reloadPmsData = useCallback(async () => {
-    const domain = userProfile?.domainName;
-    if (!domain) return;
+    if (!organizationId) return;
 
     setPmsLoading(true);
     try {
-      const response = await fetchPmsKeyData(domain);
+      const response = await fetchPmsKeyData(organizationId);
       if (response?.success && response.data) {
         setPmsData(response.data);
       }
@@ -535,7 +534,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     setRankingLoading(true);
     try {
       const response = await fetch(
-        `/api/practice-ranking/latest?googleAccountId=${organizationId}`,
+        `/api/practice-ranking/latest?googleAccountId=${organizationId}${locationId ? `&locationId=${locationId}` : ""}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -551,7 +550,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     } finally {
       setRankingLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, locationId]);
 
   // Function to reload tasks
   const reloadTasks = useCallback(async () => {
@@ -559,7 +558,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
 
     setTasksLoading(true);
     try {
-      const response = await fetchClientTasks(organizationId);
+      const response = await fetchClientTasks(organizationId, locationId);
       if (response?.success && response.tasks) {
         const allTasks = [...response.tasks.ALLORO, ...response.tasks.USER];
         const opportunityTasks = allTasks.filter(
@@ -573,7 +572,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     } finally {
       setTasksLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, locationId]);
 
   // Function to reload referral data
   const reloadReferralData = useCallback(async () => {
@@ -581,8 +580,9 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
 
     setReferralLoading(true);
     try {
+      const locParam = locationId ? `?locationId=${locationId}` : "";
       const response = await fetch(
-        `/api/agents/getLatestReferralEngineOutput/${organizationId}`,
+        `/api/agents/getLatestReferralEngineOutput/${organizationId}${locParam}`,
       );
       if (response.ok) {
         const result = await response.json();
@@ -608,7 +608,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
     } finally {
       setReferralLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, locationId]);
 
   // Handle refresh - now refreshes ALL data sources
   const handleRefresh = async () => {
@@ -767,7 +767,7 @@ export function DashboardOverview({ organizationId }: DashboardOverviewProps) {
       score: Math.round(Number(location.rankScore) || 0),
       rank: location.rankPosition || 0,
       totalCompetitors: location.totalCompetitors || 0,
-      locationName: location.gbpLocationName || location.domain || "Unknown",
+      locationName: location.gbpLocationName || location.specialty || "Unknown",
       location: location.location || "",
     };
   };

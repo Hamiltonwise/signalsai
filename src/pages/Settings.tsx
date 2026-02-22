@@ -235,13 +235,13 @@ export const Settings: React.FC = () => {
   // Fetch PMS data status to check if user has uploaded any data
   const fetchPmsStatus = async () => {
     try {
-      const domain = selectedDomain?.domain;
-      if (!domain) {
+      const orgId = userProfile?.organizationId;
+      if (!orgId) {
         setHasPmsData(false);
         return;
       }
 
-      const response = await fetchPmsKeyData(domain);
+      const response = await fetchPmsKeyData(orgId);
       if (
         response?.success &&
         response.data?.months &&
@@ -940,6 +940,7 @@ export const Settings: React.FC = () => {
         isLoading={isDisconnecting}
         type="danger"
       />
+
     </div>
   );
 };

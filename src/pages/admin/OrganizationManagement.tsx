@@ -13,6 +13,9 @@ import {
   ExternalLink,
   RefreshCw,
   Globe,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -82,6 +85,12 @@ export function OrganizationManagement() {
     orgName: string;
     tier: "DWY" | "DFY";
   } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    orgId: number;
+    orgName: string;
+  } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formatStatus = (status: string): string => {
     return status
@@ -204,6 +213,38 @@ export function OrganizationManagement() {
       toast.success(data.message);
     } catch (error) {
       toast.error("Failed to update tier");
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!deleteConfirm || deleteConfirmText !== deleteConfirm.orgName) return;
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/organizations/${deleteConfirm.orgId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ confirmDelete: true }),
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete organization");
+      }
+
+      setOrganizations((prev) => prev.filter((org) => org.id !== deleteConfirm.orgId));
+      if (expandedOrgId === deleteConfirm.orgId) setExpandedOrgId(null);
+      toast.success(`"${deleteConfirm.orgName}" has been permanently deleted.`);
+      setDeleteConfirm(null);
+      setDeleteConfirmText("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete organization";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -597,6 +638,32 @@ export function OrganizationManagement() {
                               ))}
                             </div>
                           </div>
+
+                          {/* Danger Zone */}
+                          <div className="rounded-xl border border-red-200 overflow-hidden">
+                            <div className="px-4 py-2.5 bg-red-50 border-b border-red-200">
+                              <h4 className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                                Danger Zone
+                              </h4>
+                            </div>
+                            <div className="p-4 bg-white flex items-center justify-between gap-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  Delete this organization
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  Permanently remove this organization and all of its data.
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setDeleteConfirm({ orgId: org.id, orgName: org.name })}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 hover:border-red-400 transition-colors shrink-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </button>
+                            </div>
+                          </div>
                         </motion.div>
                       ) : (
                         <div className="text-sm text-red-500 py-4 text-center">
@@ -654,6 +721,109 @@ export function OrganizationManagement() {
                 >
                   {tierConfirm.tier === "DFY" ? "Upgrade" : "Downgrade"}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Organization Confirm Modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+              onClick={() => {
+                if (!isDeleting) {
+                  setDeleteConfirm(null);
+                  setDeleteConfirmText("");
+                }
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md rounded-2xl bg-white shadow-xl overflow-hidden"
+            >
+              <button
+                onClick={() => {
+                  if (!isDeleting) {
+                    setDeleteConfirm(null);
+                    setDeleteConfirmText("");
+                  }
+                }}
+                disabled={isDeleting}
+                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-red-50 text-red-600">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Delete Organization
+                  </h3>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    This will <span className="font-bold text-red-600">permanently delete</span>{" "}
+                    <strong>"{deleteConfirm.orgName}"</strong> and all associated data including:
+                  </p>
+                  <ul className="text-sm text-gray-500 space-y-1 pl-4 list-disc">
+                    <li>All locations and Google connections</li>
+                    <li>All tasks, rankings, and notifications</li>
+                    <li>All agent results and PMS data</li>
+                    <li>All team member access</li>
+                    <li>Website builder projects</li>
+                  </ul>
+                  <p className="text-sm text-red-600 font-bold">
+                    This action cannot be undone.
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type <span className="font-bold text-gray-900">"{deleteConfirm.orgName}"</span> to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-300"
+                    placeholder={deleteConfirm.orgName}
+                    disabled={isDeleting}
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setDeleteConfirm(null);
+                      setDeleteConfirmText("");
+                    }}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteOrganization}
+                    disabled={deleteConfirmText !== deleteConfirm.orgName || isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Delete Organization
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

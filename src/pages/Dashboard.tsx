@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 // Onboarding Components
 import { OnboardingContainer } from "../components/onboarding/OnboardingContainer";
 import { useIsWizardActive, useIsWizardLoading, useRecheckWizardStatus } from "../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../contexts/locationContext";
 
 export default function Dashboard() {
   // Domain selection and auth hooks - now includes centralized onboarding state
@@ -39,6 +40,8 @@ export default function Dashboard() {
   const isWizardActive = useIsWizardActive();
   const isWizardLoading = useIsWizardLoading();
   const recheckWizardStatus = useRecheckWizardStatus();
+  const { selectedLocation } = useLocationContext();
+  const locationId = selectedLocation?.id ?? null;
 
   // Modal state management
   const [showGBPModal, setShowGBPModal] = useState(false);
@@ -313,13 +316,12 @@ export default function Dashboard() {
                   {activeTab === "Dashboard" && (
                     <DashboardOverview
                       organizationId={userProfile?.organizationId ?? null}
+                      locationId={locationId}
                     />
                   )}
 
                   {activeTab === "Patient Journey Insights" && (
-                    <VitalSignsCards
-                      selectedDomain={selectedDomain?.domain || ""}
-                    />
+                    <VitalSignsCards />
                   )}
 
                   {activeTab === "PMS Statistics" && (
@@ -344,6 +346,7 @@ export default function Dashboard() {
                         <PMSVisualPillars
                           domain={selectedDomain?.domain || ""}
                           organizationId={userProfile?.organizationId ?? null}
+                          locationId={locationId}
                           hasProperties={hasProperties}
                         />
                       ) : (
@@ -366,18 +369,21 @@ export default function Dashboard() {
                   {activeTab === "Rankings" && (
                     <RankingsDashboard
                       organizationId={userProfile?.organizationId ?? null}
+                      locationId={locationId}
                     />
                   )}
 
                   {activeTab === "Tasks" && (
                     <TasksView
                       organizationId={userProfile?.organizationId ?? null}
+                      locationId={locationId}
                     />
                   )}
 
                   {activeTab === "Referral Engine" && (
                     <ReferralEngineDashboard
                       organizationId={userProfile?.organizationId ?? null}
+                      locationId={locationId}
                     />
                   )}
                 </motion.div>

@@ -18,12 +18,6 @@ export interface Location {
   googleProperties: GooglePropertyInfo[];
 }
 
-interface LocationsResponse {
-  success: boolean;
-  locations: Location[];
-  total: number;
-}
-
 /**
  * Fetch all locations accessible to the current user.
  * Backend filters by organization + user_locations for non-admin users.

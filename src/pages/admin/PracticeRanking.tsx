@@ -87,6 +87,9 @@ interface RankingJob {
   id: number;
   organizationId?: number;
   organization_id?: number;
+  location_id?: number | null;
+  organization_name?: string | null;
+  location_name?: string | null;
   specialty: string;
   location: string | null;
   rankKeywords?: string | null;
@@ -292,11 +295,19 @@ interface RankingTask {
 interface BatchGroup {
   batchId: string;
   organization_id: number | null;
+  organization_name: string | null;
   jobs: RankingJob[];
   status: "processing" | "completed" | "failed" | "pending";
   createdAt: Date;
   totalLocations: number;
   completedLocations: number;
+}
+
+// Month group for card layout
+interface MonthGroup {
+  label: string; // e.g. "February 2026"
+  sortKey: string; // e.g. "2026-02"
+  batches: BatchGroup[];
 }
 
 const getWeekLabel = (date: Date): string => {
@@ -484,6 +495,7 @@ export function PracticeRanking() {
           batchMap.set(job.batch_id, {
             batchId: job.batch_id,
             organization_id: job.organization_id ?? null,
+            organization_name: job.organization_name ?? null,
             jobs: [],
             status: "pending",
             createdAt: jobDate,
@@ -498,6 +510,11 @@ export function PracticeRanking() {
         batch.completedLocations = batch.jobs.filter(
           (j) => j.status === "completed"
         ).length;
+
+        // Use org name from the first job that has it
+        if (!batch.organization_name && job.organization_name) {
+          batch.organization_name = job.organization_name;
+        }
 
         // Determine batch status
         const hasProcessing = batch.jobs.some(
@@ -522,6 +539,26 @@ export function PracticeRanking() {
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
     );
   }, [jobs]);
+
+  // Group batches by month for card layout
+  const monthGroups = useMemo((): MonthGroup[] => {
+    const monthMap = new Map<string, MonthGroup>();
+
+    groupedBatches.forEach((batch) => {
+      const d = batch.createdAt;
+      const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+      if (!monthMap.has(sortKey)) {
+        monthMap.set(sortKey, { label, sortKey, batches: [] });
+      }
+      monthMap.get(sortKey)!.batches.push(batch);
+    });
+
+    return Array.from(monthMap.values()).sort(
+      (a, b) => b.sortKey.localeCompare(a.sortKey)
+    );
+  }, [groupedBatches]);
 
   // Get standalone jobs (no batch) sorted by date
   const standaloneJobs = useMemo(() => {
@@ -783,7 +820,7 @@ export function PracticeRanking() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          organizationId: selectedAccount,
+          googleAccountId: selectedAccount,
           locations: locationForms.map((form) => ({
             gbpAccountId: form.gbpAccountId,
             gbpLocationId: form.gbpLocationId,
@@ -1222,15 +1259,16 @@ export function PracticeRanking() {
         )}
       </motion.div>
 
-      {/* Jobs List - Grouped by Batch */}
+      {/* Jobs List - Grouped by Month */}
       <motion.div
-        className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+        className="space-y-6"
         variants={fadeInUp}
         initial="hidden"
         animate="visible"
         transition={{ delay: 0.1 }}
       >
-        <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/50 flex items-center justify-between">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-alloro-orange" />
@@ -1278,124 +1316,163 @@ export function PracticeRanking() {
         </div>
 
         {jobs.length === 0 ? (
-          <EmptyState
-            icon={<TrendingUp className="w-12 h-12" />}
-            title="No analyses yet"
-            description="Run your first practice ranking analysis above"
-          />
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <EmptyState
+              icon={<TrendingUp className="w-12 h-12" />}
+              title="No analyses yet"
+              description="Run your first practice ranking analysis above"
+            />
+          </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {/* Batches */}
-            {groupedBatches.map((batch) => (
-              <div key={batch.batchId} className="bg-white">
-                {/* Batch Header */}
-                <motion.div
-                  className="flex cursor-pointer items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleBatch(batch.batchId)}
-                  whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-                    <Layers className="h-5 w-5" />
-                  </div>
+          <>
+            {/* Month Cards */}
+            {monthGroups.map((month) => (
+              <motion.div
+                key={month.sortKey}
+                className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {/* Month Header */}
+                <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/50">
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    {month.label}
+                  </h4>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {month.batches.length} batch{month.batches.length !== 1 ? "es" : ""} •{" "}
+                    {month.batches.reduce((sum, b) => sum + b.totalLocations, 0)} analyses
+                  </p>
+                </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-gray-900">
-                        {getWeekLabel(batch.createdAt)}: {getOrgName(batch.organization_id)}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-gray-400">
-                      Batch ran:{" "}
-                      {batch.createdAt.toLocaleDateString("en-US", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        year: "numeric",
-                      })}
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-                      <span>
-                        {batch.totalLocations} location
-                        {batch.totalLocations !== 1 ? "s" : ""}
-                      </span>
-                      {batch.status === "processing" && (
-                        <span className="flex items-center gap-1 text-blue-600">
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                          {batch.completedLocations}/{batch.totalLocations}{" "}
-                          completed
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                <div className="divide-y divide-gray-100">
+                  {month.batches.map((batch) => (
+                    <div key={batch.batchId} className="bg-white">
+                      {/* Batch Header */}
+                      <motion.div
+                        className="flex cursor-pointer items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                        onClick={() => toggleBatch(batch.batchId)}
+                        whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+                          <Layers className="h-5 w-5" />
+                        </div>
 
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(batch.status)}
-                    <motion.button
-                      onClick={(e) => deleteBatch(batch.batchId, e)}
-                      disabled={deletingBatch === batch.batchId}
-                      className="p-1.5 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 rounded-lg hover:bg-red-50"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      title="Delete entire batch"
-                    >
-                      {deletingBatch === batch.batchId ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </motion.button>
-                    <motion.div
-                      variants={chevronVariants}
-                      animate={expandedBatches.has(batch.batchId) ? "open" : "closed"}
-                      className="text-gray-400"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </motion.div>
-                  </div>
-                </motion.div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">
+                              {batch.organization_name || getOrgName(batch.organization_id)}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+                            <span>
+                              {getWeekLabel(batch.createdAt)} •{" "}
+                              {batch.createdAt.toLocaleDateString("en-US", {
+                                month: "2-digit",
+                                day: "2-digit",
+                                year: "numeric",
+                              })}
+                            </span>
+                            {batch.jobs[0]?.location_name && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {batch.jobs.map((j) => j.location_name || j.gbp_location_name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ")}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                            <span>
+                              {batch.totalLocations} location
+                              {batch.totalLocations !== 1 ? "s" : ""}
+                            </span>
+                            {batch.status === "processing" && (
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                {batch.completedLocations}/{batch.totalLocations}{" "}
+                                completed
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                {/* Expanded Batch - Individual Locations */}
-                <AnimatePresence>
-                  {expandedBatches.has(batch.batchId) && (
-                    <motion.div
-                      className="bg-gray-50/50 border-t border-gray-100"
-                      variants={expandCollapse}
-                      initial="collapsed"
-                      animate="expanded"
-                      exit="collapsed"
-                    >
-                      {batch.jobs.map((job) => (
-                        <JobRow
-                          key={job.id}
-                          job={job}
-                          isExpanded={expandedJobId === job.id}
-                          onToggle={() => toggleExpand(job.id)}
-                          onDelete={(e) => deleteJob(job.id, e)}
-                          deletingJob={deletingJob}
-                          loadingResults={loadingResults}
-                          jobResults={jobResults}
-                          rankingTasks={rankingTasks}
-                          refreshingCompetitors={refreshingCompetitors}
-                          onRefreshCompetitors={() =>
-                            refreshCompetitors(job.specialty, job.location || "")
-                          }
-                          getStatusBadge={getStatusBadge}
-                          getScoreColor={getScoreColorLocal}
-                          indentLevel={1}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                        <div className="flex items-center gap-3">
+                          {getStatusBadge(batch.status)}
+                          <motion.button
+                            onClick={(e) => deleteBatch(batch.batchId, e)}
+                            disabled={deletingBatch === batch.batchId}
+                            className="p-1.5 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 rounded-lg hover:bg-red-50"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Delete entire batch"
+                          >
+                            {deletingBatch === batch.batchId ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </motion.button>
+                          <motion.div
+                            variants={chevronVariants}
+                            animate={expandedBatches.has(batch.batchId) ? "open" : "closed"}
+                            className="text-gray-400"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </motion.div>
+                        </div>
+                      </motion.div>
+
+                      {/* Expanded Batch - Individual Locations */}
+                      <AnimatePresence>
+                        {expandedBatches.has(batch.batchId) && (
+                          <motion.div
+                            className="bg-gray-50/50 border-t border-gray-100"
+                            variants={expandCollapse}
+                            initial="collapsed"
+                            animate="expanded"
+                            exit="collapsed"
+                          >
+                            {batch.jobs.map((job) => (
+                              <JobRow
+                                key={job.id}
+                                job={job}
+                                isExpanded={expandedJobId === job.id}
+                                onToggle={() => toggleExpand(job.id)}
+                                onDelete={(e) => deleteJob(job.id, e)}
+                                deletingJob={deletingJob}
+                                loadingResults={loadingResults}
+                                jobResults={jobResults}
+                                rankingTasks={rankingTasks}
+                                refreshingCompetitors={refreshingCompetitors}
+                                onRefreshCompetitors={() =>
+                                  refreshCompetitors(job.specialty, job.location || "")
+                                }
+                                getStatusBadge={getStatusBadge}
+                                getScoreColor={getScoreColorLocal}
+                                indentLevel={1}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             ))}
 
             {/* Standalone Jobs (no batch) */}
             {standaloneJobs.length > 0 && (
-              <div className="bg-white">
-                <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">
+              <motion.div
+                className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
+                  <h4 className="text-sm font-semibold text-gray-600">
                     Individual Analyses (No Batch)
-                  </span>
+                  </h4>
                 </div>
                 {standaloneJobs.map((job) => (
                   <JobRow
@@ -1417,9 +1494,9 @@ export function PracticeRanking() {
                     indentLevel={0}
                   />
                 ))}
-              </div>
+              </motion.div>
             )}
-          </div>
+          </>
         )}
       </motion.div>
     </div>
@@ -1477,10 +1554,10 @@ function JobRow({
               {job.gbp_location_name || job.specialty}
             </h4>
             <Badge variant="default">{job.specialty}</Badge>
-            {job.location && (
+            {(job.location_name || job.location) && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 <MapPin className="h-3 w-3" />
-                {job.location}
+                {job.location_name || job.location}
               </span>
             )}
           </div>

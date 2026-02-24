@@ -5,12 +5,9 @@ import {
   Trophy,
   Star,
   AlertTriangle,
-  MapPin,
   AlertCircle,
-  Building2,
   RefreshCw,
   ArrowUpRight,
-  CheckCircle2,
   Target,
   Rocket,
   HelpCircle,
@@ -30,6 +27,7 @@ import {
   useIsWizardActive,
   useWizardDemoData,
 } from "../../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../../contexts/locationContext";
 
 // Type for client GBP data
 interface ClientGbpData {
@@ -277,12 +275,10 @@ const KPICard = ({
 export function RankingsDashboard({ organizationId, locationId }: RankingsDashboardProps) {
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
+  const { signalContentReady } = useLocationContext();
   const wizardDemoData = useWizardDemoData();
   const [loading, setLoading] = useState(true);
   const [rankings, setRankings] = useState<RankingResult[]>([]);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null
-  );
   const [error, setError] = useState<string | null>(null);
   const [rankingTasks, setRankingTasks] = useState<
     Record<number, RankingTask[]>
@@ -327,19 +323,9 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
       // Handle both old format (single ranking) and new format (rankings array)
       if (data.rankings && Array.isArray(data.rankings)) {
         setRankings(data.rankings);
-        // Auto-select first location if multiple
-        if (data.rankings.length > 0) {
-          const firstRanking = data.rankings[0];
-          setSelectedLocationId(
-            firstRanking.gbpLocationId || firstRanking.id.toString()
-          );
-        }
       } else if (data.ranking) {
         // Legacy single ranking format
         setRankings([data.ranking]);
-        setSelectedLocationId(
-          data.ranking.gbpLocationId || data.ranking.id.toString()
-        );
       }
     } catch (err) {
       console.error("Error fetching rankings:", err);
@@ -348,6 +334,7 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
       );
     } finally {
       setLoading(false);
+      signalContentReady();
     }
   };
 
@@ -622,11 +609,8 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
       ? [demoRanking!]
       : rankings;
 
-  // Get selected ranking
-  const selectedRanking =
-    effectiveRankings.find(
-      (r) => (r.gbpLocationId || r.id.toString()) === selectedLocationId
-    ) || effectiveRankings[0];
+  // Use the first ranking (backend filters by locationId)
+  const selectedRanking = effectiveRankings[0] || null;
 
   return (
     <div className="min-h-screen bg-alloro-bg font-body text-alloro-textDark pb-32 selection:bg-alloro-orange selection:text-white">
@@ -652,9 +636,9 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
             </span>
             <span className="text-[11px] font-black text-alloro-navy flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>{" "}
-              {effectiveRankings.length} Location{effectiveRankings.length !== 1 ? "s" : ""} •{" "}
+              {selectedRanking?.gbpLocationName || "Location"} •{" "}
               {new Date(
-                effectiveRankings[0]?.observedAt || new Date()
+                selectedRanking?.observedAt || new Date()
               ).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -693,98 +677,6 @@ export function RankingsDashboard({ organizationId, locationId }: RankingsDashbo
                 {selectedRanking.llmAnalysis.client_summary}
               </p>
             </div>
-          </section>
-        )}
-
-        {/* 1. LOCATION SELECTION - GRID */}
-        {effectiveRankings.length > 1 && (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {effectiveRankings.map((ranking, index) => {
-              const isSelected =
-                (ranking.gbpLocationId || ranking.id.toString()) ===
-                selectedLocationId;
-              const locationName = ranking.gbpLocationName || ranking.specialty;
-              const clientRating =
-                ranking.rankingFactors?.star_rating?.value ??
-                ranking.rawData?.client_gbp?.averageRating ??
-                0;
-
-              return (
-                <motion.div
-                  key={ranking.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() =>
-                    setSelectedLocationId(
-                      ranking.gbpLocationId || ranking.id.toString()
-                    )
-                  }
-                  className={`p-10 rounded-3xl border-2 cursor-pointer transition-all duration-500 relative group overflow-hidden ${
-                    isSelected
-                      ? "bg-white border-alloro-orange shadow-premium"
-                      : "bg-white/60 border-black/5 hover:border-slate-300 shadow-inner-soft"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-10">
-                    <div className="flex gap-6">
-                      <div
-                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                          isSelected
-                            ? "bg-alloro-orange text-white shadow-xl rotate-3"
-                            : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        <Building2 size={28} />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-2xl font-black font-heading text-alloro-navy tracking-tight mb-1">
-                          {locationName}
-                        </h3>
-                        {ranking.location && (
-                          <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
-                            <MapPin size={12} className="text-alloro-orange" />{" "}
-                            {ranking.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle2
-                        className="text-alloro-orange shrink-0 animate-in zoom-in duration-300"
-                        size={28}
-                      />
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-slate-50/50 rounded-2xl p-5 text-center border border-black/5 group-hover:bg-white transition-colors">
-                      <p className="text-2xl font-black font-heading text-alloro-navy leading-none mb-2 font-sans">
-                        #{ranking.rankPosition}
-                      </p>
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                        Market Rank
-                      </p>
-                    </div>
-                    <div className="bg-slate-50/50 rounded-2xl p-5 text-center border border-black/5 group-hover:bg-white transition-colors">
-                      <p className="text-2xl font-black font-heading text-alloro-navy leading-none mb-2 font-sans">
-                        {Number(ranking.rankScore).toFixed(0)}
-                      </p>
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                        Auth Score
-                      </p>
-                    </div>
-                    <div className="bg-slate-50/50 rounded-2xl p-5 text-center border border-black/5 group-hover:bg-white transition-colors">
-                      <p className="text-2xl font-black font-heading text-alloro-navy leading-none mb-2 font-sans">
-                        {Number(clientRating).toFixed(1)}
-                      </p>
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                        Patient Rating
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
           </section>
         )}
 

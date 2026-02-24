@@ -45,6 +45,7 @@ export interface AgentOutputDetailResponse {
 
 export interface FetchAgentOutputsRequest {
   organization_id?: number;
+  location_id?: number;
   agent_type?: AgentOutputType | "all";
   status?: AgentOutputStatus | "all";
   date_from?: string;

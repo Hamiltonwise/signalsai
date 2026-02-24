@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { uploadPMSData } from "../api/pms";
 import { showUploadToast } from "../lib/toast";
+import { useLocationContext } from "../contexts/locationContext";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -182,6 +183,7 @@ const CompactTag = ({ status }: { status: string }) => {
 // ============================================================================
 
 export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
+  const { signalContentReady } = useLocationContext();
   const [fetchedData, setFetchedData] = useState<ReferralEngineData | null>(
     null
   );
@@ -244,6 +246,7 @@ export function ReferralEngineDashboard(props: ReferralEngineDashboardProps) {
         );
       } finally {
         setLoading(false);
+        signalContentReady();
       }
     };
 

@@ -11,16 +11,24 @@ import {
   Trash2,
   X,
   Loader2,
+  CheckSquare,
+  Database,
+  Trophy,
+  MessageSquare,
+  FileText,
+  TrendingUp,
+  Target,
+  Share2,
+  Bell,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import {
-  AdminPageHeader,
-  Badge,
-} from "../../components/ui/DesignSystem";
+import { AdminPageHeader, Badge } from "../../components/ui/DesignSystem";
 import { OrgLocationSelector } from "../../components/Admin/OrgLocationSelector";
 import { OrgTasksTab } from "../../components/Admin/OrgTasksTab";
 import { OrgPmsTab } from "../../components/Admin/OrgPmsTab";
 import { OrgAgentOutputsTab } from "../../components/Admin/OrgAgentOutputsTab";
+import { OrgRankingsTab } from "../../components/Admin/OrgRankingsTab";
+import { OrgNotificationsTab } from "../../components/Admin/OrgNotificationsTab";
 import {
   adminGetOrganization,
   adminGetOrganizationLocations,
@@ -31,17 +39,29 @@ import {
   type AdminLocation,
 } from "../../api/admin-organizations";
 
-const TAB_KEYS = ["tasks", "pms", "proofline", "summary", "opportunity", "cro", "referral"] as const;
-type TabKey = typeof TAB_KEYS[number];
+const TAB_KEYS = [
+  "tasks",
+  "notifications",
+  "rankings",
+  "pms",
+  "proofline",
+  "summary",
+  "opportunity",
+  "cro",
+  "referral",
+] as const;
+type TabKey = (typeof TAB_KEYS)[number];
 
-const TAB_LABELS: Record<TabKey, string> = {
-  tasks: "Tasks Hub",
-  pms: "PMS Ingestion",
-  proofline: "Proofline",
-  summary: "Summary",
-  opportunity: "Opportunity",
-  cro: "CRO",
-  referral: "Referral Engine",
+const TAB_CONFIG: Record<TabKey, { label: string; icon: React.ReactNode }> = {
+  tasks: { label: "Tasks Hub", icon: <CheckSquare className="h-4 w-4" /> },
+  notifications: { label: "Notifications", icon: <Bell className="h-4 w-4" /> },
+  rankings: { label: "Rankings", icon: <Trophy className="h-4 w-4" /> },
+  pms: { label: "PMS Ingestion", icon: <Database className="h-4 w-4" /> },
+  proofline: { label: "Proofline", icon: <MessageSquare className="h-4 w-4" /> },
+  summary: { label: "Summary", icon: <FileText className="h-4 w-4" /> },
+  opportunity: { label: "Opportunity", icon: <TrendingUp className="h-4 w-4" /> },
+  cro: { label: "CRO", icon: <Target className="h-4 w-4" /> },
+  referral: { label: "Referral Engine", icon: <Share2 className="h-4 w-4" /> },
 };
 
 export default function OrganizationDetail() {
@@ -52,7 +72,8 @@ export default function OrganizationDetail() {
 
   const [org, setOrg] = useState<AdminOrganizationDetail | null>(null);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<AdminLocation | null>(null);
+  const [selectedLocation, setSelectedLocation] =
+    useState<AdminLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [tierConfirm, setTierConfirm] = useState<"DWY" | "DFY" | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -92,7 +113,7 @@ export default function OrganizationDetail() {
           setSelectedLocation(locRes.locations[0]);
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load organization details");
       navigate("/admin/organization-management");
     } finally {
@@ -108,7 +129,7 @@ export default function OrganizationDetail() {
       const response = await adminUpdateOrganizationTier(orgId, tierConfirm);
       if (response.success) {
         setOrg((prev) =>
-          prev ? { ...prev, subscription_tier: tierConfirm } : null
+          prev ? { ...prev, subscription_tier: tierConfirm } : null,
         );
         toast.success(response.message);
       } else {
@@ -127,14 +148,18 @@ export default function OrganizationDetail() {
       await adminDeleteOrganization(orgId);
       toast.success(`"${org.name}" has been permanently deleted`);
       navigate("/admin/organization-management");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete organization");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handlePilotSession = async (userId: number, userName: string, userRole: string) => {
+  const handlePilotSession = async (
+    userId: number,
+    userName: string,
+    userRole: string,
+  ) => {
     try {
       toast.loading(`Starting pilot session for ${userName}...`);
       const response = await adminStartPilotSession(userId);
@@ -157,7 +182,7 @@ export default function OrganizationDetail() {
         window.open(
           pilotUrl,
           "Pilot",
-          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
         );
       }
     } catch (error) {
@@ -207,22 +232,22 @@ export default function OrganizationDetail() {
             title={org.name}
             description={org.domain || "No domain assigned"}
             actionButtons={
-              <Badge
-                variant={org.subscription_tier === "DFY" ? "orange" : "gray"}
-              >
-                {org.subscription_tier || "DWY"}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant={org.subscription_tier === "DFY" ? "orange" : "gray"}
+                >
+                  {org.subscription_tier || "DWY"}
+                </Badge>
+                <OrgLocationSelector
+                  locations={locations}
+                  selectedLocation={selectedLocation}
+                  onSelect={setSelectedLocation}
+                />
+              </div>
             }
           />
         </div>
       </div>
-
-      {/* Location Selector */}
-      <OrgLocationSelector
-        locations={locations}
-        selectedLocation={selectedLocation}
-        onSelect={setSelectedLocation}
-      />
 
       {/* Tab Navigation */}
       <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
@@ -231,13 +256,14 @@ export default function OrganizationDetail() {
             <button
               key={tab}
               onClick={() => setSearchParams({ tab })}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tab
                   ? "bg-white text-alloro-orange border border-alloro-orange/20"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              {TAB_LABELS[tab]}
+              {TAB_CONFIG[tab].icon}
+              {TAB_CONFIG[tab].label}
             </button>
           ))}
         </div>
@@ -250,8 +276,23 @@ export default function OrganizationDetail() {
               locationId={selectedLocation?.id ?? null}
             />
           )}
+          {activeTab === "notifications" && (
+            <OrgNotificationsTab
+              organizationId={orgId}
+              locationId={selectedLocation?.id ?? null}
+            />
+          )}
+          {activeTab === "rankings" && (
+            <OrgRankingsTab
+              organizationId={orgId}
+              locationId={selectedLocation?.id ?? null}
+            />
+          )}
           {activeTab === "pms" && (
-            <OrgPmsTab organizationId={orgId} />
+            <OrgPmsTab
+              organizationId={orgId}
+              locationId={selectedLocation?.id ?? null}
+            />
           )}
           {activeTab === "proofline" && (
             <OrgAgentOutputsTab
@@ -350,7 +391,9 @@ export default function OrganizationDetail() {
                 <p className="truncate text-xs text-gray-500">{user.email}</p>
               </div>
               <button
-                onClick={() => handlePilotSession(user.id, user.name, user.role)}
+                onClick={() =>
+                  handlePilotSession(user.id, user.name, user.role)
+                }
                 className="p-2 text-gray-400 hover:text-alloro-orange hover:bg-alloro-orange/10 rounded-lg transition-colors shrink-0"
                 title="Pilot as this user"
               >
@@ -371,12 +414,10 @@ export default function OrganizationDetail() {
           <h3 className="font-semibold text-gray-900 mb-4">Connections</h3>
           <div className="space-y-3">
             {(org.connections || []).map((conn, idx) => (
-              <div
-                key={idx}
-                className="rounded-lg border border-gray-200 p-4"
-              >
+              <div key={idx} className="rounded-lg border border-gray-200 p-4">
                 <p className="text-sm text-gray-600">
-                  Connected via <span className="font-medium">{conn.email}</span>
+                  Connected via{" "}
+                  <span className="font-medium">{conn.email}</span>
                 </p>
                 {conn.properties?.gbp && conn.properties.gbp.length > 0 ? (
                   <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded px-2 py-1 inline-block mt-2 font-medium">
@@ -437,7 +478,8 @@ export default function OrganizationDetail() {
             className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
           >
             <h3 className="text-lg font-semibold text-gray-900">
-              {tierConfirm === "DFY" ? "Upgrade" : "Downgrade"} to {tierConfirm}?
+              {tierConfirm === "DFY" ? "Upgrade" : "Downgrade"} to {tierConfirm}
+              ?
             </h3>
             <p className="mt-2 text-sm text-gray-500">
               {tierConfirm === "DFY"
@@ -500,7 +542,9 @@ export default function OrganizationDetail() {
 
               <div className="space-y-4 mb-6">
                 <p className="text-sm text-gray-600">
-                  This will <strong className="text-red-600">permanently delete</strong> "{org.name}" and all associated data.
+                  This will{" "}
+                  <strong className="text-red-600">permanently delete</strong> "
+                  {org.name}" and all associated data.
                 </p>
                 <p className="text-sm text-red-600 font-bold">
                   This action cannot be undone.

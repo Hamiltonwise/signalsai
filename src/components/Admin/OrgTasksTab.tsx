@@ -11,6 +11,8 @@ import {
   Clock,
   CheckCircle,
   Circle,
+  ShieldCheck,
+  ShieldX,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -19,6 +21,7 @@ import {
   unarchiveTask,
   bulkArchiveTasks,
   bulkUnarchiveTasks,
+  bulkApproveTasks,
 } from "../../api/tasks";
 import type { ActionItem } from "../../types/tasks";
 import { TaskDetailsModal } from "../tasks/TaskDetailsModal";
@@ -52,6 +55,7 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
 
   // Individual action loading
   const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
 
   const pageSize = 50;
 
@@ -212,6 +216,64 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
     }
   };
 
+  const handleApprove = async (id: number) => {
+    if (approvingId) return;
+    try {
+      setApprovingId(id);
+      await bulkApproveTasks([id], true);
+      toast.success("Task approved");
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleUnapprove = async (id: number) => {
+    if (approvingId) return;
+    try {
+      setApprovingId(id);
+      await bulkApproveTasks([id], false);
+      toast.success("Task unapproved");
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to unapprove");
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBulkLoading(true);
+      await bulkApproveTasks(Array.from(selectedIds), true);
+      toast.success(`${selectedIds.size} task(s) approved`);
+      setSelectedIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkUnapprove = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBulkLoading(true);
+      await bulkApproveTasks(Array.from(selectedIds), false);
+      toast.success(`${selectedIds.size} task(s) unapproved`);
+      setSelectedIds(new Set());
+      await loadTasks();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to unapprove");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const allSelectedArchived =
     selectedIds.size > 0 &&
     Array.from(selectedIds).every(
@@ -222,6 +284,18 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
     selectedIds.size > 0 &&
     Array.from(selectedIds).some(
       (id) => tasks.find((t) => t.id === id)?.status !== "archived"
+    );
+
+  const anySelectedNotApproved =
+    selectedIds.size > 0 &&
+    Array.from(selectedIds).some(
+      (id) => !tasks.find((t) => t.id === id)?.is_approved
+    );
+
+  const anySelectedApproved =
+    selectedIds.size > 0 &&
+    Array.from(selectedIds).some(
+      (id) => tasks.find((t) => t.id === id)?.is_approved
     );
 
   return (
@@ -303,6 +377,28 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
         }
         actions={
           <>
+            {anySelectedNotApproved && (
+              <ActionButton
+                label="Approve"
+                icon={<ShieldCheck className="w-4 h-4" />}
+                onClick={handleBulkApprove}
+                variant="primary"
+                size="sm"
+                disabled={bulkLoading}
+                loading={bulkLoading}
+              />
+            )}
+            {anySelectedApproved && (
+              <ActionButton
+                label="Unapprove"
+                icon={<ShieldX className="w-4 h-4" />}
+                onClick={handleBulkUnapprove}
+                variant="secondary"
+                size="sm"
+                disabled={bulkLoading}
+                loading={bulkLoading}
+              />
+            )}
             {anySelectedNotArchived && (
               <ActionButton
                 label="Archive"
@@ -435,6 +531,33 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
                       <Eye className="h-3.5 w-3.5" />
                       View
                     </motion.button>
+                    {approvingId === task.id ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      </span>
+                    ) : task.is_approved ? (
+                      <motion.button
+                        onClick={() => handleUnapprove(task.id)}
+                        disabled={approvingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-600 transition hover:border-amber-300 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <ShieldX className="h-3.5 w-3.5" />
+                        Unapprove
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        onClick={() => handleApprove(task.id)}
+                        disabled={approvingId !== null}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-white px-3 py-1.5 text-xs font-semibold text-green-600 transition hover:border-green-300 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Approve
+                      </motion.button>
+                    )}
                     {task.status === "archived" ? (
                       archivingId === task.id ? (
                         <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700">

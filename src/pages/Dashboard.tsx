@@ -40,7 +40,7 @@ export default function Dashboard() {
   const isWizardActive = useIsWizardActive();
   const isWizardLoading = useIsWizardLoading();
   const recheckWizardStatus = useRecheckWizardStatus();
-  const { selectedLocation } = useLocationContext();
+  const { selectedLocation, isTransitioning, registerContentLoading } = useLocationContext();
   const locationId = selectedLocation?.id ?? null;
 
   // Modal state management
@@ -78,6 +78,13 @@ export default function Dashboard() {
   useEffect(() => {
     setActiveTab(tabFromPath(location.pathname));
   }, [location.pathname]);
+
+  // Register content loading during location transitions so the splash waits for data
+  useEffect(() => {
+    if (isTransitioning) {
+      registerContentLoading();
+    }
+  }, [locationId]);
 
 
   // REMOVED: Duplicate onboarding status check

@@ -34,6 +34,7 @@ import {
   useIsWizardActive,
   useWizardDemoData,
 } from "../../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../../contexts/locationContext";
 
 // Ranking data types
 interface RankingResult {
@@ -137,6 +138,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { data, error, refetch } = useAgentData(organizationId || null, locationId);
+  const { signalContentReady } = useLocationContext();
 
   // Onboarding wizard state - shows demo data when wizard is active
   const isWizardActive = useIsWizardActive();
@@ -221,6 +223,7 @@ export function DashboardOverview({ organizationId, locationId }: DashboardOverv
         );
       } finally {
         setPmsLoading(false);
+        signalContentReady();
       }
     };
 

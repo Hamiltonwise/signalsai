@@ -22,6 +22,7 @@ import { fetchClientTasks, completeTask } from "../../api/tasks";
 import type { GroupedActionItems, ActionItem } from "../../types/tasks";
 import { parseHighlightTags } from "../../utils/textFormatting";
 import { useIsWizardActive } from "../../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../../contexts/locationContext";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
 
 // CSS for pulse animation
@@ -282,6 +283,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 export function TasksView({ organizationId, locationId }: TasksViewProps) {
   const location = useLocation();
   const isWizardActive = useIsWizardActive();
+  const { signalContentReady } = useLocationContext();
   const [tasks, setTasks] = useState<GroupedActionItems | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -470,6 +472,7 @@ export function TasksView({ organizationId, locationId }: TasksViewProps) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
       setLoading(false);
+      signalContentReady();
     }
   };
 

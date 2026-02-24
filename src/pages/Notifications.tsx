@@ -29,7 +29,7 @@ import { ConfirmModal } from "../components/settings/ConfirmModal";
 export const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { selectedLocation } = useLocationContext();
+  const { selectedLocation, isTransitioning, registerContentLoading, signalContentReady } = useLocationContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -52,6 +52,10 @@ export const Notifications: React.FC = () => {
     }
 
     const loadNotifications = async () => {
+      // Tell the location transition overlay to wait for our data
+      if (isTransitioning) {
+        registerContentLoading();
+      }
       try {
         const data = await fetchNotifications(organizationId, locationId);
         setNotifications(data.notifications);
@@ -59,13 +63,14 @@ export const Notifications: React.FC = () => {
         console.error("Error fetching notifications:", error);
       } finally {
         setLoading(false);
+        signalContentReady();
       }
     };
 
     // Mark all notifications as read when leaving the page
     const markAllReadOnLeave = async () => {
       try {
-        await markAllNotificationsRead(organizationId);
+        await markAllNotificationsRead(organizationId, locationId);
         // Dispatch event to update sidebar notification badge
         window.dispatchEvent(new CustomEvent("notifications:updated"));
       } catch (error) {
@@ -177,7 +182,7 @@ export const Notifications: React.FC = () => {
 
     setMarkingAll(true);
     try {
-      await markAllNotificationsRead(organizationId);
+      await markAllNotificationsRead(organizationId, locationId);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       // Dispatch event to update sidebar notification badge
       window.dispatchEvent(new CustomEvent("notifications:updated"));
@@ -194,7 +199,7 @@ export const Notifications: React.FC = () => {
 
     setDeletingAll(true);
     try {
-      await deleteAllNotifications(organizationId);
+      await deleteAllNotifications(organizationId, locationId);
       setNotifications([]);
       // Dispatch event to update sidebar notification badge
       window.dispatchEvent(new CustomEvent("notifications:updated"));

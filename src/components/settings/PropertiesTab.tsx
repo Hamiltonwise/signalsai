@@ -13,7 +13,6 @@ import {
   updateLocation,
   updateLocationGBP,
   type Location,
-  type GBPSelection,
 } from "../../api/locations";
 
 type UserRole = "admin" | "manager" | "viewer";

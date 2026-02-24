@@ -2,21 +2,23 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, TrendingUp } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { fetchPmsJobs, fetchPmsKeyData, type PmsJob } from "../../api/pms";
+import {
+  fetchPmsJobs,
+  fetchPmsKeyData,
+  type PmsJob,
+  type PmsKeyDataResponse,
+} from "../../api/pms";
 
 interface OrgPmsTabProps {
   organizationId: number;
+  locationId: number | null;
 }
 
-interface KeyData {
-  months?: { month: string }[];
-  sources?: any[];
-  totals?: { totalReferrals: number; totalProduction: number };
-}
-
-export function OrgPmsTab({ organizationId }: OrgPmsTabProps) {
+export function OrgPmsTab({ organizationId, locationId }: OrgPmsTabProps) {
   const [jobs, setJobs] = useState<PmsJob[]>([]);
-  const [keyData, setKeyData] = useState<KeyData | null>(null);
+  const [keyData, setKeyData] = useState<PmsKeyDataResponse["data"] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -25,7 +27,7 @@ export function OrgPmsTab({ organizationId }: OrgPmsTabProps) {
 
   useEffect(() => {
     loadData();
-  }, [organizationId, page]);
+  }, [organizationId, locationId, page]);
 
   const loadData = async () => {
     setLoading(true);
@@ -33,9 +35,10 @@ export function OrgPmsTab({ organizationId }: OrgPmsTabProps) {
       const [jobsRes, keyRes] = await Promise.all([
         fetchPmsJobs({
           organization_id: organizationId,
+          location_id: locationId || undefined,
           page,
         }),
-        fetchPmsKeyData(organizationId),
+        fetchPmsKeyData(organizationId, locationId || undefined),
       ]);
 
       if (jobsRes.success && jobsRes.data) {
@@ -46,7 +49,7 @@ export function OrgPmsTab({ organizationId }: OrgPmsTabProps) {
       if (keyRes.success && keyRes.data) {
         setKeyData(keyRes.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load PMS data");
     } finally {
       setLoading(false);

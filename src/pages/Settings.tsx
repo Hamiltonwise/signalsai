@@ -164,10 +164,10 @@ export const Settings: React.FC = () => {
   const { userProfile, selectedDomain } = useAuth();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [_userRole, setUserRole] = useState<UserRole | null>(null);
 
   // Scopes State
-  const [scopesStatus, setScopesStatus] = useState<ScopesState | null>(null);
+  const [_scopesStatus, setScopesStatus] = useState<ScopesState | null>(null);
   const [missingScopes, setMissingScopes] = useState<string[]>([]);
   const [missingScopeCount, setMissingScopeCount] = useState(0);
 

@@ -135,6 +135,7 @@ export interface FetchPmsJobsParams {
   status?: string[];
   isApproved?: boolean;
   organization_id?: number;
+  location_id?: number;
 }
 
 export interface FetchPmsJobsResponse {
@@ -277,6 +278,10 @@ export async function fetchPmsJobs(
 
   if (params.organization_id) {
     query.set("organization_id", String(params.organization_id));
+  }
+
+  if (params.location_id) {
+    query.set("location_id", String(params.location_id));
   }
 
   const queryString = query.toString();

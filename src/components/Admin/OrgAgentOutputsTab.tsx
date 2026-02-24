@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   RefreshCw,
   AlertCircle,
@@ -71,6 +71,7 @@ export function OrgAgentOutputsTab({
     try {
       const response = await fetchAgentOutputs({
         organization_id: organizationId,
+        location_id: locationId ?? undefined,
         agent_type: agentType,
         status: statusFilter !== "all" ? statusFilter : undefined,
         page,

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { ChevronDown, MapPin, Phone, Star, ExternalLink } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { ChevronDown, MapPin, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AdminLocation } from "../../api/admin-organizations";
 
@@ -9,12 +10,25 @@ interface OrgLocationSelectorProps {
   onSelect: (location: AdminLocation) => void;
 }
 
+interface TransitionOrigin {
+  x: number;
+  y: number;
+}
+
 export function OrgLocationSelector({
   locations,
   selectedLocation,
   onSelect,
 }: OrgLocationSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionOrigin, setTransitionOrigin] =
+    useState<TransitionOrigin | null>(null);
+  const [transitionLocationName, setTransitionLocationName] = useState<
+    string | null
+  >(null);
+  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (locations.length === 1 && !selectedLocation) {
@@ -22,164 +36,179 @@ export function OrgLocationSelector({
     }
   }, [locations, selectedLocation, onSelect]);
 
-  if (locations.length === 0) {
-    return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
-        <MapPin className="h-8 w-8 mx-auto text-gray-300 mb-2" />
-        <p className="text-gray-500">No locations found for this organization</p>
-      </div>
-    );
-  }
+  const handleSelect = (location: AdminLocation) => {
+    if (location.id === selectedLocation?.id) {
+      setIsOpen(false);
+      return;
+    }
 
-  const getMetadata = (location: AdminLocation) => {
-    const prop = location.googleProperties?.[0];
-    const meta = prop?.metadata as Record<string, any> || {};
-    return {
-      address: meta.address || "—",
-      phone: meta.phone || "—",
-      rating: meta.rating ? Number(meta.rating).toFixed(1) : "—",
-      placeId: meta.placeId || "—",
-      locationId: prop?.external_id || "—",
-    };
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setButtonRect(rect);
+      setTransitionOrigin({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+      setTransitionLocationName(location.name);
+      setIsTransitioning(true);
+      setIsOpen(false);
+
+      setTimeout(() => {
+        onSelect(location);
+      }, 400);
+
+      setTimeout(() => {
+        setIsTransitioning(false);
+        setTransitionOrigin(null);
+        setTransitionLocationName(null);
+        setButtonRect(null);
+      }, 1200);
+    } else {
+      onSelect(location);
+      setIsOpen(false);
+    }
   };
 
-  const metadata = selectedLocation ? getMetadata(selectedLocation) : null;
+  if (locations.length <= 1) return null;
+
+  const buttonContent = (
+    <>
+      <MapPin className="h-4 w-4 shrink-0" />
+      <span className="font-medium truncate">
+        {selectedLocation?.name || "Select location"}
+      </span>
+      <ChevronDown className="h-4 w-4 shrink-0 ml-1" />
+    </>
+  );
 
   return (
-    <div className="space-y-4">
-      {/* Location Selector (only show if multi-location) */}
-      {locations.length > 1 && (
-        <div className="relative">
-          <motion.button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left hover:border-alloro-orange/30 transition-colors"
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <MapPin className="h-5 w-5 text-alloro-orange shrink-0" />
-              <span className="font-medium text-gray-900 truncate">
-                {selectedLocation?.name || "Select location"}
-              </span>
-            </div>
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown className="h-5 w-5 text-gray-400" />
-            </motion.div>
-          </motion.button>
-
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 z-10 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
-              >
-                <div className="max-h-48 overflow-y-auto">
-                  {locations.map((location) => (
-                    <button
-                      key={location.id}
-                      onClick={() => {
-                        onSelect(location);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full px-4 py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-alloro-orange/5 transition-colors ${
-                        selectedLocation?.id === location.id
-                          ? "bg-alloro-orange/10 border-l-2 border-l-alloro-orange"
-                          : ""
-                      }`}
-                    >
-                      <div className="font-medium text-gray-900">
-                        {location.name}
-                      </div>
-                      {location.is_primary && (
-                        <div className="text-xs text-alloro-orange font-medium">
-                          Primary Location
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* Location Metadata Card */}
-      {selectedLocation && metadata && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4"
+    <>
+      {/* Inline dropdown button */}
+      <div className="relative">
+        <motion.button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 rounded-xl bg-[#212D40] px-4 py-2.5 text-sm text-white hover:bg-[#2a3a50] transition-colors whitespace-nowrap"
         >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-gray-900 text-lg">
-                {selectedLocation.name}
-              </h3>
-              {selectedLocation.is_primary && (
-                <p className="text-xs text-alloro-orange font-medium mt-1">
-                  Primary Location
+          {buttonContent}
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full right-0 mt-2 z-50 min-w-[220px] rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
+            >
+              <div className="max-h-48 overflow-y-auto">
+                {locations.map((location) => (
+                  <button
+                    key={location.id}
+                    onClick={() => handleSelect(location)}
+                    className={`w-full px-4 py-3 text-left border-b border-gray-100 last:border-b-0 hover:bg-alloro-orange/5 transition-colors ${
+                      selectedLocation?.id === location.id
+                        ? "bg-alloro-orange/10 border-l-2 border-l-alloro-orange"
+                        : ""
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">
+                      {location.name}
+                    </div>
+                    {location.is_primary && (
+                      <div className="text-xs text-alloro-orange font-medium">
+                        Primary Location
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Portal: floating button clone above the splash overlay */}
+      {isTransitioning &&
+        buttonRect &&
+        createPortal(
+          <motion.div
+            className="pointer-events-none"
+            style={{
+              position: "fixed",
+              top: buttonRect.top,
+              left: buttonRect.left,
+              width: buttonRect.width,
+              height: buttonRect.height,
+              zIndex: 95,
+            }}
+            animate={{ scale: [1, 1.06, 0.97, 1.04, 1] }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <div className="w-full h-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#212D40] rounded-xl shadow-lg">
+              {buttonContent}
+            </div>
+          </motion.div>,
+          document.body,
+        )}
+
+      {/* Splash Transition Overlay */}
+      <AnimatePresence>
+        {isTransitioning && transitionOrigin && (
+          <motion.div
+            key="location-transition"
+            className="fixed inset-0 z-[90] pointer-events-none"
+            initial={{
+              clipPath: `circle(0px at ${transitionOrigin.x}px ${transitionOrigin.y}px)`,
+            }}
+            animate={{
+              clipPath: `circle(200vmax at ${transitionOrigin.x}px ${transitionOrigin.y}px)`,
+            }}
+            exit={{
+              clipPath: `circle(0px at ${transitionOrigin.x}px ${transitionOrigin.y}px)`,
+              opacity: 0,
+              transition: { duration: 0.35, ease: "easeIn" },
+            }}
+            transition={{
+              duration: 0.4,
+              ease: "easeInOut",
+            }}
+          >
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, #d66853 0%, #c45a47 100%)",
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+                className="text-center space-y-6"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                >
+                  <Loader2 className="w-14 h-14 text-white/90 mx-auto" />
+                </motion.div>
+                <p className="text-lg font-semibold text-white/90 tracking-wide">
+                  Switching to {transitionLocationName || "location"}...
                 </p>
-              )}
+              </motion.div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-            {/* Address */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
-                Address
-              </p>
-              <p className="text-sm text-gray-900 font-medium">
-                {metadata.address}
-              </p>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1 flex items-center gap-1.5">
-                <Phone className="h-3 w-3" /> Phone
-              </p>
-              <p className="text-sm text-gray-900 font-medium">
-                {metadata.phone}
-              </p>
-            </div>
-
-            {/* Rating */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1 flex items-center gap-1.5">
-                <Star className="h-3 w-3" /> Rating
-              </p>
-              <p className="text-sm text-gray-900 font-medium">
-                {metadata.rating}
-              </p>
-            </div>
-
-            {/* Location ID */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">
-                Location ID
-              </p>
-              <p className="text-sm text-gray-900 font-mono font-medium">
-                {metadata.locationId}
-              </p>
-            </div>
-
-            {/* Google Place ID */}
-            <div className="sm:col-span-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1 flex items-center gap-1.5">
-                <ExternalLink className="h-3 w-3" /> Google Place ID
-              </p>
-              <p className="text-sm text-gray-900 font-mono font-medium break-all">
-                {metadata.placeId}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

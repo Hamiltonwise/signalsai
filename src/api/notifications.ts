@@ -1,11 +1,12 @@
-import { apiGet, apiPatch, apiDelete } from "./index";
+import { apiGet, apiPost, apiPatch, apiDelete } from "./index";
 
 export interface Notification {
   id: number;
   organization_id?: number;
   title: string;
   message?: string;
-  type: "task" | "pms" | "agent" | "system";
+  type: "task" | "pms" | "agent" | "system" | "ranking";
+  location_name?: string;
   read: boolean;
   read_timestamp?: string;
   metadata?: Record<string, unknown> | null;
@@ -53,10 +54,16 @@ export const markNotificationRead = async (
  * Mark all notifications as read
  */
 export const markAllNotificationsRead = async (
-  _organizationId: number
+  _organizationId: number,
+  locationId?: number | null
 ): Promise<{ success: boolean; message: string; count: number }> => {
+  const params = new URLSearchParams();
+  if (locationId) {
+    params.append("locationId", String(locationId));
+  }
+  const qs = params.toString();
   return apiPatch({
-    path: `/notifications/mark-all-read`,
+    path: `/notifications/mark-all-read${qs ? `?${qs}` : ""}`,
   });
 };
 
@@ -64,9 +71,51 @@ export const markAllNotificationsRead = async (
  * Delete all notifications for a user
  */
 export const deleteAllNotifications = async (
-  _organizationId: number
+  _organizationId: number,
+  locationId?: number | null
 ): Promise<{ success: boolean; message: string; count: number }> => {
+  const params = new URLSearchParams();
+  if (locationId) {
+    params.append("locationId", String(locationId));
+  }
+  const qs = params.toString();
   return apiDelete({
-    path: `/notifications/delete-all`,
+    path: `/notifications/delete-all${qs ? `?${qs}` : ""}`,
   });
+};
+
+// =====================================================================
+// ADMIN ENDPOINTS
+// =====================================================================
+
+export interface AdminNotificationsResponse {
+  success: boolean;
+  notifications: Notification[];
+  total: number;
+}
+
+export const fetchAdminNotifications = async (filters: {
+  organization_id: number;
+  location_id?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<AdminNotificationsResponse> => {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== "") {
+      params.append(key, String(value));
+    }
+  });
+  const qs = params.toString();
+  return apiGet({ path: `/notifications/admin/list${qs ? `?${qs}` : ""}` });
+};
+
+export const createAdminNotification = async (data: {
+  organization_id: number;
+  location_id?: number;
+  title: string;
+  message?: string;
+  type?: string;
+}): Promise<{ success: boolean; notificationId?: number; message: string }> => {
+  return apiPost({ path: "/notifications", passedData: data });
 };

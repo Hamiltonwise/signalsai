@@ -47,6 +47,7 @@ import {
   useIsWizardActive,
   useWizardDemoData,
 } from "../../contexts/OnboardingWizardContext";
+import { useLocationContext } from "../../contexts/locationContext";
 import { apiGet } from "../../api";
 import { getPriorityItem } from "../../hooks/useLocalStorage";
 
@@ -154,6 +155,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
   hasProperties = true,
 }) => {
   const navigate = useNavigate();
+  const { signalContentReady } = useLocationContext();
 
   // Wizard state
   const isWizardActive = useIsWizardActive();
@@ -272,6 +274,7 @@ export const PMSVisualPillars: React.FC<PMSVisualPillarsProps> = ({
         if (isMountedRef.current && !silent) {
           setIsLoading(false);
         }
+        signalContentReady();
       }
     },
     [organizationId, locationId, isWizardActive],

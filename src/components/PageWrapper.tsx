@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { LocationTransitionOverlay } from "./LocationTransitionOverlay";
 import { useAuth } from "../hooks/useAuth";
 import { useSession } from "../contexts/sessionContext";
 
@@ -71,6 +72,8 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
       <main className="flex-1 w-full lg:pl-72 pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300">
         {children}
       </main>
+
+      <LocationTransitionOverlay />
     </div>
   );
 };

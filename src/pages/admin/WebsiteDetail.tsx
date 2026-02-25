@@ -172,6 +172,10 @@ export default function WebsiteDetail() {
   const [primaryColor, setPrimaryColor] = useState("#1E40AF");
   const [accentColor, setAccentColor] = useState("#F59E0B");
 
+  // Data source toggle: scrape a website or paste data manually
+  const [dataSource, setDataSource] = useState<"website" | "pasted">("website");
+  const [scrapedData, setScrapedData] = useState("");
+
   // Detail tab: pages vs layouts vs media vs code-manager
   const [detailTab, setDetailTab] = useState<
     "pages" | "layouts" | "media" | "code-manager"
@@ -485,7 +489,7 @@ export default function WebsiteDetail() {
       setSearchError(null);
       await updateWebsite(id, {
         selected_place_id: selectedPlace.placeId,
-        selected_website_url: websiteUrl || null,
+        selected_website_url: dataSource === "website" ? (websiteUrl || null) : null,
         template_id: selectedTemplateId,
         primary_color: primaryColor,
         accent_color: accentColor,
@@ -496,7 +500,7 @@ export default function WebsiteDetail() {
           phone: selectedPlace.phone,
           rating: selectedPlace.rating,
           reviewCount: selectedPlace.reviewCount,
-          websiteUri: websiteUrl || null,
+          websiteUri: dataSource === "website" ? (websiteUrl || null) : null,
           category: selectedPlace.category,
         },
       } as any);
@@ -508,7 +512,7 @@ export default function WebsiteDetail() {
           templateId: selectedTemplateId,
           templatePageId: homepageTemplatePage.id,
           path: "/",
-          websiteUrl: websiteUrl || null,
+          websiteUrl: dataSource === "website" ? (websiteUrl || null) : null,
           practiceSearchString: selectedPlace.practiceSearchString,
           businessName: selectedPlace.name,
           formattedAddress: selectedPlace.formattedAddress,
@@ -520,6 +524,7 @@ export default function WebsiteDetail() {
           reviewCount: selectedPlace.reviewCount,
           primaryColor,
           accentColor,
+          scrapedData: dataSource === "pasted" ? (scrapedData.trim() || null) : null,
         });
       } catch (webhookErr) {
         console.error("Pipeline webhook error:", webhookErr);
@@ -1064,7 +1069,7 @@ export default function WebsiteDetail() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="rounded-2xl border-2 border-alloro-orange/30 overflow-hidden"
+                      className="rounded-2xl border-2 border-alloro-orange/30 overflow-visible"
                     >
                       <div className="bg-gradient-to-br from-alloro-orange to-orange-500 p-4 text-white">
                         <h3 className="text-lg font-bold">
@@ -1105,25 +1110,61 @@ export default function WebsiteDetail() {
                             </p>
                           </div>
                         )}
+                        {/* Data source toggle */}
                         <div className="pt-2 border-t border-gray-100">
-                          <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                            Website URL to scrape (leave as-is to use the
-                            attached website)
+                          <label className="block text-xs font-medium text-gray-500 mb-2">
+                            Content Source
                           </label>
-                          <div className="flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                            <input
-                              type="url"
-                              value={websiteUrl}
-                              onChange={(e) => setWebsiteUrl(e.target.value)}
-                              placeholder="https://example.com"
-                              className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
-                            />
+                          <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
+                            <button
+                              type="button"
+                              onClick={() => setDataSource("website")}
+                              className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                                dataSource === "website"
+                                  ? "bg-alloro-orange text-white"
+                                  : "bg-white text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              Scrape Website
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDataSource("pasted")}
+                              className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                                dataSource === "pasted"
+                                  ? "bg-alloro-orange text-white"
+                                  : "bg-white text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              Paste Data
+                            </button>
                           </div>
-                          {!websiteUrl && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              Leave empty if there's no existing website
-                            </p>
+                          {dataSource === "website" ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <input
+                                  type="url"
+                                  value={websiteUrl}
+                                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                                  placeholder="https://example.com"
+                                  className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
+                                />
+                              </div>
+                              {!websiteUrl && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Leave empty if there's no existing website
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <textarea
+                              value={scrapedData}
+                              onChange={(e) => setScrapedData(e.target.value)}
+                              placeholder="Paste scraped content, service lists, bios, or any extra info you want the AI to use..."
+                              rows={5}
+                              className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none resize-none"
+                            />
                           )}
                         </div>
                         {/* Template selector */}

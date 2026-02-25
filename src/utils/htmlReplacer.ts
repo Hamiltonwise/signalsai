@@ -103,11 +103,24 @@ export function validateHtml(html: string): { valid: boolean; error?: string } {
 }
 
 /**
+ * Extract the alloro-tpl class from a section's stored content HTML.
+ * Parses the root element and finds the first class that starts with "alloro-tpl-".
+ */
+function extractAlloroClass(sectionContent: string): string | null {
+  const match = sectionContent.match(/class="([^"]*?)"/);
+  if (!match) return null;
+  const classes = match[1].split(/\s+/);
+  return classes.find((c) => c.startsWith("alloro-tpl-")) ?? null;
+}
+
+/**
  * Extract updated section content from the iframe DOM after a mutation.
  *
- * Strategy: each section's content has a root element with an alloro-tpl class
- * containing `-section-{sectionName}`. After DOM mutation, we look up each
- * section's root element by that class pattern and read its updated outerHTML.
+ * Strategy: parse each section's stored content HTML to extract the actual
+ * alloro-tpl class from its root element, then use that exact class to find
+ * the element in the iframe DOM. This avoids relying on section.name matching
+ * the DOM class — N8N-generated names can be more descriptive than the CSS
+ * class identifiers (e.g., "section-legacy-software" vs "section-legacy").
  *
  * Falls back to the original section content if no matching element is found.
  */
@@ -116,16 +129,21 @@ export function extractSectionsFromDom(
   currentSections: Section[]
 ): Section[] {
   return currentSections.map((section) => {
-    // Look for an element whose class contains the section name pattern
-    const sectionPattern = `-section-${section.name}`;
-    const el = iframeDoc.querySelector(`[class*="${sectionPattern}"]`);
+    // Extract the actual alloro-tpl class from the section's stored HTML content
+    const alloroClass = extractAlloroClass(section.content);
+
+    if (!alloroClass) {
+      console.warn(`[extractSections] "${section.name}" → no alloro-tpl class found in stored content`);
+      return section;
+    }
+
+    const el = iframeDoc.querySelector(`.${CSS.escape(alloroClass)}`);
 
     if (el) {
       return { ...section, content: el.outerHTML };
     }
 
-    // Fallback: try to match by finding the first element that contains the section's
-    // original root tag in the DOM. This handles cases where naming conventions differ.
+    console.warn(`[extractSections] "${section.name}" → no DOM match for class "${alloroClass}"`);
     return section;
   });
 }
@@ -141,9 +159,10 @@ function serializeDocument(doc: Document): string {
   // Strip injected editor styles
   clone.querySelector("#alloro-selector-styles")?.remove();
 
-  // Strip injected label divs
+  // Strip injected label divs and action panel
   clone.querySelector("#alloro-hover-label")?.remove();
   clone.querySelector("#alloro-selected-label")?.remove();
+  clone.querySelector("#alloro-action-panel")?.remove();
 
   // Strip editor data attributes from all elements
   clone

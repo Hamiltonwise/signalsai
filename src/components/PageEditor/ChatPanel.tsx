@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Paperclip, X, Image, Upload } from "lucide-react";
+import MediaBrowser from "./MediaBrowser";
+import type { MediaItem } from "./MediaBrowser";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -16,14 +18,6 @@ interface ChatPanelProps {
   projectId?: string;
 }
 
-interface MediaItem {
-  id: string;
-  display_name: string;
-  s3_url: string;
-  thumbnail_s3_url: string | null;
-  mime_type: string;
-}
-
 export default function ChatPanel({
   messages,
   onSend,
@@ -35,8 +29,6 @@ export default function ChatPanel({
   const [uploading, setUploading] = useState(false);
   const [attachedMedia, setAttachedMedia] = useState<MediaItem[]>([]);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
-  const [loadingMedia, setLoadingMedia] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -158,43 +150,13 @@ export default function ChatPanel({
     setAttachedMedia((prev) => prev.filter((m) => m.id !== mediaId));
   };
 
-  const fetchMediaLibrary = async () => {
-    if (!projectId) return;
-
-    try {
-      setLoadingMedia(true);
-      const response = await fetch(
-        `/api/admin/websites/${projectId}/media?type=all&limit=50`,
-        { credentials: "include" }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMediaItems(data.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch media:", err);
-    } finally {
-      setLoadingMedia(false);
-    }
-  };
-
   const attachMediaFromLibrary = (media: MediaItem) => {
-    // Add to attached list (avoid duplicates)
     setAttachedMedia((prev) => {
       if (prev.find((m) => m.id === media.id)) return prev;
       return [...prev, media];
     });
     setShowMediaLibrary(false);
     setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const toggleMediaLibrary = () => {
-    if (!showMediaLibrary) {
-      fetchMediaLibrary();
-    }
-    setShowMediaLibrary(!showMediaLibrary);
   };
 
   return (
@@ -256,53 +218,14 @@ export default function ChatPanel({
 
       {/* Input */}
       <div className="px-4 pb-4 pt-2 border-t border-gray-200">
-        {/* Media Library Modal */}
-        {showMediaLibrary && (
-          <div className="mb-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-[300px] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-700">Media Library</span>
-              <button
-                onClick={() => setShowMediaLibrary(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {loadingMedia ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-              </div>
-            ) : mediaItems.length === 0 ? (
-              <div className="text-center py-8 text-xs text-gray-500">
-                No media uploaded yet
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 p-2">
-                {mediaItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => attachMediaFromLibrary(item)}
-                    className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-alloro-orange transition border border-gray-200"
-                  >
-                    {item.thumbnail_s3_url || item.mime_type.startsWith("image/") ? (
-                      <img
-                        src={item.thumbnail_s3_url || item.s3_url}
-                        alt={item.display_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Image className="w-6 h-6 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition">
-                      {item.display_name}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* Media Library */}
+        {showMediaLibrary && projectId && (
+          <div className="mb-2">
+            <MediaBrowser
+              projectId={projectId}
+              onSelect={attachMediaFromLibrary}
+              onClose={() => setShowMediaLibrary(false)}
+            />
           </div>
         )}
 
@@ -345,7 +268,7 @@ export default function ChatPanel({
                 )}
               </button>
               <button
-                onClick={toggleMediaLibrary}
+                onClick={() => setShowMediaLibrary(!showMediaLibrary)}
                 disabled={disabled || isLoading}
                 className={`p-2 rounded-xl border transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 ${
                   showMediaLibrary

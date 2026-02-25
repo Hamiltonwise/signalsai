@@ -112,6 +112,7 @@ export function SlideProposalsReview({
   const [loading, setLoading] = useState(true);
 
   // Compile state
+  const [compileRunId, setCompileRunId] = useState<string | null>(null);
   const [compileSteps, setCompileSteps] = useState<SyncStep[]>([]);
   const [compiling, setCompiling] = useState(false);
   const [compileStarting, setCompileStarting] = useState(false);

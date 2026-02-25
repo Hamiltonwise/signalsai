@@ -122,10 +122,26 @@ export function parseSectionsJs(input: string): Section[] {
     return JSON.parse(input);
   } catch {
     // Fall back to JS eval for backtick template literal syntax
-    // eslint-disable-next-line no-new-func
-    const result = new Function(`"use strict"; return (${input});`)();
-    if (!Array.isArray(result)) throw new Error("Sections must be an array");
-    return result as Section[];
+    try {
+      // eslint-disable-next-line no-new-func
+      const result = new Function(`"use strict"; return (${input});`)();
+      if (!Array.isArray(result)) throw new Error("Sections must be an array");
+      return result as Section[];
+    } catch (evalErr) {
+      // Try to extract a useful line number from the SyntaxError.
+      // new Function() wraps input with a prefix (`"use strict"; return (`)
+      // which adds 1 line, so subtract 1 from any reported line number.
+      if (evalErr instanceof SyntaxError) {
+        // V8 includes line/col in the stack, e.g. "<anonymous>:5:12"
+        const stackMatch = evalErr.stack?.match(/<anonymous>:(\d+):(\d+)/);
+        if (stackMatch) {
+          const line = Math.max(1, parseInt(stackMatch[1], 10) - 1);
+          const col = parseInt(stackMatch[2], 10);
+          throw new Error(`Line ${line}, col ${col}: ${evalErr.message}`);
+        }
+      }
+      throw evalErr;
+    }
   }
 }
 

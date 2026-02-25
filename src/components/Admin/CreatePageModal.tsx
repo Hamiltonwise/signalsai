@@ -58,6 +58,10 @@ export default function CreatePageModal({
   const [overrideWebsiteUrl, setOverrideWebsiteUrl] =
     useState(defaultWebsiteUrl);
 
+  // Data source toggle
+  const [dataSource, setDataSource] = useState<"website" | "pasted">("website");
+  const [scrapedData, setScrapedData] = useState("");
+
   // GBP search for override
   const [gbpSearchQuery, setGbpSearchQuery] = useState("");
   const [gbpSuggestions, setGbpSuggestions] = useState<PlaceSuggestion[]>([]);
@@ -165,7 +169,7 @@ export default function CreatePageModal({
         templatePageId: selectedPageId,
         path: slug,
         placeId: overridePlaceId,
-        websiteUrl: overrideWebsiteUrl || null,
+        websiteUrl: dataSource === "website" ? (overrideWebsiteUrl || null) : null,
         pageContext: pageContext.trim() || undefined,
         businessName: effectiveGbpData?.name
           ? String(effectiveGbpData.name)
@@ -193,6 +197,7 @@ export default function CreatePageModal({
           : undefined,
         primaryColor: pagePrimaryColor,
         accentColor: pageAccentColor,
+        scrapedData: dataSource === "pasted" ? (scrapedData.trim() || null) : null,
       });
       onSuccess();
     } catch (err) {
@@ -398,21 +403,55 @@ export default function CreatePageModal({
                     )}
                   </div>
 
-                  {/* Website URL override */}
-                  <div className="space-y-1.5">
+                  {/* Content source toggle */}
+                  <div className="space-y-2">
                     <label className="block text-xs font-medium text-gray-500">
-                      Website URL
+                      Content Source
                     </label>
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      <input
-                        type="url"
-                        value={overrideWebsiteUrl}
-                        onChange={(e) => setOverrideWebsiteUrl(e.target.value)}
-                        placeholder="https://example.com"
-                        className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
-                      />
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setDataSource("website")}
+                        className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                          dataSource === "website"
+                            ? "bg-alloro-orange text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        Scrape Website
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDataSource("pasted")}
+                        className={`flex-1 px-3 py-2 text-xs font-medium transition ${
+                          dataSource === "pasted"
+                            ? "bg-alloro-orange text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        Paste Data
+                      </button>
                     </div>
+                    {dataSource === "website" ? (
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <input
+                          type="url"
+                          value={overrideWebsiteUrl}
+                          onChange={(e) => setOverrideWebsiteUrl(e.target.value)}
+                          placeholder="https://example.com"
+                          className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <textarea
+                        value={scrapedData}
+                        onChange={(e) => setScrapedData(e.target.value)}
+                        placeholder="Paste scraped content, service lists, bios, or any extra info you want the AI to use..."
+                        rows={4}
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none resize-none"
+                      />
+                    )}
                   </div>
                 </div>
               )}

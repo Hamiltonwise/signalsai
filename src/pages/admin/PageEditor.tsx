@@ -16,6 +16,7 @@ import {
   useIframeSelector,
   prepareHtmlForPreview,
 } from "../../hooks/useIframeSelector";
+import type { QuickActionPayload, QuickActionType } from "../../hooks/useIframeSelector";
 import { replaceComponentInDom, validateHtml, extractSectionsFromDom } from "../../utils/htmlReplacer";
 import { AdminTopBar } from "../../components/Admin/AdminTopBar";
 import { AdminSidebar } from "../../components/Admin/AdminSidebar";
@@ -96,9 +97,26 @@ function PageEditorInner() {
   // Per-component chat history: Map<alloroClass, ChatMessage[]>
   const [chatMap, setChatMap] = useState<Map<string, ChatMessage[]>>(new Map());
 
+  // Quick action triggered from iframe label icons
+  const [pendingSidebarAction, setPendingSidebarAction] = useState<QuickActionType | null>(null);
+  const deferredEditRef = useRef<string | null>(null);
+  const handleIframeQuickAction = useCallback((payload: QuickActionPayload) => {
+    if ((payload.action === "text" || payload.action === "link") && payload.value) {
+      // Text/link submitted from iframe input — queue for deferred handleSendEdit
+      deferredEditRef.current = payload.action === "text"
+        ? `Change the text content to "${payload.value}"`
+        : `Change the link href to "${payload.value}"`;
+      // Force a re-render so the effect picks it up
+      setPendingSidebarAction("__deferred__" as QuickActionType);
+    } else {
+      // Media and hide — dispatch to sidebar
+      setPendingSidebarAction(payload.action);
+    }
+  }, []);
+
   // Selector hook
-  const { selectedInfo, setSelectedInfo, clearSelection, setupListeners } =
-    useIframeSelector(iframeRef);
+  const { selectedInfo, setSelectedInfo, clearSelection, setupListeners, toggleHidden } =
+    useIframeSelector(iframeRef, handleIframeQuickAction);
 
   // Debounced auto-save ref
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -151,6 +169,12 @@ function PageEditorInner() {
 
         setPage(workingPage);
         setDraftPageId(workingPageId);
+
+        // Update URL to reflect the draft page ID so refresh loads the correct page.
+        // Use replaceState to avoid re-triggering the useEffect that depends on pageId.
+        if (workingPageId !== pageId) {
+          window.history.replaceState(null, "", `/admin/websites/${projectId}/pages/${workingPageId}/edit`);
+        }
 
         // Load sections from the page (handles both [...] and {sections: [...]} formats)
         const pageSections: Section[] = normalizeSections(workingPage.sections);
@@ -327,7 +351,8 @@ function PageEditorInner() {
           // The DOM is already mutated in place, which is what the user sees
 
           // Extract updated sections from the mutated DOM
-          const updatedSections = extractSectionsFromDom(iframe.contentDocument, sections);
+          // Use sectionsRef.current (not closure `sections`) to avoid stale data
+          const updatedSections = extractSectionsFromDom(iframe.contentDocument, sectionsRef.current);
           setSections(updatedSections);
 
           setIsDirty(true);
@@ -343,6 +368,7 @@ function PageEditorInner() {
             setSelectedInfo({
               ...selectedInfo,
               outerHtml: freshEl.outerHTML,
+              isHidden: freshEl.getAttribute("data-alloro-hidden") === "true",
             });
           }
         }
@@ -394,6 +420,16 @@ function PageEditorInner() {
     ]
   );
 
+  // Process deferred quick-action edits from iframe input panel
+  useEffect(() => {
+    if (deferredEditRef.current && pendingSidebarAction === ("__deferred__" as QuickActionType)) {
+      const instruction = deferredEditRef.current;
+      deferredEditRef.current = null;
+      setPendingSidebarAction(null);
+      handleSendEdit(instruction);
+    }
+  }, [pendingSidebarAction, handleSendEdit]);
+
   // --- Undo ---
   const handleUndo = useCallback(() => {
     if (editHistory.length === 0) return;
@@ -414,6 +450,19 @@ function PageEditorInner() {
     scheduleSave(assembled);
     clearSelection();
   }, [editHistory, project, scheduleSave, clearSelection]);
+
+  // --- Toggle hidden ---
+  const handleToggleHidden = useCallback(() => {
+    toggleHidden();
+
+    const iframe = iframeRef.current;
+    if (iframe?.contentDocument) {
+      const updatedSections = extractSectionsFromDom(iframe.contentDocument, sectionsRef.current);
+      setSections(updatedSections);
+      setIsDirty(true);
+      scheduleSave("");
+    }
+  }, [toggleHidden, scheduleSave]);
 
   // --- Manual save ---
   const handleSave = useCallback(async () => {
@@ -471,6 +520,22 @@ function PageEditorInner() {
       setDraftPageId(newDraft.data.id);
       setPage(newDraft.data);
       setIsDirty(false);
+
+      // Update URL to reflect the new draft page ID so refresh loads the correct page
+      window.history.replaceState(null, "", `/admin/websites/${projectId}/pages/${newDraft.data.id}/edit`);
+
+      // Reload sections and iframe from the new draft
+      const draftSections: Section[] = normalizeSections(newDraft.data.sections);
+      setSections(draftSections);
+      if (project) {
+        const assembled = renderPage(
+          project.wrapper || "{{slot}}",
+          project.header || "",
+          project.footer || "",
+          draftSections
+        );
+        setHtmlContent(assembled);
+      }
 
       // Clear chat history for fresh draft
       setChatMap(new Map());
@@ -635,10 +700,13 @@ function PageEditorInner() {
           selectedInfo={selectedInfo}
           chatMessages={currentChatMessages}
           onSendEdit={handleSendEdit}
+          onToggleHidden={handleToggleHidden}
           isEditing={isEditing}
           debugInfo={lastDebugInfo}
           systemPrompt={systemPrompt}
           projectId={projectId}
+          externalAction={pendingSidebarAction !== ("__deferred__" as QuickActionType) ? pendingSidebarAction : null}
+          onExternalActionHandled={() => setPendingSidebarAction(null)}
         />
       </div>
 

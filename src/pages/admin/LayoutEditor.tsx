@@ -13,6 +13,7 @@ import {
   useIframeSelector,
   prepareHtmlForPreview,
 } from "../../hooks/useIframeSelector";
+import type { QuickActionPayload, QuickActionType } from "../../hooks/useIframeSelector";
 import { replaceComponentInDom, validateHtml } from "../../utils/htmlReplacer";
 import { AdminTopBar } from "../../components/Admin/AdminTopBar";
 import { AdminSidebar } from "../../components/Admin/AdminSidebar";
@@ -56,9 +57,23 @@ function LayoutEditorInner() {
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
   const [chatMap, setChatMap] = useState<Map<string, ChatMessage[]>>(new Map());
 
+  // Quick action triggered from iframe label icons
+  const [pendingSidebarAction, setPendingSidebarAction] = useState<QuickActionType | null>(null);
+  const deferredEditRef = useRef<string | null>(null);
+  const handleIframeQuickAction = useCallback((payload: QuickActionPayload) => {
+    if ((payload.action === "text" || payload.action === "link") && payload.value) {
+      deferredEditRef.current = payload.action === "text"
+        ? `Change the text content to "${payload.value}"`
+        : `Change the link href to "${payload.value}"`;
+      setPendingSidebarAction("__deferred__" as QuickActionType);
+    } else {
+      setPendingSidebarAction(payload.action);
+    }
+  }, []);
+
   // Selector hook (only active for header/footer)
-  const { selectedInfo, setSelectedInfo, setupListeners } =
-    useIframeSelector(iframeRef);
+  const { selectedInfo, setSelectedInfo, setupListeners, toggleHidden } =
+    useIframeSelector(iframeRef, handleIframeQuickAction);
 
   // --- Load project data ---
   useEffect(() => {
@@ -273,6 +288,30 @@ function LayoutEditorInner() {
     [projectId, field, selectedInfo, setSelectedInfo, chatMap, isVisualMode, setupListeners]
   );
 
+  // Process deferred quick-action edits from iframe input panel
+  useEffect(() => {
+    if (deferredEditRef.current && pendingSidebarAction === ("__deferred__" as QuickActionType)) {
+      const instruction = deferredEditRef.current;
+      deferredEditRef.current = null;
+      setPendingSidebarAction(null);
+      handleSendEdit(instruction);
+    }
+  }, [pendingSidebarAction, handleSendEdit]);
+
+  // Toggle hidden handler
+  const handleToggleHidden = useCallback(() => {
+    toggleHidden();
+
+    const iframe = iframeRef.current;
+    if (iframe?.contentDocument) {
+      const marker = iframe.contentDocument.querySelector("[data-layout-content]");
+      if (marker) {
+        setContent(marker.innerHTML);
+        setIsDirty(true);
+      }
+    }
+  }, [toggleHidden]);
+
   // Current chat messages for selected element
   const currentChatMessages = selectedInfo
     ? chatMap.get(selectedInfo.alloroClass) || []
@@ -420,10 +459,13 @@ function LayoutEditorInner() {
             selectedInfo={selectedInfo}
             chatMessages={currentChatMessages}
             onSendEdit={handleSendEdit}
+            onToggleHidden={handleToggleHidden}
             isEditing={isEditing}
             debugInfo={lastDebugInfo}
             systemPrompt={systemPrompt}
             projectId={projectId}
+            externalAction={pendingSidebarAction !== ("__deferred__" as QuickActionType) ? pendingSidebarAction : null}
+            onExternalActionHandled={() => setPendingSidebarAction(null)}
           />
         </div>
       ) : (

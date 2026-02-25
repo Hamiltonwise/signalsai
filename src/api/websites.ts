@@ -220,6 +220,7 @@ export interface StartPipelineRequest {
   reviewCount?: number;
   primaryColor?: string;
   accentColor?: string;
+  scrapedData?: string | null;
 }
 
 /**

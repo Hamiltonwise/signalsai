@@ -74,7 +74,7 @@ export function KnowledgeSyncWizard({
   const [direction, setDirection] = useState(1);
 
   // Server state
-  const [status, setStatus] = useState<MindStatus | null>(null);
+  const [, setStatus] = useState<MindStatus | null>(null);
   const [batch, setBatch] = useState<DiscoveryBatch | null>(null);
   const [posts, setPosts] = useState<DiscoveredPost[]>([]);
 

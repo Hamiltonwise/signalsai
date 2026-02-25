@@ -14,13 +14,16 @@ import { startPipeline } from "../../api/websites";
 import type { TemplatePage } from "../../api/templates";
 import { searchPlaces, getPlaceDetails } from "../../api/places";
 import type { PlaceSuggestion } from "../../api/places";
+import ColorPicker from "./ColorPicker";
 
-interface CreatePageModalProps {
+export interface CreatePageModalProps {
   projectId: string;
   templateId: string;
   gbpData: Record<string, string | number | null> | null;
   defaultPlaceId: string;
   defaultWebsiteUrl: string;
+  defaultPrimaryColor?: string;
+  defaultAccentColor?: string;
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -31,6 +34,8 @@ export default function CreatePageModal({
   gbpData,
   defaultPlaceId,
   defaultWebsiteUrl,
+  defaultPrimaryColor = "#1E40AF",
+  defaultAccentColor = "#F59E0B",
   onSuccess,
   onClose,
 }: CreatePageModalProps) {
@@ -43,16 +48,24 @@ export default function CreatePageModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Color picker state (pre-loaded from project defaults, customizable per page)
+  const [pagePrimaryColor, setPagePrimaryColor] = useState(defaultPrimaryColor);
+  const [pageAccentColor, setPageAccentColor] = useState(defaultAccentColor);
+
   // Override state
   const [showOverrides, setShowOverrides] = useState(false);
   const [overridePlaceId, setOverridePlaceId] = useState(defaultPlaceId);
-  const [overrideWebsiteUrl, setOverrideWebsiteUrl] = useState(defaultWebsiteUrl);
+  const [overrideWebsiteUrl, setOverrideWebsiteUrl] =
+    useState(defaultWebsiteUrl);
 
   // GBP search for override
   const [gbpSearchQuery, setGbpSearchQuery] = useState("");
   const [gbpSuggestions, setGbpSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searchingGbp, setSearchingGbp] = useState(false);
-  const [overrideGbpData, setOverrideGbpData] = useState<Record<string, string | number | null> | null>(null);
+  const [overrideGbpData, setOverrideGbpData] = useState<Record<
+    string,
+    string | number | null
+  > | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -154,14 +167,32 @@ export default function CreatePageModal({
         placeId: overridePlaceId,
         websiteUrl: overrideWebsiteUrl || null,
         pageContext: pageContext.trim() || undefined,
-        businessName: effectiveGbpData?.name ? String(effectiveGbpData.name) : undefined,
-        formattedAddress: effectiveGbpData?.formattedAddress ? String(effectiveGbpData.formattedAddress) : undefined,
-        city: effectiveGbpData?.city ? String(effectiveGbpData.city) : undefined,
-        state: effectiveGbpData?.state ? String(effectiveGbpData.state) : undefined,
-        phone: effectiveGbpData?.phone ? String(effectiveGbpData.phone) : undefined,
-        category: effectiveGbpData?.category ? String(effectiveGbpData.category) : undefined,
-        rating: effectiveGbpData?.rating ? Number(effectiveGbpData.rating) : undefined,
-        reviewCount: effectiveGbpData?.reviewCount ? Number(effectiveGbpData.reviewCount) : undefined,
+        businessName: effectiveGbpData?.name
+          ? String(effectiveGbpData.name)
+          : undefined,
+        formattedAddress: effectiveGbpData?.formattedAddress
+          ? String(effectiveGbpData.formattedAddress)
+          : undefined,
+        city: effectiveGbpData?.city
+          ? String(effectiveGbpData.city)
+          : undefined,
+        state: effectiveGbpData?.state
+          ? String(effectiveGbpData.state)
+          : undefined,
+        phone: effectiveGbpData?.phone
+          ? String(effectiveGbpData.phone)
+          : undefined,
+        category: effectiveGbpData?.category
+          ? String(effectiveGbpData.category)
+          : undefined,
+        rating: effectiveGbpData?.rating
+          ? Number(effectiveGbpData.rating)
+          : undefined,
+        reviewCount: effectiveGbpData?.reviewCount
+          ? Number(effectiveGbpData.reviewCount)
+          : undefined,
+        primaryColor: pagePrimaryColor,
+        accentColor: pageAccentColor,
       });
       onSuccess();
     } catch (err) {
@@ -175,7 +206,9 @@ export default function CreatePageModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div
         className="fixed inset-0 bg-black/40 transition-opacity"
-        onClick={() => { if (!submitting) onClose(); }}
+        onClick={() => {
+          if (!submitting) onClose();
+        }}
       />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl">
@@ -217,11 +250,16 @@ export default function CreatePageModal({
                           : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                       }`}
                     >
-                      <FileText className={`w-4 h-4 flex-shrink-0 ${selectedPageId === page.id ? "text-alloro-orange" : "text-gray-400"}`} />
-                      <span className="text-sm font-medium truncate">{page.name}</span>
+                      <FileText
+                        className={`w-4 h-4 flex-shrink-0 ${selectedPageId === page.id ? "text-alloro-orange" : "text-gray-400"}`}
+                      />
+                      <span className="text-sm font-medium truncate">
+                        {page.name}
+                      </span>
                       {page.sections && page.sections.length > 0 && (
                         <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
-                          {page.sections.length} section{page.sections.length !== 1 ? "s" : ""}
+                          {page.sections.length} section
+                          {page.sections.length !== 1 ? "s" : ""}
                         </span>
                       )}
                     </button>
@@ -246,9 +284,7 @@ export default function CreatePageModal({
                     : "border-gray-200 focus:border-alloro-orange focus:ring-alloro-orange/20"
                 }`}
               />
-              {slugError && (
-                <p className="text-xs text-red-500">{slugError}</p>
-              )}
+              {slugError && <p className="text-xs text-red-500">{slugError}</p>}
               <p className="text-xs text-gray-400">
                 The URL path for this page (e.g., /services, /about-us)
               </p>
@@ -267,7 +303,30 @@ export default function CreatePageModal({
                 className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:border-alloro-orange focus:ring-2 focus:ring-alloro-orange/20 outline-none resize-none transition"
               />
               <p className="text-xs text-gray-400">
-                Add details about this page so the AI generates relevant, specific content instead of generic filler.
+                Add details about this page so the AI generates relevant,
+                specific content instead of generic filler.
+              </p>
+            </div>
+
+            {/* Brand colors (per-page override) */}
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-gray-700">
+                Brand Colors
+              </label>
+              <div className="flex items-start gap-4">
+                <ColorPicker
+                  label="Primary"
+                  value={pagePrimaryColor}
+                  onChange={setPagePrimaryColor}
+                />
+                <ColorPicker
+                  label="Accent"
+                  value={pageAccentColor}
+                  onChange={setPageAccentColor}
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                Pre-loaded from the project. Adjust per-page if needed.
               </p>
             </div>
 
@@ -287,17 +346,26 @@ export default function CreatePageModal({
               {showOverrides && (
                 <div className="border-t border-gray-200 px-3 py-3 space-y-3 bg-gray-50/50">
                   <p className="text-xs text-gray-500">
-                    Override the business profile and website URL for this page only. These changes are not saved to the project.
+                    Override the business profile and website URL for this page
+                    only. These changes are not saved to the project.
                   </p>
 
                   {/* GBP search */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-medium text-gray-500">
-                      Business Profile (PlaceId: {overridePlaceId ? overridePlaceId.slice(0, 12) + "..." : "none"})
+                      Business Profile (PlaceId:{" "}
+                      {overridePlaceId
+                        ? overridePlaceId.slice(0, 12) + "..."
+                        : "none"}
+                      )
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        {searchingGbp ? <Loader2 className="h-3.5 w-3.5 text-gray-400 animate-spin" /> : <Search className="h-3.5 w-3.5 text-gray-400" />}
+                        {searchingGbp ? (
+                          <Loader2 className="h-3.5 w-3.5 text-gray-400 animate-spin" />
+                        ) : (
+                          <Search className="h-3.5 w-3.5 text-gray-400" />
+                        )}
                       </div>
                       <input
                         type="text"
@@ -317,8 +385,12 @@ export default function CreatePageModal({
                           >
                             <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                             <div className="min-w-0">
-                              <p className="font-medium text-gray-800 truncate">{s.mainText}</p>
-                              <p className="text-xs text-gray-500 truncate">{s.secondaryText}</p>
+                              <p className="font-medium text-gray-800 truncate">
+                                {s.mainText}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {s.secondaryText}
+                              </p>
                             </div>
                           </button>
                         ))}
@@ -365,7 +437,9 @@ export default function CreatePageModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || !selectedPageId || slug.length < 2 || !!slugError}
+              disabled={
+                submitting || !selectedPageId || slug.length < 2 || !!slugError
+              }
               className="inline-flex items-center gap-2 bg-alloro-orange hover:bg-alloro-orange/90 disabled:bg-alloro-orange/50 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed"
             >
               {submitting ? (

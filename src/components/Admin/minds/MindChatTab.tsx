@@ -7,10 +7,12 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Layers,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   sendChatMessage,
   getConversation,
@@ -83,11 +85,31 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const shouldAutoScroll = useRef(false);
 
+  // Only auto-scroll when the user just sent a message (not on load/switch)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScroll.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      shouldAutoScroll.current = false;
+    }
   }, [messages.length, isLoading]);
+
+  // Track scroll position to show/hide "scroll to latest" button
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const threshold = 80;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    setIsAtBottom(atBottom);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !loadingMessages) {
@@ -153,6 +175,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
       created_at: new Date().toISOString(),
     };
 
+    shouldAutoScroll.current = true;
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
@@ -176,6 +199,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
           content: result.reply,
           created_at: new Date().toISOString(),
         };
+        shouldAutoScroll.current = true;
         setMessages((prev) => [...prev, assistantMessage]);
       }
     } catch {
@@ -290,7 +314,11 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="relative flex-1 overflow-y-auto p-4 space-y-4"
+        >
           {loadingMessages ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
@@ -318,15 +346,15 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm overflow-hidden ${
                       msg.role === "user"
                         ? "bg-alloro-orange text-white rounded-br-md"
                         : "bg-gray-100 text-gray-800 rounded-bl-md"
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="prose prose-sm prose-gray max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <div className="prose prose-sm prose-gray max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-gray-300 prose-th:bg-gray-200 prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-gray-200">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -351,6 +379,19 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
 
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll to latest floating button */}
+        {!isAtBottom && messages.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={scrollToBottom}
+              className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-alloro-navy/90 px-4 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-alloro-navy transition-colors backdrop-blur-sm"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+              Scroll to latest
+            </button>
+          </div>
+        )}
 
         {/* Input */}
         <div className="border-t border-gray-200 p-3">

@@ -5,7 +5,6 @@ import {
   Check,
   X,
   ExternalLink,
-  Loader2,
   ArrowRight,
   Inbox,
 } from "lucide-react";

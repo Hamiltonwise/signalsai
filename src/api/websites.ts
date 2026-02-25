@@ -15,6 +15,8 @@ export interface WebsiteProject {
   wrapper: string;
   header: string;
   footer: string;
+  primary_color: string | null;
+  accent_color: string | null;
   step_gbp_scrape: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -82,7 +84,7 @@ const API_BASE = "/api/admin/websites";
  * Fetch all website projects with pagination
  */
 export const fetchWebsites = async (
-  filters: FetchWebsitesRequest = {}
+  filters: FetchWebsitesRequest = {},
 ): Promise<WebsitesResponse> => {
   const params = new URLSearchParams();
 
@@ -93,7 +95,7 @@ export const fetchWebsites = async (
   });
 
   const response = await fetch(
-    `${API_BASE}${params.toString() ? `?${params.toString()}` : ""}`
+    `${API_BASE}${params.toString() ? `?${params.toString()}` : ""}`,
   );
 
   if (!response.ok) {
@@ -107,7 +109,7 @@ export const fetchWebsites = async (
  * Fetch a single website project with pages
  */
 export const fetchWebsiteDetail = async (
-  id: string
+  id: string,
 ): Promise<WebsiteDetailResponse> => {
   const response = await fetch(`${API_BASE}/${id}`);
 
@@ -158,7 +160,7 @@ export const createWebsite = async (data: {
  * Delete a website project
  */
 export const deleteWebsite = async (
-  id: string
+  id: string,
 ): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: "DELETE",
@@ -177,7 +179,7 @@ export const deleteWebsite = async (
  */
 export const updateWebsite = async (
   id: string,
-  data: Partial<WebsiteProject>
+  data: Partial<WebsiteProject>,
 ): Promise<{ success: boolean; data: WebsiteProject }> => {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: "PATCH",
@@ -216,13 +218,15 @@ export interface StartPipelineRequest {
   category?: string;
   rating?: number;
   reviewCount?: number;
+  primaryColor?: string;
+  accentColor?: string;
 }
 
 /**
  * Trigger the N8N pipeline to generate a website page
  */
 export const startPipeline = async (
-  data: StartPipelineRequest
+  data: StartPipelineRequest,
 ): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(`${API_BASE}/start-pipeline`, {
     method: "POST",
@@ -257,7 +261,7 @@ export interface WebsiteStatusResponse {
  * Poll website project status (lightweight endpoint)
  */
 export const pollWebsiteStatus = async (
-  id: string
+  id: string,
 ): Promise<WebsiteStatusResponse> => {
   const response = await fetch(`${API_BASE}/${id}/status`);
 
@@ -312,7 +316,7 @@ export const scrapeWebsite = async (url: string): Promise<ScrapeResponse> => {
  */
 export const fetchPage = async (
   projectId: string,
-  pageId: string
+  pageId: string,
 ): Promise<{ success: boolean; data: WebsitePage }> => {
   const response = await fetch(`${API_BASE}/${projectId}/pages/${pageId}`);
 
@@ -329,11 +333,11 @@ export const fetchPage = async (
  */
 export const createDraftFromPage = async (
   projectId: string,
-  pageId: string
+  pageId: string,
 ): Promise<{ success: boolean; data: WebsitePage }> => {
   const response = await fetch(
     `${API_BASE}/${projectId}/pages/${pageId}/create-draft`,
-    { method: "POST" }
+    { method: "POST" },
   );
 
   if (!response.ok) {
@@ -351,7 +355,7 @@ export const updatePageSections = async (
   projectId: string,
   pageId: string,
   sections: Section[],
-  editChatHistory?: EditChatHistory
+  editChatHistory?: EditChatHistory,
 ): Promise<{ success: boolean; data: WebsitePage }> => {
   const body: Record<string, unknown> = { sections };
   if (editChatHistory !== undefined) {
@@ -377,11 +381,11 @@ export const updatePageSections = async (
  */
 export const publishPage = async (
   projectId: string,
-  pageId: string
+  pageId: string,
 ): Promise<{ success: boolean; data: WebsitePage }> => {
   const response = await fetch(
     `${API_BASE}/${projectId}/pages/${pageId}/publish`,
-    { method: "POST" }
+    { method: "POST" },
   );
 
   if (!response.ok) {
@@ -397,7 +401,7 @@ export const publishPage = async (
  */
 export const deletePageVersion = async (
   projectId: string,
-  pageId: string
+  pageId: string,
 ): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(`${API_BASE}/${projectId}/pages/${pageId}`, {
     method: "DELETE",
@@ -416,11 +420,11 @@ export const deletePageVersion = async (
  */
 export const deletePageByPath = async (
   projectId: string,
-  path: string
+  path: string,
 ): Promise<{ success: boolean; message: string }> => {
   const response = await fetch(
     `${API_BASE}/${projectId}/pages/by-path?path=${encodeURIComponent(path)}`,
-    { method: "DELETE" }
+    { method: "DELETE" },
   );
 
   if (!response.ok) {
@@ -460,7 +464,7 @@ export interface EditComponentResponse {
 export const editPageComponent = async (
   projectId: string,
   pageId: string,
-  payload: EditComponentRequest
+  payload: EditComponentRequest,
 ): Promise<EditComponentResponse> => {
   const response = await fetch(
     `${API_BASE}/${projectId}/pages/${pageId}/edit`,
@@ -468,7 +472,7 @@ export const editPageComponent = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -484,16 +488,13 @@ export const editPageComponent = async (
  */
 export const editLayoutComponent = async (
   projectId: string,
-  payload: EditComponentRequest
+  payload: EditComponentRequest,
 ): Promise<EditComponentResponse> => {
-  const response = await fetch(
-    `${API_BASE}/${projectId}/edit-layout`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }
-  );
+  const response = await fetch(`${API_BASE}/${projectId}/edit-layout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -527,7 +528,7 @@ export const fetchEditorSystemPrompt = async (): Promise<string> => {
  */
 export const linkWebsiteToOrganization = async (
   projectId: string,
-  organizationId: number | null
+  organizationId: number | null,
 ): Promise<{ success: boolean; data: WebsiteProject }> => {
   const token = localStorage.getItem("auth_token");
   const response = await fetch(`${API_BASE}/${projectId}/link-organization`, {
@@ -564,7 +565,7 @@ export interface ContactFormData {
  * Submit a contact form from a rendered site
  */
 export const submitContactForm = async (
-  data: ContactFormData
+  data: ContactFormData,
 ): Promise<{ success: boolean }> => {
   const response = await fetch("/api/websites/contact", {
     method: "POST",

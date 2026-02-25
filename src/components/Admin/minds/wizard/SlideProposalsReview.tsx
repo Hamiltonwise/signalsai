@@ -31,11 +31,7 @@ interface SlideProposalsReviewProps {
   onDone: () => void;
 }
 
-function ProposalDiff({
-  proposal,
-}: {
-  proposal: SyncProposal;
-}) {
+function ProposalDiff({ proposal }: { proposal: SyncProposal }) {
   const [expanded, setExpanded] = useState(false);
 
   if (proposal.type === "NEW") {
@@ -112,7 +108,7 @@ export function SlideProposalsReview({
   const [loading, setLoading] = useState(true);
 
   // Compile state
-  const [compileRunId, setCompileRunId] = useState<string | null>(null);
+  const [, setCompileRunId] = useState<string | null>(null);
   const [compileSteps, setCompileSteps] = useState<SyncStep[]>([]);
   const [compiling, setCompiling] = useState(false);
   const [compileStarting, setCompileStarting] = useState(false);
@@ -227,12 +223,8 @@ export function SlideProposalsReview({
 
   const totalCount = proposals.length;
   const pendingCount = proposals.filter((p) => p.status === "pending").length;
-  const approvedCount = proposals.filter(
-    (p) => p.status === "approved",
-  ).length;
-  const rejectedCount = proposals.filter(
-    (p) => p.status === "rejected",
-  ).length;
+  const approvedCount = proposals.filter((p) => p.status === "approved").length;
+  const rejectedCount = proposals.filter((p) => p.status === "rejected").length;
   const reviewedCount = approvedCount + rejectedCount;
   const canCompile = pendingCount === 0 && approvedCount > 0;
   const progressPct = totalCount > 0 ? (reviewedCount / totalCount) * 100 : 0;

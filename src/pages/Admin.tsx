@@ -21,6 +21,8 @@ import ImportDetail from "./admin/ImportDetail";
 import PageEditor from "./admin/PageEditor";
 import LayoutEditor from "./admin/LayoutEditor";
 import AdminSettings from "./admin/AdminSettings";
+import MindsList from "./admin/MindsList";
+import MindDetail from "./admin/MindDetail";
 
 function WebDevEngine() {
   return (
@@ -83,6 +85,8 @@ function AdminWithLayout() {
         <Route path="templates" element={<TemplatesList />} />
         <Route path="templates/imports/:id" element={<ImportDetail />} />
         <Route path="templates/:id" element={<TemplateDetail />} />
+        <Route path="minds" element={<MindsList />} />
+        <Route path="minds/:mindId" element={<MindDetail />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="sentry-test" element={<SentryTest />} />
       </Routes>

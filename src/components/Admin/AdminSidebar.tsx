@@ -11,6 +11,7 @@ import {
   Building,
   Database,
   Bot,
+  Brain,
   TrendingUp,
   Briefcase,
   Globe,
@@ -27,6 +28,7 @@ export type AdminNavKey =
   | "ai-pms-automation"
   | "ai-data-insights"
   | "practice-ranking"
+  | "minds"
   | "app-logs"
   | "organization-management"
   | "websites"
@@ -44,6 +46,7 @@ const AGENTS_GROUP_ITEMS: NavItem[] = [
   { key: "ai-pms-automation", label: "AI PMS Automation", icon: Cpu },
   { key: "ai-data-insights", label: "Agent Enhancements", icon: LineChart },
   { key: "practice-ranking", label: "Practice Ranking", icon: TrendingUp },
+  { key: "minds", label: "Minds", icon: Brain },
 ];
 
 const DONE_FOR_YOU_ITEMS: NavItem[] = [

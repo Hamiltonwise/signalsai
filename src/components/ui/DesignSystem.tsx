@@ -891,6 +891,7 @@ interface TabBarProps {
   tabs: Array<{
     id: string;
     label: string;
+    description?: string;
     icon?: ReactNode;
   }>;
   activeTab: string;
@@ -907,7 +908,7 @@ export const TabBar: React.FC<TabBarProps> = ({
       <motion.button
         key={tab.id}
         onClick={() => onTabChange(tab.id)}
-        className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
           activeTab === tab.id
             ? "text-alloro-navy"
             : "text-gray-500 hover:text-gray-700"
@@ -924,7 +925,16 @@ export const TabBar: React.FC<TabBarProps> = ({
         )}
         <span className="relative z-10 flex items-center gap-2">
           {tab.icon}
-          {tab.label}
+          <span className="flex flex-col items-start">
+            <span>{tab.label}</span>
+            {tab.description && (
+              <span className={`text-[10px] font-normal leading-tight ${
+                activeTab === tab.id ? "text-gray-400" : "text-gray-400/70"
+              }`}>
+                {tab.description}
+              </span>
+            )}
+          </span>
         </span>
       </motion.button>
     ))}

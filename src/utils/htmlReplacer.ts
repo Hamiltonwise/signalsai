@@ -129,21 +129,27 @@ export function extractSectionsFromDom(
   currentSections: Section[]
 ): Section[] {
   return currentSections.map((section) => {
-    // Extract the actual alloro-tpl class from the section's stored HTML content
+    // Strategy 1: find by data-alloro-section marker (injected by renderPage)
+    const markerEl = iframeDoc.querySelector(`[data-alloro-section="${CSS.escape(section.name)}"]`);
+    if (markerEl) {
+      // Strip the marker attribute before persisting — it's editor-only
+      markerEl.removeAttribute("data-alloro-section");
+      const html = markerEl.outerHTML;
+      // Re-add the marker so subsequent extractions still work
+      markerEl.setAttribute("data-alloro-section", section.name);
+      return { ...section, content: html };
+    }
+
+    // Strategy 2: fall back to alloro-tpl-* class from stored content
     const alloroClass = extractAlloroClass(section.content);
-
-    if (!alloroClass) {
-      console.warn(`[extractSections] "${section.name}" → no alloro-tpl class found in stored content`);
-      return section;
+    if (alloroClass) {
+      const el = iframeDoc.querySelector(`.${CSS.escape(alloroClass)}`);
+      if (el) {
+        return { ...section, content: el.outerHTML };
+      }
     }
 
-    const el = iframeDoc.querySelector(`.${CSS.escape(alloroClass)}`);
-
-    if (el) {
-      return { ...section, content: el.outerHTML };
-    }
-
-    console.warn(`[extractSections] "${section.name}" → no DOM match for class "${alloroClass}"`);
+    console.warn(`[extractSections] "${section.name}" → no match in DOM`);
     return section;
   });
 }
@@ -171,6 +177,9 @@ function serializeDocument(doc: Document): string {
   clone
     .querySelectorAll("[data-alloro-selected]")
     .forEach((el) => el.removeAttribute("data-alloro-selected"));
+  clone
+    .querySelectorAll("[data-alloro-section]")
+    .forEach((el) => el.removeAttribute("data-alloro-section"));
 
   const doctype = doc.doctype;
   const doctypeStr = doctype

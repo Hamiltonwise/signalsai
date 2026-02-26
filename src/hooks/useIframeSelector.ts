@@ -147,6 +147,16 @@ const SELECTOR_CSS = `
     pointer-events: none !important;
   }
 
+  /* Re-enable navigation toggle buttons (hamburger menus) */
+  button[aria-expanded],
+  button[aria-controls],
+  button[data-collapse-toggle],
+  button[data-drawer-toggle],
+  [data-mobile-menu-toggle] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+
   /* Hover highlight */
   [data-alloro-hover="true"] {
     outline: 2px dashed #3b82f6 !important;

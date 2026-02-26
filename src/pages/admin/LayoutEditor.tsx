@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Monitor, Tablet, Smartphone } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import {
   fetchWebsiteDetail,
@@ -48,6 +48,9 @@ function LayoutEditorInner() {
   const [content, setContent] = useState("");
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Device preview
+  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
   // Visual editor state (header/footer only)
   const [previewHtml, setPreviewHtml] = useState("");
@@ -410,6 +413,32 @@ function LayoutEditorInner() {
             <span className="text-[10px] text-gray-400">Unsaved changes</span>
           )}
         </div>
+        {/* Center: Device switcher (header/footer only) */}
+        {isVisualMode && (
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            {(
+              [
+                { key: "desktop", icon: Monitor, title: "Desktop (100%)" },
+                { key: "tablet", icon: Tablet, title: "Tablet (768px)" },
+                { key: "mobile", icon: Smartphone, title: "Mobile (375px)" },
+              ] as const
+            ).map(({ key, icon: Icon, title }) => (
+              <button
+                key={key}
+                onClick={() => setDevice(key)}
+                className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
+                  device === key
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+                title={title}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={handleSave}
           disabled={isSaving || !isDirty}
@@ -443,7 +472,18 @@ function LayoutEditorInner() {
         <div className="flex-1 flex overflow-hidden">
           {/* Iframe preview */}
           <div className="flex-1 bg-gray-100 p-4 overflow-hidden flex items-start justify-center">
-            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white">
+            <div
+              className="h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 transition-all duration-300 mx-auto bg-white"
+              style={{
+                width:
+                  device === "desktop"
+                    ? "100%"
+                    : device === "tablet"
+                      ? "768px"
+                      : "375px",
+                maxWidth: "100%",
+              }}
+            >
               <iframe
                 ref={iframeRef}
                 srcDoc={prepareHtmlForPreview(previewHtml)}

@@ -256,10 +256,15 @@ function PageEditorInner() {
   // --- Handle edit send ---
   const handleSendEdit = useCallback(
     async (instruction: string, attachedMedia?: any[]) => {
-      // Block editing non-section elements (header/footer live on the project, not the page)
-      if (selectedInfo && !selectedInfo.alloroClass.includes("-section-")) {
-        setEditError("Header/footer components can't be edited here. Use the Layout Editor from the project page.");
-        return;
+      // Block editing header/footer elements (they live on the project, not the page).
+      // Check structurally: if the element is inside a data-alloro-section marker, it's page content.
+      if (selectedInfo) {
+        const doc = iframeRef.current?.contentDocument;
+        const el = doc?.querySelector(`.${CSS.escape(selectedInfo.alloroClass)}`);
+        if (el && !el.closest("[data-alloro-section]")) {
+          setEditError("Header/footer components can't be edited here. Use the Layout Editor from the project page.");
+          return;
+        }
       }
 
       if (!projectId || !draftPageId || !selectedInfo) return;

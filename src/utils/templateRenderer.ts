@@ -79,6 +79,16 @@ function injectCodeSnippets(
 }
 
 /**
+ * Inject a `data-alloro-section` attribute on the root element of a section's HTML.
+ * This gives extractSectionsFromDom a reliable way to find each section in the
+ * live iframe DOM, regardless of whether the template uses alloro-tpl-* classes.
+ */
+function tagSectionRoot(sectionName: string, html: string): string {
+  // Match the first opening HTML tag (e.g., <section ...>, <div ...>)
+  return html.replace(/^(\s*<\w+)/, `$1 data-alloro-section="${sectionName}"`);
+}
+
+/**
  * Assemble a full HTML page from template parts.
  *
  * wrapper.replace('{{slot}}', header + sections + footer)
@@ -100,7 +110,11 @@ export function renderPage(
     ? sections.filter((s) => sectionFilter.includes(s.name))
     : sections;
 
-  const mainContent = sectionsToRender.map((s) => s.content).join("\n");
+  // Inject a data-alloro-section marker on each section's root element
+  // so extractSectionsFromDom can reliably find them after DOM mutation.
+  const mainContent = sectionsToRender
+    .map((s) => tagSectionRoot(s.name, s.content))
+    .join("\n");
   const pageContent = [header, mainContent, footer].join("\n");
   let finalHtml = wrapper.replace("{{slot}}", pageContent);
 

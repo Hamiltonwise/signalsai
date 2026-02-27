@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Globe, ExternalLink, AlertCircle, Sparkles, FileText, ChevronDown, Link as LinkIcon } from "lucide-react";
+import {
+  Globe,
+  ExternalLink,
+  AlertCircle,
+  Sparkles,
+  FileText,
+  Link as LinkIcon,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import { apiGet, apiPost, apiDelete } from "../api";
 import ConnectDomainModal from "../components/Admin/ConnectDomainModal";
@@ -34,15 +41,21 @@ interface Usage {
 
 export function DFYWebsite() {
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<"PREPARING" | "READY" | "READ_ONLY" | null>(null);
+  const [status, setStatus] = useState<
+    "PREPARING" | "READY" | "READ_ONLY" | null
+  >(null);
   const [project, setProject] = useState<Project | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [previewHtml, setPreviewHtml] = useState("");
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(
+    null,
+  );
   const [instruction, setInstruction] = useState("");
-  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([]);
+  const [chatHistory, setChatHistory] = useState<
+    Array<{ role: string; content: string }>
+  >([]);
   const [editing, setEditing] = useState(false);
   const [showDomainModal, setShowDomainModal] = useState(false);
 
@@ -87,9 +100,7 @@ export function DFYWebsite() {
   const renderPage = () => {
     if (!selectedPage || !project) return;
 
-    const sectionsHtml = selectedPage.sections
-      .map((s) => s.content)
-      .join("\n");
+    const sectionsHtml = selectedPage.sections.map((s) => s.content).join("\n");
 
     const pageContent = [project.header, sectionsHtml, project.footer]
       .filter(Boolean)
@@ -197,7 +208,11 @@ export function DFYWebsite() {
           <div className="h-4 w-48 bg-slate-100 rounded" />
           <div className="mt-8 space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${80 - i * 15}%` }} />
+              <div
+                key={i}
+                className="h-4 bg-slate-100 rounded"
+                style={{ width: `${80 - i * 15}%` }}
+              />
             ))}
           </div>
         </div>
@@ -210,9 +225,12 @@ export function DFYWebsite() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center max-w-md">
           <div className="animate-spin w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Your Website is Being Prepared</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            Your Website is Being Prepared
+          </h2>
           <p className="text-gray-600">
-            We're setting up your website. You'll receive an email when it's ready!
+            We're setting up your website. You'll receive an email when it's
+            ready!
           </p>
         </div>
       </div>
@@ -224,12 +242,16 @@ export function DFYWebsite() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center max-w-md">
           <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Website in Read-Only Mode</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            Website in Read-Only Mode
+          </h2>
           <p className="text-gray-600 mb-4">
-            Your subscription has been downgraded. Your website is still live but you cannot make edits.
+            Your subscription has been downgraded. Your website is still live
+            but you cannot make edits.
           </p>
           <p className="text-sm text-gray-500">
-            Contact your administrator to upgrade your plan and regain editing access.
+            Contact your administrator to upgrade your plan and regain editing
+            access.
           </p>
         </div>
       </div>
@@ -244,13 +266,16 @@ export function DFYWebsite() {
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 rounded-full mb-4">
               <Sparkles className="w-4 h-4 text-alloro-orange" />
-              <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">Almost There</span>
+              <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">
+                Almost There
+              </span>
             </div>
             <h1 className="text-3xl font-black text-alloro-navy font-heading tracking-tight mb-3">
               Your Website is Being Built
             </h1>
             <p className="text-base text-slate-500 font-medium max-w-md mx-auto">
-              Your project has been created and our team is setting up your pages. You'll be able to edit them here once they're ready.
+              Your project has been created and our team is setting up your
+              pages. You'll be able to edit them here once they're ready.
             </p>
           </div>
 
@@ -266,7 +291,9 @@ export function DFYWebsite() {
                   No Pages Yet
                 </h3>
                 <p className="text-slate-500 font-medium leading-relaxed mb-4">
-                  Pages will appear here once they've been designed and published. You'll receive a notification when your website is ready for editing.
+                  Pages will appear here once they've been designed and
+                  published. You'll receive a notification when your website is
+                  ready for editing.
                 </p>
                 {project && (
                   <div className="flex items-center gap-2 text-sm text-slate-400">
@@ -316,7 +343,9 @@ export function DFYWebsite() {
               key={page.id}
               onClick={() => setSelectedPage(page)}
               className={`w-full px-4 py-3 text-left hover:bg-gray-50 border-b transition-colors ${
-                selectedPage?.id === page.id ? "bg-purple-50 border-l-4 border-purple-600" : ""
+                selectedPage?.id === page.id
+                  ? "bg-purple-50 border-l-4 border-purple-600"
+                  : ""
               }`}
             >
               <div className="font-medium text-sm">
@@ -342,9 +371,13 @@ export function DFYWebsite() {
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${
-                    usage.storage_percentage > 90 ? "bg-red-500" : "bg-purple-600"
+                    usage.storage_percentage > 90
+                      ? "bg-red-500"
+                      : "bg-purple-600"
                   }`}
-                  style={{ width: `${Math.min(usage.storage_percentage, 100)}%` }}
+                  style={{
+                    width: `${Math.min(usage.storage_percentage, 100)}%`,
+                  }}
                 />
               </div>
             </div>
@@ -352,7 +385,13 @@ export function DFYWebsite() {
             <div className="text-xs text-gray-600">
               <div className="flex justify-between">
                 <span>Edits today</span>
-                <span className={usage.edits_today >= usage.edits_limit ? "text-red-600 font-semibold" : ""}>
+                <span
+                  className={
+                    usage.edits_today >= usage.edits_limit
+                      ? "text-red-600 font-semibold"
+                      : ""
+                  }
+                >
                   {usage.edits_today} / {usage.edits_limit}
                 </span>
               </div>
@@ -396,7 +435,10 @@ export function DFYWebsite() {
           <h3 className="font-semibold">Edit with AI</h3>
           {selectedComponent ? (
             <p className="text-xs text-gray-600 mt-1">
-              Selected: <code className="bg-gray-100 px-1 rounded text-xs">{selectedComponent}</code>
+              Selected:{" "}
+              <code className="bg-gray-100 px-1 rounded text-xs">
+                {selectedComponent}
+              </code>
             </p>
           ) : (
             <p className="text-xs text-gray-600 mt-1">
@@ -408,7 +450,9 @@ export function DFYWebsite() {
         <div className="flex-1 overflow-y-auto p-4">
           {chatHistory.length === 0 ? (
             <div className="text-center text-gray-500 text-sm mt-8">
-              <p className="mb-2">Select a component and describe your changes.</p>
+              <p className="mb-2">
+                Select a component and describe your changes.
+              </p>
               <p className="font-semibold mb-2">Examples:</p>
               <ul className="text-left space-y-1 text-xs">
                 <li>• "Make this text larger"</li>
@@ -448,12 +492,21 @@ export function DFYWebsite() {
             placeholder="Describe your changes..."
             className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
             rows={3}
-            disabled={!selectedComponent || editing || !!(usage && usage.edits_today >= usage.edits_limit)}
+            disabled={
+              !selectedComponent ||
+              editing ||
+              !!(usage && usage.edits_today >= usage.edits_limit)
+            }
           />
 
           <button
             onClick={handleEdit}
-            disabled={!selectedComponent || !instruction.trim() || editing || !!(usage && usage.edits_today >= usage.edits_limit)}
+            disabled={
+              !selectedComponent ||
+              !instruction.trim() ||
+              editing ||
+              !!(usage && usage.edits_today >= usage.edits_limit)
+            }
             className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {editing ? "Editing..." : "Send"}
@@ -471,7 +524,10 @@ export function DFYWebsite() {
           domainVerifiedAt={project.domain_verified_at}
           onDomainChange={fetchWebsite}
           onConnect={async (domain) => {
-            const res = await apiPost({ path: "/user/website/domain/connect", passedData: { domain } });
+            const res = await apiPost({
+              path: "/user/website/domain/connect",
+              passedData: { domain },
+            });
             return { server_ip: res.data.server_ip };
           }}
           onVerify={async () => {

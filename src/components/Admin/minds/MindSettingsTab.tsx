@@ -35,8 +35,6 @@ interface MindSettingsTabProps {
   onMindDeleted?: () => void;
 }
 
-const MAX_BRAIN_CHARACTERS = 50_000;
-
 export function MindSettingsTab({ mind, onMindUpdated, onMindDeleted }: MindSettingsTabProps) {
   const confirm = useConfirm();
 
@@ -200,8 +198,6 @@ export function MindSettingsTab({ mind, onMindUpdated, onMindDeleted }: MindSett
     }
   };
 
-  const charPercent = Math.round((brainMarkdown.length / MAX_BRAIN_CHARACTERS) * 100);
-
   return (
     <div className="space-y-6">
       {/* Personality Section */}
@@ -240,26 +236,14 @@ export function MindSettingsTab({ mind, onMindUpdated, onMindDeleted }: MindSett
                 v{mind.published_version.version_number}
               </span>
             )}
-            <span
-              className={`text-xs ${
-                charPercent > 90
-                  ? "text-red-500 font-medium"
-                  : charPercent > 70
-                  ? "text-amber-500"
-                  : "text-gray-400"
-              }`}
-            >
-              {brainMarkdown.length.toLocaleString()} / {MAX_BRAIN_CHARACTERS.toLocaleString()} chars ({charPercent}%)
+            <span className="text-xs text-gray-400">
+              {brainMarkdown.length.toLocaleString()} chars
             </span>
           </div>
         </div>
         <textarea
           value={brainMarkdown}
-          onChange={(e) => {
-            if (e.target.value.length <= MAX_BRAIN_CHARACTERS) {
-              setBrainMarkdown(e.target.value);
-            }
-          }}
+          onChange={(e) => setBrainMarkdown(e.target.value)}
           rows={20}
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono leading-relaxed focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange resize-y"
           placeholder="# Mind Knowledge Base&#10;&#10;Write markdown content here..."

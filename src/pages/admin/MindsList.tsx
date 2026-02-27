@@ -6,7 +6,6 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  BookOpen,
   X,
   Bot,
 } from "lucide-react";
@@ -213,7 +212,7 @@ export default function MindsList() {
 
         {/* Cards grid */}
         {!loading && !error && minds.length > 0 && (
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {minds.map((mind, i) => (
               <motion.div
                 key={mind.id}
@@ -221,31 +220,15 @@ export default function MindsList() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => navigate(`/admin/minds/${mind.id}`)}
-                className="cursor-pointer rounded-2xl liquid-glass p-8 transition-all hover:border-alloro-orange/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_40px_rgba(214,104,83,0.08)]"
+                className="cursor-pointer rounded-2xl liquid-glass p-6 transition-all hover:border-alloro-orange/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_40px_rgba(214,104,83,0.08)]"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-alloro-orange text-white">
-                    <Bot className="h-7 w-7" />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-alloro-orange text-white">
+                    <Bot className="h-5 w-5" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-semibold text-[#eaeaea]">
-                      {mind.name}
-                    </h3>
-                    <p className="mt-2 text-sm text-[#a0a0a8] leading-relaxed">
-                      {mind.personality_prompt || "No personality set"}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 flex items-center gap-4 text-sm text-[#6a6a75]">
-                  <div className="flex items-center gap-1.5">
-                    <BookOpen className="h-4 w-4" />
-                    <span>
-                      {mind.published_version_id ? "Published" : "Draft"}
-                    </span>
-                  </div>
-                  <span>
-                    Created {new Date(mind.created_at).toLocaleDateString()}
-                  </span>
+                  <h3 className="text-base font-semibold text-[#eaeaea]">
+                    {mind.name}
+                  </h3>
                 </div>
               </motion.div>
             ))}

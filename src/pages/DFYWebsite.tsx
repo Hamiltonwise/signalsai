@@ -190,30 +190,31 @@ export function DFYWebsite() {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-alloro-bg animate-pulse">
-        <div className="w-64 bg-white border-r border-black/5 p-4 space-y-4">
+      <div className="flex flex-col h-screen bg-alloro-bg animate-pulse">
+        <div className="bg-white border-b border-black/5 px-4 py-3 flex items-center gap-4">
           <div className="h-6 w-32 bg-slate-200 rounded" />
-          <div className="space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+          <div className="flex gap-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-8 w-20 bg-slate-100 rounded-lg" />
             ))}
           </div>
         </div>
-        <div className="flex-1 p-6 space-y-6">
-          <div className="h-8 w-48 bg-slate-200 rounded" />
-          <div className="h-[70vh] bg-slate-100 rounded-2xl" />
-        </div>
-        <div className="w-96 bg-white border-l border-black/5 p-4 space-y-4">
-          <div className="h-6 w-24 bg-slate-200 rounded" />
-          <div className="h-4 w-48 bg-slate-100 rounded" />
-          <div className="mt-8 space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-4 bg-slate-100 rounded"
-                style={{ width: `${80 - i * 15}%` }}
-              />
-            ))}
+        <div className="flex flex-1 min-h-0">
+          <div className="flex-1 p-6">
+            <div className="h-full bg-slate-100 rounded-2xl" />
+          </div>
+          <div className="w-96 bg-white border-l border-black/5 p-4 space-y-4">
+            <div className="h-6 w-24 bg-slate-200 rounded" />
+            <div className="h-4 w-48 bg-slate-100 rounded" />
+            <div className="mt-8 space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-4 bg-slate-100 rounded"
+                  style={{ width: `${80 - i * 15}%` }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -313,18 +314,52 @@ export function DFYWebsite() {
     );
   }
 
+  const liveUrl = project?.custom_domain && project?.domain_verified_at
+    ? `https://${project.custom_domain}`
+    : project
+      ? `https://${project.hostname}.sites.getalloro.com`
+      : null;
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar: Pages */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg flex items-center gap-2">
-            <Globe className="h-5 w-5 text-purple-600" />
-            Your Website
-          </h2>
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Top Bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-4">
+        <h2 className="font-semibold text-sm flex items-center gap-2 shrink-0">
+          <Globe className="h-4 w-4 text-purple-600" />
+          Your Website
+        </h2>
+
+        {/* Page Tabs */}
+        <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0">
+          {pages.map((page) => (
+            <button
+              key={page.id}
+              onClick={() => setSelectedPage(page)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedPage?.id === page.id
+                  ? "bg-purple-100 text-purple-700"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {page.path === "/" ? "Home" : page.path}
+            </button>
+          ))}
+        </div>
+
+        {/* Right section: usage, domain, view live */}
+        <div className="flex items-center gap-3 shrink-0">
+          {usage && (
+            <div className="flex items-center gap-3 text-xs text-gray-500">
+              <span>
+                {usage.edits_today}/{usage.edits_limit} edits
+              </span>
+              <span>{Math.round(usage.storage_percentage)}% storage</span>
+            </div>
+          )}
+
           <button
             onClick={() => setShowDomainModal(true)}
-            className={`mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               project?.custom_domain && project?.domain_verified_at
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
                 : project?.custom_domain
@@ -335,182 +370,118 @@ export function DFYWebsite() {
             <LinkIcon className="w-3.5 h-3.5" />
             {project?.custom_domain || "Connect Domain"}
           </button>
-        </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {pages.map((page) => (
-            <button
-              key={page.id}
-              onClick={() => setSelectedPage(page)}
-              className={`w-full px-4 py-3 text-left hover:bg-gray-50 border-b transition-colors ${
-                selectedPage?.id === page.id
-                  ? "bg-purple-50 border-l-4 border-purple-600"
-                  : ""
-              }`}
-            >
-              <div className="font-medium text-sm">
-                {page.path === "/" ? "Home" : page.path}
-              </div>
-              <div className="text-xs text-gray-500">
-                Updated {new Date(page.updated_at).toLocaleDateString()}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Usage Stats */}
-        {usage && (
-          <div className="p-4 border-t bg-gray-50">
-            <h3 className="text-xs font-semibold mb-3 text-gray-700">Usage</h3>
-
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>Storage</span>
-                <span>{Math.round(usage.storage_percentage)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    usage.storage_percentage > 90
-                      ? "bg-red-500"
-                      : "bg-purple-600"
-                  }`}
-                  style={{
-                    width: `${Math.min(usage.storage_percentage, 100)}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-600">
-              <div className="flex justify-between">
-                <span>Edits today</span>
-                <span
-                  className={
-                    usage.edits_today >= usage.edits_limit
-                      ? "text-red-600 font-semibold"
-                      : ""
-                  }
-                >
-                  {usage.edits_today} / {usage.edits_limit}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Center: Preview */}
-      <div className="flex-1 bg-white flex flex-col">
-        <div className="p-4 border-b flex items-center justify-between">
-          <h3 className="font-semibold">
-            {selectedPage?.path === "/" ? "Home" : selectedPage?.path}
-          </h3>
-          {project && (
+          {liveUrl && (
             <a
-              href={`https://${project.hostname}.sites.getalloro.com${selectedPage?.path || ""}`}
+              href={`${liveUrl}${selectedPage?.path || ""}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-purple-600 hover:underline flex items-center gap-1"
+              className="flex items-center gap-1 text-sm text-purple-600 hover:underline"
             >
               <ExternalLink className="w-4 h-4" />
               View Live
             </a>
           )}
         </div>
-
-        <div className="flex-1 overflow-auto">
-          <iframe
-            srcDoc={previewHtml}
-            className="w-full h-full border-0"
-            title="Page Preview"
-            sandbox="allow-same-origin allow-scripts"
-          />
-        </div>
       </div>
 
-      {/* Right: AI Chat */}
-      <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Edit with AI</h3>
-          {selectedComponent ? (
-            <p className="text-xs text-gray-600 mt-1">
-              Selected:{" "}
-              <code className="bg-gray-100 px-1 rounded text-xs">
-                {selectedComponent}
-              </code>
-            </p>
-          ) : (
-            <p className="text-xs text-gray-600 mt-1">
-              Click on an element in the preview to start editing
-            </p>
-          )}
+      {/* Main Content */}
+      <div className="flex flex-1 min-h-0">
+        {/* Preview */}
+        <div className="flex-1 bg-white flex flex-col">
+          <div className="flex-1 overflow-auto">
+            <iframe
+              srcDoc={previewHtml}
+              className="w-full h-full border-0"
+              title="Page Preview"
+              sandbox="allow-same-origin allow-scripts"
+            />
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          {chatHistory.length === 0 ? (
-            <div className="text-center text-gray-500 text-sm mt-8">
-              <p className="mb-2">
-                Select a component and describe your changes.
+        {/* Right: AI Chat */}
+        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold">Edit with AI</h3>
+            {selectedComponent ? (
+              <p className="text-xs text-gray-600 mt-1">
+                Selected:{" "}
+                <code className="bg-gray-100 px-1 rounded text-xs">
+                  {selectedComponent}
+                </code>
               </p>
-              <p className="font-semibold mb-2">Examples:</p>
-              <ul className="text-left space-y-1 text-xs">
-                <li>• "Make this text larger"</li>
-                <li>• "Change the button color to blue"</li>
-                <li>• "Use a different background color"</li>
-              </ul>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {chatHistory.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`p-3 rounded-lg text-sm ${
-                    msg.role === "user" ? "bg-purple-100" : "bg-gray-100"
-                  }`}
-                >
-                  <div className="text-xs font-semibold mb-1 text-gray-600">
-                    {msg.role === "user" ? "You" : "AI"}
+            ) : (
+              <p className="text-xs text-gray-600 mt-1">
+                Click on an element in the preview to start editing
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {chatHistory.length === 0 ? (
+              <div className="text-center text-gray-500 text-sm mt-8">
+                <p className="mb-2">
+                  Select a component and describe your changes.
+                </p>
+                <p className="font-semibold mb-2">Examples:</p>
+                <ul className="text-left space-y-1 text-xs">
+                  <li>• "Make this text larger"</li>
+                  <li>• "Change the button color to blue"</li>
+                  <li>• "Use a different background color"</li>
+                </ul>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {chatHistory.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`p-3 rounded-lg text-sm ${
+                      msg.role === "user" ? "bg-purple-100" : "bg-gray-100"
+                    }`}
+                  >
+                    <div className="text-xs font-semibold mb-1 text-gray-600">
+                      {msg.role === "user" ? "You" : "AI"}
+                    </div>
+                    <div>{msg.content}</div>
                   </div>
-                  <div>{msg.content}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-        <div className="p-4 border-t bg-gray-50">
-          {usage && usage.edits_today >= usage.edits_limit && (
-            <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-              Daily edit limit reached. Try again tomorrow.
-            </div>
-          )}
+          <div className="p-4 border-t bg-gray-50">
+            {usage && usage.edits_today >= usage.edits_limit && (
+              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                Daily edit limit reached. Try again tomorrow.
+              </div>
+            )}
 
-          <textarea
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            placeholder="Describe your changes..."
-            className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
-            rows={3}
-            disabled={
-              !selectedComponent ||
-              editing ||
-              !!(usage && usage.edits_today >= usage.edits_limit)
-            }
-          />
+            <textarea
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              placeholder="Describe your changes..."
+              className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
+              rows={3}
+              disabled={
+                !selectedComponent ||
+                editing ||
+                !!(usage && usage.edits_today >= usage.edits_limit)
+              }
+            />
 
-          <button
-            onClick={handleEdit}
-            disabled={
-              !selectedComponent ||
-              !instruction.trim() ||
-              editing ||
-              !!(usage && usage.edits_today >= usage.edits_limit)
-            }
-            className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-          >
-            {editing ? "Editing..." : "Send"}
-          </button>
+            <button
+              onClick={handleEdit}
+              disabled={
+                !selectedComponent ||
+                !instruction.trim() ||
+                editing ||
+                !!(usage && usage.edits_today >= usage.edits_limit)
+              }
+              className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {editing ? "Editing..." : "Send"}
+            </button>
+          </div>
         </div>
       </div>
 

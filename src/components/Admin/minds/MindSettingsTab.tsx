@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton } from "../../ui/DesignSystem";
 import {
   updateMind,
@@ -22,6 +23,7 @@ import {
   toggleSource,
   listVersions,
   publishVersion,
+  deleteMind,
   type MindWithVersion,
   type MindSource,
   type MindVersion,
@@ -30,11 +32,14 @@ import {
 interface MindSettingsTabProps {
   mind: MindWithVersion;
   onMindUpdated: () => void;
+  onMindDeleted?: () => void;
 }
 
 const MAX_BRAIN_CHARACTERS = 50_000;
 
-export function MindSettingsTab({ mind, onMindUpdated }: MindSettingsTabProps) {
+export function MindSettingsTab({ mind, onMindUpdated, onMindDeleted }: MindSettingsTabProps) {
+  const confirm = useConfirm();
+
   // Personality
   const [personality, setPersonality] = useState(mind.personality_prompt);
   const [savingPersonality, setSavingPersonality] = useState(false);
@@ -57,6 +62,9 @@ export function MindSettingsTab({ mind, onMindUpdated }: MindSettingsTabProps) {
   const [versions, setVersions] = useState<MindVersion[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(true);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  // Delete mind
+  const [deletingMind, setDeletingMind] = useState(false);
 
   useEffect(() => {
     setPersonality(mind.personality_prompt);
@@ -131,9 +139,10 @@ export function MindSettingsTab({ mind, onMindUpdated }: MindSettingsTabProps) {
   };
 
   const handleDeleteSource = async (sourceId: string) => {
-    if (!confirm("Delete this source?")) return;
-    const ok = await deleteSource(mind.id, sourceId);
-    if (ok) {
+    const ok = await confirm({ title: "Delete this source?", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
+    const deleted = await deleteSource(mind.id, sourceId);
+    if (deleted) {
       toast.success("Source deleted");
       fetchSources();
     } else {
@@ -165,6 +174,30 @@ export function MindSettingsTab({ mind, onMindUpdated }: MindSettingsTabProps) {
       toast.error("Failed to publish version");
     }
     setPublishingId(null);
+  };
+
+  const handleDeleteMind = async () => {
+    const ok = await confirm({
+      title: `Permanently delete ${mind.name}?`,
+      message: "All data (brain, conversations, sessions, sources) will be lost. This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingMind(true);
+    try {
+      const deleted = await deleteMind(mind.id);
+      if (deleted) {
+        toast.success(`${mind.name} deleted`);
+        onMindDeleted?.();
+      } else {
+        toast.error("Failed to delete mind");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete mind");
+    } finally {
+      setDeletingMind(false);
+    }
   };
 
   const charPercent = Math.round((brainMarkdown.length / MAX_BRAIN_CHARACTERS) * 100);
@@ -410,6 +443,22 @@ export function MindSettingsTab({ mind, onMindUpdated }: MindSettingsTabProps) {
             })}
           </div>
         )}
+      </section>
+
+      {/* Danger Zone */}
+      <section className="rounded-xl border border-red-500/20 bg-red-500/5 p-6">
+        <h3 className="text-sm font-semibold text-red-400 mb-2">Danger Zone</h3>
+        <p className="text-xs text-[#6a6a75] mb-4">
+          Permanently delete {mind.name} and all associated data. This action cannot be undone.
+        </p>
+        <ActionButton
+          label={`Delete ${mind.name}`}
+          icon={<Trash2 className="h-4 w-4" />}
+          onClick={handleDeleteMind}
+          variant="danger"
+          size="sm"
+          loading={deletingMind}
+        />
       </section>
     </div>
   );

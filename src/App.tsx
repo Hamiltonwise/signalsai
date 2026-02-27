@@ -28,6 +28,7 @@ import {
 } from "./components/SetupProgressWizard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PublicRoute } from "./components/PublicRoute";
+import { ConfirmProvider } from "./components/ui/ConfirmModal";
 import { DFYRoute } from "./components/DFYRoute";
 import { PilotHandler } from "./components/PilotHandler";
 import { PilotBanner } from "./components/Admin/PilotBanner";
@@ -75,6 +76,7 @@ function App() {
       <AuthProvider>
         <OnboardingWizardProvider>
           <SetupProgressProvider>
+            <ConfirmProvider>
             <Toaster position="top-right" />
             <WizardController />
             <SetupProgressWizard />
@@ -161,6 +163,7 @@ function App() {
               </Route>
             </Routes>
             <PilotBanner />
+            </ConfirmProvider>
           </SetupProgressProvider>
         </OnboardingWizardProvider>
       </AuthProvider>

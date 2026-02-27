@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe,
   ExternalLink,
@@ -6,16 +7,47 @@ import {
   Sparkles,
   FileText,
   Link as LinkIcon,
+  Inbox,
+  Monitor,
+  Smartphone,
+  ChevronDown,
+  Undo2,
+  RotateCcw,
+  Check,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { apiGet, apiPost, apiDelete } from "../api";
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "../api";
 import ConnectDomainModal from "../components/Admin/ConnectDomainModal";
+import FormSubmissionsTab from "../components/Admin/FormSubmissionsTab";
+import RecipientsConfig from "../components/Admin/RecipientsConfig";
+import {
+  renderPage as assemblePageHtml,
+  normalizeSections,
+} from "../utils/templateRenderer";
+import {
+  useIframeSelector,
+  prepareHtmlForPreview,
+} from "../hooks/useIframeSelector";
+import type {
+  QuickActionPayload,
+  QuickActionType,
+} from "../hooks/useIframeSelector";
+import {
+  replaceComponentInDom,
+  validateHtml,
+  extractSectionsFromDom,
+} from "../utils/htmlReplacer";
+import EditorSidebar from "../components/PageEditor/EditorSidebar";
+import type { ChatMessage } from "../components/PageEditor/ChatPanel";
+import type { PageVersion } from "../components/PageEditor/VersionHistoryTab";
+import type { Section } from "../api/templates";
+import { useSidebar } from "../components/Admin/SidebarContext";
 
 interface Page {
   id: string;
   path: string;
   status: string;
-  sections: Array<{ name: string; content: string }>;
+  sections: unknown;
   updated_at: string;
 }
 
@@ -39,6 +71,8 @@ interface Usage {
   edits_limit: number;
 }
 
+const DESKTOP_SCALE = 0.7;
+
 export function DFYWebsite() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<
@@ -48,25 +82,141 @@ export function DFYWebsite() {
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(
-    null,
-  );
-  const [instruction, setInstruction] = useState("");
-  const [chatHistory, setChatHistory] = useState<
-    Array<{ role: string; content: string }>
-  >([]);
-  const [editing, setEditing] = useState(false);
   const [showDomainModal, setShowDomainModal] = useState(false);
+  const [activeView, setActiveView] = useState<"editor" | "submissions">(
+    "editor",
+  );
+  const [viewportMode, setViewportMode] = useState<"desktop" | "mobile">(
+    "desktop",
+  );
+  const [isPageDropdownOpen, setIsPageDropdownOpen] = useState(false);
 
+  // Version preview state
+  const [previewVersion, setPreviewVersion] = useState<PageVersion | null>(null);
+  const [previewHtmlContent, setPreviewHtmlContent] = useState("");
+
+  // Editor state (ported from admin PageEditor)
+  const [sections, setSections] = useState<Section[]>([]);
+  const [htmlContent, setHtmlContent] = useState("");
+  const [chatMap, setChatMap] = useState<Map<string, ChatMessage[]>>(new Map());
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editHistory, setEditHistory] = useState<Section[][]>([]);
+  const [pendingSidebarAction, setPendingSidebarAction] =
+    useState<QuickActionType | null>(null);
+
+  const { setCollapsed } = useSidebar();
+
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+  const deferredEditRef = useRef<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-collapse sidebar when entering website editor (like admin PageEditor)
+  useEffect(() => {
+    setCollapsed(true);
+  }, [setCollapsed]);
+
+  // Quick action handler from iframe label icons
+  const handleIframeQuickAction = useCallback(
+    (payload: QuickActionPayload) => {
+      if (
+        (payload.action === "text" || payload.action === "link") &&
+        payload.value
+      ) {
+        deferredEditRef.current =
+          payload.action === "text"
+            ? `Change the text content to "${payload.value}"`
+            : `Change the link href to "${payload.value}"`;
+        setPendingSidebarAction("__deferred__" as QuickActionType);
+      } else {
+        setPendingSidebarAction(payload.action);
+      }
+    },
+    [],
+  );
+
+  // Selector hook (hover, click, selection in iframe)
+  const {
+    selectedInfo,
+    setSelectedInfo,
+    clearSelection,
+    setupListeners,
+    toggleHidden,
+  } = useIframeSelector(iframeRef, handleIframeQuickAction);
+
+  // User-facing API wrappers (routes don't need projectId — inferred from auth)
+  const userFetchRecipients = async (_projectId: string) =>
+    apiGet({ path: "/user/website/recipients" });
+
+  const userUpdateRecipients = async (
+    _projectId: string,
+    recipients: string[],
+  ) =>
+    apiPut({
+      path: "/user/website/recipients",
+      passedData: { recipients },
+    });
+
+  const userFetchSubmissions = async (
+    _projectId: string,
+    page: number,
+    limit: number,
+  ) =>
+    apiGet({
+      path: `/user/website/form-submissions?page=${page}&limit=${limit}`,
+    });
+
+  const userToggleRead = async (
+    _projectId: string,
+    submissionId: string,
+    is_read: boolean,
+  ) =>
+    apiPatch({
+      path: `/user/website/form-submissions/${submissionId}/read`,
+      passedData: { is_read },
+    });
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsPageDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // --- Load website data ---
   useEffect(() => {
     fetchWebsite();
   }, []);
 
+  // --- Assemble preview when page or project changes ---
   useEffect(() => {
-    if (selectedPage && project) {
-      renderPage();
-    }
+    if (!selectedPage || !project) return;
+
+    const pageSections = normalizeSections(selectedPage.sections);
+    setSections(pageSections);
+
+    const html = assemblePageHtml(
+      project.wrapper || "{{slot}}",
+      project.header || "",
+      project.footer || "",
+      pageSections,
+      undefined,
+      undefined,
+      undefined,
+      project.id,
+    );
+    setHtmlContent(html);
+
+    // Reset editor state for new page
+    setChatMap(new Map());
+    setEditHistory([]);
+    setEditError(null);
   }, [selectedPage, project]);
 
   const fetchWebsite = async () => {
@@ -97,97 +247,275 @@ export function DFYWebsite() {
     }
   };
 
-  const renderPage = () => {
-    if (!selectedPage || !project) return;
+  // --- Handle iframe load: set up selector listeners ---
+  const handleIframeLoad = useCallback(() => {
+    setupListeners();
+  }, [setupListeners]);
 
-    const sectionsHtml = selectedPage.sections.map((s) => s.content).join("\n");
+  // --- Handle edit send (ported from admin PageEditor) ---
+  const handleSendEdit = useCallback(
+    async (instruction: string, attachedMedia?: any[]) => {
+      if (!selectedPage || !selectedInfo) return;
 
-    const pageContent = [project.header, sectionsHtml, project.footer]
-      .filter(Boolean)
-      .join("\n");
+      setIsEditing(true);
+      setEditError(null);
 
-    const html = project.wrapper.replace("{{slot}}", pageContent);
-    setPreviewHtml(html);
-  };
+      const alloroClass = selectedInfo.alloroClass;
 
-  const handleComponentClick = (className: string) => {
-    setSelectedComponent(className);
-    setChatHistory([]);
-  };
-
-  const handleEdit = async () => {
-    if (!selectedComponent || !instruction.trim() || !selectedPage) return;
-
-    setEditing(true);
-
-    try {
-      // Extract component HTML from iframe
-      const iframe = document.querySelector("iframe");
-      const iframeDoc = iframe?.contentDocument;
-      const element = iframeDoc?.querySelector(`.${selectedComponent}`);
-      const currentHtml = element?.outerHTML;
-
-      if (!currentHtml) {
-        toast.error("Component not found");
-        return;
+      // Enrich instruction with attached media context
+      let enrichedInstruction = instruction;
+      if (attachedMedia && attachedMedia.length > 0) {
+        enrichedInstruction += "\n\n## Use the images below:\n";
+        attachedMedia.forEach((media, index) => {
+          const altText = media.alt_text ? ` (${media.alt_text})` : "";
+          enrichedInstruction += `Image ${index + 1}${altText}: ${media.s3_url}\n`;
+        });
       }
 
-      const data = await apiPost({
-        path: `/user/website/pages/${selectedPage.id}/edit`,
-        passedData: {
-          alloroClass: selectedComponent,
-          currentHtml,
-          instruction,
-          chatHistory,
-        },
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: instruction,
+        timestamp: Date.now(),
+      };
+
+      setChatMap((prev) => {
+        const next = new Map(prev);
+        next.set(alloroClass, [
+          ...(next.get(alloroClass) || []),
+          userMessage,
+        ]);
+        return next;
       });
 
-      // Update chat history
-      setChatHistory([
-        ...chatHistory,
-        { role: "user", content: instruction },
-        { role: "assistant", content: data.message },
-      ]);
+      try {
+        const existingMessages = chatMap.get(alloroClass) || [];
+        const chatHistory = existingMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
-      setInstruction("");
-      toast.success("Page updated!");
+        const result = await apiPost({
+          path: `/user/website/pages/${selectedPage.id}/edit`,
+          passedData: {
+            alloroClass,
+            currentHtml: selectedInfo.outerHtml,
+            instruction: enrichedInstruction,
+            chatHistory,
+          },
+        });
 
-      // Refresh website data
-      await fetchWebsite();
-    } catch (error) {
-      toast.error("Network error");
-    } finally {
-      setEditing(false);
-    }
-  };
-
-  // Setup iframe click handlers
-  useEffect(() => {
-    const iframe = document.querySelector("iframe");
-    if (!iframe || !previewHtml) return;
-
-    const setupClickHandlers = () => {
-      const iframeDoc = iframe.contentDocument;
-      if (!iframeDoc) return;
-
-      const allComponents = iframeDoc.querySelectorAll("[class*='alloro-tpl']");
-      allComponents.forEach((el) => {
-        const classList = Array.from(el.classList);
-        const alloroClass = classList.find((c) => c.startsWith("alloro-tpl"));
-
-        if (alloroClass) {
-          (el as HTMLElement).style.cursor = "pointer";
-          (el as HTMLElement).onclick = (e) => {
-            e.preventDefault();
-            handleComponentClick(alloroClass);
+        // Handle rejection
+        if (result.rejected) {
+          const rejectionMessage: ChatMessage = {
+            role: "assistant",
+            content: result.message || "This edit is not allowed.",
+            timestamp: Date.now(),
+            isError: true,
           };
+
+          setChatMap((prev) => {
+            const next = new Map(prev);
+            next.set(alloroClass, [
+              ...(next.get(alloroClass) || []),
+              rejectionMessage,
+            ]);
+            return next;
+          });
+          return;
         }
+
+        // DOM mutation path — if API returns edited HTML
+        if (result.editedHtml) {
+          const validation = validateHtml(result.editedHtml);
+          if (!validation.valid) {
+            throw new Error(`Invalid HTML: ${validation.error}`);
+          }
+
+          setEditHistory((prev) => [...prev, structuredClone(sections)]);
+
+          const iframe = iframeRef.current;
+          if (iframe?.contentDocument) {
+            const scrollY = iframe.contentWindow?.scrollY || 0;
+            const scrollX = iframe.contentWindow?.scrollX || 0;
+
+            replaceComponentInDom(
+              iframe.contentDocument,
+              alloroClass,
+              result.editedHtml,
+            );
+
+            const updatedSections = extractSectionsFromDom(
+              iframe.contentDocument,
+              sectionsRef.current,
+            );
+            setSections(updatedSections);
+
+            setupListeners();
+            iframe.contentWindow?.scrollTo(scrollX, scrollY);
+
+            const freshEl = iframe.contentDocument.querySelector(
+              `.${CSS.escape(alloroClass)}`,
+            );
+            if (freshEl && selectedInfo) {
+              setSelectedInfo({
+                ...selectedInfo,
+                outerHtml: freshEl.outerHTML,
+                isHidden:
+                  freshEl.getAttribute("data-alloro-hidden") === "true",
+              });
+            }
+          }
+        } else {
+          // Fallback: refresh entire page data
+          await fetchWebsite();
+        }
+
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: result.message || "Edit applied.",
+          timestamp: Date.now(),
+        };
+
+        setChatMap((prev) => {
+          const next = new Map(prev);
+          next.set(alloroClass, [
+            ...(next.get(alloroClass) || []),
+            assistantMessage,
+          ]);
+          return next;
+        });
+      } catch (err) {
+        console.error("Edit failed:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Edit failed";
+        setEditError(errorMessage);
+
+        const errorChatMessage: ChatMessage = {
+          role: "assistant",
+          content: `Error: ${errorMessage}`,
+          timestamp: Date.now(),
+          isError: true,
+        };
+
+        setChatMap((prev) => {
+          const next = new Map(prev);
+          next.set(alloroClass, [
+            ...(next.get(alloroClass) || []),
+            errorChatMessage,
+          ]);
+          return next;
+        });
+      } finally {
+        setIsEditing(false);
+      }
+    },
+    [selectedPage, selectedInfo, chatMap, setupListeners, setSelectedInfo],
+  );
+
+  // Process deferred quick-action edits from iframe input panel
+  useEffect(() => {
+    if (
+      deferredEditRef.current &&
+      pendingSidebarAction === ("__deferred__" as QuickActionType)
+    ) {
+      const instruction = deferredEditRef.current;
+      deferredEditRef.current = null;
+      setPendingSidebarAction(null);
+      handleSendEdit(instruction);
+    }
+  }, [pendingSidebarAction, handleSendEdit]);
+
+  // --- Toggle hidden ---
+  const handleToggleHidden = useCallback(() => {
+    toggleHidden();
+
+    const iframe = iframeRef.current;
+    if (iframe?.contentDocument) {
+      const updatedSections = extractSectionsFromDom(
+        iframe.contentDocument,
+        sectionsRef.current,
+      );
+      setSections(updatedSections);
+    }
+  }, [toggleHidden]);
+
+  // --- Undo ---
+  const handleUndo = useCallback(() => {
+    if (editHistory.length === 0 || !project) return;
+
+    const previousSections = editHistory[editHistory.length - 1];
+    setEditHistory((prev) => prev.slice(0, -1));
+    setSections(previousSections);
+
+    const html = assemblePageHtml(
+      project.wrapper || "{{slot}}",
+      project.header || "",
+      project.footer || "",
+      previousSections,
+      undefined,
+      undefined,
+      undefined,
+      project.id,
+    );
+    setHtmlContent(html);
+    clearSelection();
+  }, [editHistory, project, clearSelection]);
+
+  // --- Version preview ---
+  const handlePreviewVersion = useCallback(
+    async (version: PageVersion) => {
+      if (!project || !selectedPage) return;
+      try {
+        const res = await apiGet({
+          path: `/user/website/pages/${selectedPage.id}/versions/${version.id}`,
+        });
+        const versionData = res.data;
+        const versionSections = normalizeSections(versionData.sections);
+        const html = assemblePageHtml(
+          project.wrapper || "{{slot}}",
+          project.header || "",
+          project.footer || "",
+          versionSections,
+          undefined,
+          undefined,
+          undefined,
+          project.id,
+        );
+        setPreviewHtmlContent(html);
+        setPreviewVersion(version);
+        clearSelection();
+      } catch {
+        toast.error("Failed to load version preview");
+      }
+    },
+    [project, selectedPage, clearSelection],
+  );
+
+  const handleExitPreview = useCallback(() => {
+    setPreviewVersion(null);
+    setPreviewHtmlContent("");
+  }, []);
+
+  const handleRestoreVersion = useCallback(
+    async (versionId: string) => {
+      if (!selectedPage) return;
+      await apiPost({
+        path: `/user/website/pages/${selectedPage.id}/versions/${versionId}/restore`,
       });
-    };
+      setPreviewVersion(null);
+      setPreviewHtmlContent("");
+      toast.success("Version restored");
+      await fetchWebsite();
+    },
+    [selectedPage],
+  );
 
-    iframe.onload = setupClickHandlers;
-  }, [previewHtml]);
+  // Current chat messages for selected element
+  const currentChatMessages = selectedInfo
+    ? chatMap.get(selectedInfo.alloroClass) || []
+    : [];
 
+  // --- Loading skeleton ---
   if (loading) {
     return (
       <div className="flex flex-col h-screen bg-alloro-bg animate-pulse">
@@ -225,7 +553,7 @@ export function DFYWebsite() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center max-w-md">
-          <div className="animate-spin w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4" />
+          <div className="animate-spin w-12 h-12 border-4 border-alloro-orange border-t-transparent rounded-full mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">
             Your Website is Being Prepared
           </h2>
@@ -314,37 +642,138 @@ export function DFYWebsite() {
     );
   }
 
-  const liveUrl = project?.custom_domain && project?.domain_verified_at
-    ? `https://${project.custom_domain}`
-    : project
-      ? `https://${project.hostname}.sites.getalloro.com`
-      : null;
+  const liveUrl =
+    project?.custom_domain && project?.domain_verified_at
+      ? `https://${project.custom_domain}`
+      : project
+        ? `https://${project.hostname}.sites.getalloro.com`
+        : null;
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Top Bar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-4">
-        <h2 className="font-semibold text-sm flex items-center gap-2 shrink-0">
-          <Globe className="h-4 w-4 text-purple-600" />
-          Your Website
-        </h2>
-
-        {/* Page Tabs */}
-        <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0">
-          {pages.map((page) => (
-            <button
-              key={page.id}
-              onClick={() => setSelectedPage(page)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedPage?.id === page.id
-                  ? "bg-purple-100 text-purple-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {page.path === "/" ? "Home" : page.path}
-            </button>
-          ))}
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0 text-sm font-semibold text-gray-800">
+          <Globe className="h-4 w-4 text-alloro-orange" />
+          <span className="truncate max-w-[200px]">
+            {project?.custom_domain || (project ? `${project.hostname}.sites.getalloro.com` : "Your Website")}
+          </span>
         </div>
+
+        {/* Page Selector Dropdown */}
+        <div className="relative shrink-0" ref={dropdownRef}>
+          <button
+            onClick={() => setIsPageDropdownOpen((prev) => !prev)}
+            className="flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-alloro-orange/20 focus:border-alloro-orange cursor-pointer transition-colors"
+          >
+            <span className="truncate max-w-[140px]">
+              {selectedPage
+                ? selectedPage.path === "/"
+                  ? "Home"
+                  : selectedPage.path
+                : "Select page"}
+            </span>
+            <motion.span
+              animate={{ rotate: isPageDropdownOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="shrink-0"
+            >
+              <ChevronDown size={14} className="text-gray-400" />
+            </motion.span>
+          </button>
+
+          <AnimatePresence>
+            {isPageDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full left-0 mt-1 min-w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
+              >
+                {pages.map((page) => {
+                  const isActive = selectedPage?.id === page.id;
+                  return (
+                    <button
+                      key={page.id}
+                      onClick={() => {
+                        setSelectedPage(page);
+                        setActiveView("editor");
+                        setIsPageDropdownOpen(false);
+                        setPreviewVersion(null);
+                        setPreviewHtmlContent("");
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
+                        isActive
+                          ? "bg-alloro-orange/5 text-alloro-orange font-medium"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span>{page.path === "/" ? "Home" : page.path}</span>
+                      {isActive && <Check size={14} className="text-alloro-orange shrink-0" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Viewport Toggle */}
+        {activeView === "editor" && (
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0">
+            <button
+              onClick={() => setViewportMode("desktop")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewportMode === "desktop"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              title="Desktop view"
+            >
+              <Monitor size={14} />
+            </button>
+            <button
+              onClick={() => setViewportMode("mobile")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewportMode === "mobile"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              title="Mobile view"
+            >
+              <Smartphone size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Undo */}
+        {activeView === "editor" && editHistory.length > 0 && (
+          <button
+            onClick={handleUndo}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+            title="Undo last edit"
+          >
+            <Undo2 size={14} />
+          </button>
+        )}
+
+        <div className="w-px h-5 bg-gray-200" />
+
+        <button
+          onClick={() => setActiveView("submissions")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 shrink-0 ${
+            activeView === "submissions"
+              ? "bg-orange-100 text-orange-700"
+              : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <Inbox size={14} />
+          Submissions
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
 
         {/* Right section: usage, domain, view live */}
         <div className="flex items-center gap-3 shrink-0">
@@ -364,7 +793,7 @@ export function DFYWebsite() {
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
                 : project?.custom_domain
                   ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
-                  : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                  : "bg-alloro-orange/10 text-alloro-orange hover:bg-alloro-orange/20"
             }`}
           >
             <LinkIcon className="w-3.5 h-3.5" />
@@ -376,114 +805,160 @@ export function DFYWebsite() {
               href={`${liveUrl}${selectedPage?.path || ""}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-sm text-purple-600 hover:underline"
+              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-alloro-orange transition-colors"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-3 h-3" />
               View Live
             </a>
           )}
         </div>
       </div>
 
+      {/* Error banner */}
+      {editError && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2 flex items-center justify-between">
+          <span className="text-xs text-red-600">{editError}</span>
+          <button
+            onClick={() => setEditError(null)}
+            className="text-xs text-red-400 hover:text-red-600"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Preview */}
-        <div className="flex-1 bg-white flex flex-col">
-          <div className="flex-1 overflow-auto">
-            <iframe
-              srcDoc={previewHtml}
-              className="w-full h-full border-0"
-              title="Page Preview"
-              sandbox="allow-same-origin allow-scripts"
-            />
-          </div>
-        </div>
-
-        {/* Right: AI Chat */}
-        <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold">Edit with AI</h3>
-            {selectedComponent ? (
-              <p className="text-xs text-gray-600 mt-1">
-                Selected:{" "}
-                <code className="bg-gray-100 px-1 rounded text-xs">
-                  {selectedComponent}
-                </code>
-              </p>
-            ) : (
-              <p className="text-xs text-gray-600 mt-1">
-                Click on an element in the preview to start editing
-              </p>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4">
-            {chatHistory.length === 0 ? (
-              <div className="text-center text-gray-500 text-sm mt-8">
-                <p className="mb-2">
-                  Select a component and describe your changes.
-                </p>
-                <p className="font-semibold mb-2">Examples:</p>
-                <ul className="text-left space-y-1 text-xs">
-                  <li>• "Make this text larger"</li>
-                  <li>• "Change the button color to blue"</li>
-                  <li>• "Use a different background color"</li>
-                </ul>
+      {activeView === "submissions" ? (
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {project && (
+            <>
+              <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                  Email Recipients
+                </h3>
+                <RecipientsConfig
+                  projectId={project.id}
+                  fetchRecipientsFn={userFetchRecipients}
+                  updateRecipientsFn={userUpdateRecipients}
+                />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {chatHistory.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`p-3 rounded-lg text-sm ${
-                      msg.role === "user" ? "bg-purple-100" : "bg-gray-100"
-                    }`}
-                  >
-                    <div className="text-xs font-semibold mb-1 text-gray-600">
-                      {msg.role === "user" ? "You" : "AI"}
-                    </div>
-                    <div>{msg.content}</div>
+              <FormSubmissionsTab
+                projectId={project.id}
+                fetchSubmissionsFn={userFetchSubmissions}
+                toggleReadFn={userToggleRead}
+              />
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Preview */}
+          <div className="flex-1 flex flex-col relative">
+            <div className="flex-1 overflow-hidden bg-gray-100">
+              {viewportMode === "desktop" ? (
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={prepareHtmlForPreview(
+                    previewVersion ? previewHtmlContent : htmlContent,
+                  )}
+                  style={{
+                    width: `${Math.round(100 / DESKTOP_SCALE)}%`,
+                    height: `${Math.round(100 / DESKTOP_SCALE)}%`,
+                    transform: `scale(${DESKTOP_SCALE})`,
+                    transformOrigin: "top left",
+                  }}
+                  className="border-0"
+                  title="Page Preview"
+                  sandbox="allow-same-origin allow-scripts"
+                  onLoad={handleIframeLoad}
+                />
+              ) : (
+                <div className="flex justify-center h-full py-4">
+                  <div className="w-[375px] h-full bg-white rounded-2xl shadow-xl border border-gray-300 overflow-hidden">
+                    <iframe
+                      ref={iframeRef}
+                      srcDoc={prepareHtmlForPreview(
+                        previewVersion ? previewHtmlContent : htmlContent,
+                      )}
+                      className="w-full h-full border-0"
+                      title="Page Preview"
+                      sandbox="allow-same-origin allow-scripts"
+                      onLoad={handleIframeLoad}
+                    />
                   </div>
-                ))}
+                </div>
+              )}
+            </div>
+
+            {/* Version preview overlay */}
+            <AnimatePresence>
+              {previewVersion && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-xl px-5 py-3 flex items-center gap-4 z-10"
+                >
+                  <div className="text-sm">
+                    <p className="text-gray-700 font-medium">
+                      Previewing v{previewVersion.version}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Editing is disabled in preview mode
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRestoreVersion(previewVersion.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-alloro-orange text-white text-xs font-medium hover:bg-alloro-orange/90 transition-colors"
+                  >
+                    <RotateCcw size={12} />
+                    Restore this version
+                  </button>
+                  <button
+                    onClick={handleExitPreview}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Exit
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {viewportMode === "desktop" && !previewVersion && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[10px] px-3 py-1 rounded-full backdrop-blur-sm">
+                Preview scaled to fit — use View Live for full size
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t bg-gray-50">
-            {usage && usage.edits_today >= usage.edits_limit && (
-              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                Daily edit limit reached. Try again tomorrow.
-              </div>
-            )}
-
-            <textarea
-              value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              placeholder="Describe your changes..."
-              className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
-              rows={3}
-              disabled={
-                !selectedComponent ||
-                editing ||
-                !!(usage && usage.edits_today >= usage.edits_limit)
-              }
-            />
-
-            <button
-              onClick={handleEdit}
-              disabled={
-                !selectedComponent ||
-                !instruction.trim() ||
-                editing ||
-                !!(usage && usage.edits_today >= usage.edits_limit)
-              }
-              className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {editing ? "Editing..." : "Send"}
-            </button>
-          </div>
+          {/* Editor Sidebar (no debug tab, with history tab) */}
+          <EditorSidebar
+            selectedInfo={previewVersion ? null : selectedInfo}
+            chatMessages={currentChatMessages}
+            onSendEdit={handleSendEdit}
+            onToggleHidden={handleToggleHidden}
+            isEditing={isEditing}
+            debugInfo={null}
+            systemPrompt={null}
+            showDebug={false}
+            showHistory={true}
+            historyPageId={selectedPage?.id || null}
+            onPreviewVersion={handlePreviewVersion}
+            onRestoreVersion={handleRestoreVersion}
+            isPreviewingVersion={!!previewVersion}
+            previewVersionId={previewVersion?.id || null}
+            onExitPreview={handleExitPreview}
+            externalAction={
+              pendingSidebarAction !==
+              ("__deferred__" as QuickActionType)
+                ? pendingSidebarAction
+                : null
+            }
+            onExternalActionHandled={() => setPendingSidebarAction(null)}
+          />
         </div>
-      </div>
+      )}
 
       {/* Custom Domain Modal */}
       {project && (
@@ -502,7 +977,9 @@ export function DFYWebsite() {
             return { server_ip: res.data.server_ip };
           }}
           onVerify={async () => {
-            const res = await apiPost({ path: "/user/website/domain/verify" });
+            const res = await apiPost({
+              path: "/user/website/domain/verify",
+            });
             return res.data;
           }}
           onDisconnect={async () => {

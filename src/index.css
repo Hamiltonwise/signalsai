@@ -430,6 +430,13 @@ body.minds-page-active .glass-header {
   --minds-text-secondary: #a0a0a8;
   --minds-text-muted: #6a6a75;
 
+  /* SyncStepTimeline node colors (overrides Framer Motion inline styles) */
+  --step-node-bg: rgba(255, 255, 255, 0.06);
+  --step-node-border: rgba(255, 255, 255, 0.1);
+  --step-node-border-expanded: #D66853;
+  --step-label-running: #eaeaea;
+  --step-label-pending: #6a6a75;
+
   position: relative;
   background: transparent;
   min-height: 100%;
@@ -588,10 +595,11 @@ body.minds-page-active .glass-header {
 .minds-theme h4.text-sm.font-semibold.text-gray-900,
 .minds-theme h3.text-lg.font-semibold.text-gray-900,
 .minds-theme span.text-sm.font-medium.text-gray-800,
-.minds-theme p.text-sm.text-gray-800 {
+.minds-theme p.text-sm.text-gray-800,
+.minds-theme a.text-sm.text-gray-800 {
   color: var(--minds-text);
 }
-.minds-theme .text-gray-500:not(button):not(a),
+.minds-theme .text-gray-500:not(button),
 .minds-theme p.text-sm.text-gray-500 {
   color: var(--minds-text-secondary);
 }
@@ -727,6 +735,10 @@ body.minds-page-active .glass-header {
   background: rgba(34, 197, 94, 0.1) !important;
 }
 
+/* Discovery post action button hovers */
+.minds-theme .hover\:text-green-600:hover { color: #86efac !important; }
+.minds-theme .hover\:text-gray-600:hover { color: var(--minds-text) !important; }
+
 /* Progress bar track */
 .minds-theme .bg-gray-100.overflow-hidden,
 .minds-theme .h-2\.5.rounded-full.bg-gray-100 {
@@ -749,6 +761,20 @@ body.minds-page-active .glass-header {
 .minds-theme .text-gray-900.text-sm.font-semibold { color: var(--minds-text) !important; }
 .minds-theme .text-gray-300.text-\[11px\],
 .minds-theme span.text-\[11px\].text-gray-300 { color: var(--minds-text-muted) !important; }
+
+/* SyncStepTimeline description tooltips */
+.minds-theme .bg-white\/80.text-alloro-orange\/80 {
+  background: rgba(214, 104, 83, 0.12) !important;
+}
+.minds-theme .bg-gray-50.text-gray-400.border-gray-100 {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: var(--minds-text-muted) !important;
+}
+/* SyncStepTimeline connection line background */
+.minds-theme .h-1.bg-gray-100.rounded-full {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
 
 /* Discovery post rows */
 .minds-theme .rounded-lg.border.border-gray-100.bg-white.px-4.py-3 {

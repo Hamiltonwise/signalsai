@@ -85,6 +85,9 @@ export function KnowledgeSyncWizard({
   const [scrapeRunIdForProposals, setScrapeRunIdForProposals] = useState<
     string | null
   >(null);
+  const [initialCompileRunId, setInitialCompileRunId] = useState<
+    string | null
+  >(null);
 
   const fetchState = useCallback(async () => {
     const [statusData, discoveryData] = await Promise.all([
@@ -106,13 +109,13 @@ export function KnowledgeSyncWizard({
       if (!batchData) return 1;
 
       if (statusData.activeSyncRunId) {
-        if (
-          statusData.latestScrapeRunId &&
-          statusData.latestScrapeRunId !== statusData.activeSyncRunId
-        ) {
+        // Active compile_publish run — go to slide 3 in compile mode
+        if (statusData.activeSyncRunType === "compile_publish") {
           setScrapeRunIdForProposals(statusData.latestScrapeRunId);
+          setInitialCompileRunId(statusData.activeSyncRunId);
           return 3;
         }
+        // Active scrape_compare run — go to slide 2
         setActiveScrapeRunId(statusData.activeSyncRunId);
         return 2;
       }
@@ -187,6 +190,7 @@ export function KnowledgeSyncWizard({
   const handleProposalsDone = async () => {
     setActiveScrapeRunId(null);
     setScrapeRunIdForProposals(null);
+    setInitialCompileRunId(null);
     await fetchState();
     goToSlide(1);
   };
@@ -237,7 +241,7 @@ export function KnowledgeSyncWizard({
                         ? "#D66853"
                         : isPast
                           ? "#D66853"
-                          : "#f3f4f6",
+                          : "var(--step-node-bg, #f3f4f6)",
                     }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 shadow-sm ${
@@ -319,6 +323,7 @@ export function KnowledgeSyncWizard({
                 mindId={mindId}
                 mindName={mindName}
                 scrapeRunId={scrapeRunIdForProposals}
+                initialCompileRunId={initialCompileRunId}
                 onBack={handleProposalsBack}
                 onDone={handleProposalsDone}
               />

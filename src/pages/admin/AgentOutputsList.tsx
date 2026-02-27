@@ -45,6 +45,7 @@ import {
   Badge,
   ActionButton,
 } from "../../components/ui/DesignSystem";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 // Animated Dropdown Component
 interface DropdownOption {
@@ -166,6 +167,7 @@ const AnimatedDropdown: React.FC<AnimatedDropdownProps> = ({
  * Shows list of agent output cards with filtering and archive functionality
  */
 export default function AgentOutputsList() {
+  const confirm = useConfirm();
   const [outputs, setOutputs] = useState<AgentOutput[]>([]);
   const [organizations, setOrganizations] = useState<{ id: number; name: string }[]>([]);
   const [agentTypes, setAgentTypes] = useState<string[]>([]);
@@ -279,7 +281,8 @@ export default function AgentOutputsList() {
 
   const handleArchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Are you sure you want to archive this agent output?")) return;
+    const ok = await confirm({ title: "Archive this agent output?", confirmLabel: "Archive", variant: "default" });
+    if (!ok) return;
 
     try {
       setArchivingId(id);
@@ -296,7 +299,8 @@ export default function AgentOutputsList() {
 
   const handleUnarchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Are you sure you want to restore this agent output?")) return;
+    const ok = await confirm({ title: "Restore this agent output?", confirmLabel: "Restore", variant: "default" });
+    if (!ok) return;
 
     try {
       setArchivingId(id);
@@ -323,12 +327,8 @@ export default function AgentOutputsList() {
 
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to archive ${selectedIds.size} agent output(s)?`
-      )
-    )
-      return;
+    const ok = await confirm({ title: `Archive ${selectedIds.size} agent output(s)?`, confirmLabel: "Archive", variant: "default" });
+    if (!ok) return;
 
     try {
       setBulkOperationLoading(true);
@@ -346,12 +346,8 @@ export default function AgentOutputsList() {
 
   const handleBulkUnarchive = async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to restore ${selectedIds.size} agent output(s)?`
-      )
-    )
-      return;
+    const ok = await confirm({ title: `Restore ${selectedIds.size} agent output(s)?`, confirmLabel: "Restore", variant: "default" });
+    if (!ok) return;
 
     try {
       setBulkOperationLoading(true);
@@ -369,12 +365,8 @@ export default function AgentOutputsList() {
 
   const handleDelete = async (id: number) => {
     if (deletingId) return;
-    if (
-      !confirm(
-        "Are you sure you want to PERMANENTLY DELETE this agent output? This action cannot be undone."
-      )
-    )
-      return;
+    const ok = await confirm({ title: "Permanently delete this agent output?", message: "This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       setDeletingId(id);
@@ -391,12 +383,8 @@ export default function AgentOutputsList() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to PERMANENTLY DELETE ${selectedIds.size} agent output(s)? This action cannot be undone.`
-      )
-    )
-      return;
+    const ok = await confirm({ title: `Permanently delete ${selectedIds.size} agent output(s)?`, message: "This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       setBulkOperationLoading(true);

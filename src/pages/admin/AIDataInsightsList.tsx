@@ -27,6 +27,7 @@ import {
 } from "../../components/ui/DesignSystem";
 import { staggerContainer, cardVariants, fadeInUp, getScoreColor } from "../../lib/animations";
 import { getAgentIcon } from "../../lib/adminIcons";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 /**
  * AI Data Insights List Page
@@ -36,6 +37,7 @@ import { getAgentIcon } from "../../lib/adminIcons";
 export default function AIDataInsightsList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const [summaryData, setSummaryData] = useState<AgentInsightSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,13 +113,8 @@ export default function AIDataInsightsList() {
       year: "numeric",
     });
 
-    if (
-      !confirm(
-        `This will run Guardian and Governance agents for ${monthName}. This may take several minutes. Continue?`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({ title: "Run Guardian & Governance Agents?", message: `This will run agents for ${monthName}. This may take several minutes.`, confirmLabel: "Run", variant: "default" });
+    if (!ok) return;
 
     setIsRunning(true);
     try {
@@ -161,13 +158,8 @@ export default function AIDataInsightsList() {
       year: "numeric",
     });
 
-    if (
-      !confirm(
-        `This will delete ALL Guardian and Governance data for ${monthName}. This action cannot be undone. Continue?`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({ title: `Delete all data for ${monthName}?`, message: "This will delete ALL Guardian and Governance data. This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     setIsClearing(true);
     try {

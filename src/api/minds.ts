@@ -129,6 +129,7 @@ export interface MindStatus {
   compileBlockingReasons: string[];
   openBatchId: string | null;
   activeSyncRunId: string | null;
+  activeSyncRunType: "scrape_compare" | "compile_publish" | null;
   latestScrapeRunId: string | null;
 }
 
@@ -189,6 +190,11 @@ export async function publishVersion(mindId: string, versionId: string): Promise
   const res = await apiPost({
     path: `/admin/minds/${mindId}/versions/${versionId}/publish`,
   });
+  return !!res.success;
+}
+
+export async function deleteMind(mindId: string): Promise<boolean> {
+  const res = await apiDelete({ path: `/admin/minds/${mindId}` });
   return !!res.success;
 }
 
@@ -408,6 +414,7 @@ export async function getMindStatus(mindId: string): Promise<MindStatus> {
         compileBlockingReasons: [],
         openBatchId: null,
         activeSyncRunId: null,
+        activeSyncRunType: null,
         latestScrapeRunId: null,
       };
 }
@@ -531,4 +538,169 @@ export async function suggestSkillDefinition(
     passedData: { hint },
   });
   return res.success ? res.data : null;
+}
+
+// ─── Parenting ──────────────────────────────────────────────────
+
+export interface ParentingSession {
+  id: string;
+  mind_id: string;
+  status: "chatting" | "reading" | "proposals" | "compiling" | "completed" | "abandoned";
+  result: "learned" | "no_changes" | "all_rejected" | null;
+  knowledge_buffer: string;
+  sync_run_id: string | null;
+  admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ParentingMessage {
+  id: string;
+  session_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  created_at: string;
+}
+
+export interface ParentingSessionDetails {
+  session: ParentingSession;
+  messages: ParentingMessage[];
+  syncRun: SyncRun | null;
+  syncSteps: SyncStep[] | null;
+  proposals: SyncProposal[] | null;
+}
+
+export async function createParentingSession(
+  mindId: string
+): Promise<{ session: ParentingSession; greeting: string } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/parenting/sessions`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function listParentingSessions(
+  mindId: string
+): Promise<ParentingSession[]> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/parenting/sessions`,
+  });
+  return res.success ? res.data : [];
+}
+
+export async function getParentingSession(
+  mindId: string,
+  sessionId: string
+): Promise<ParentingSessionDetails | null> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function sendParentingChatStream(
+  mindId: string,
+  sessionId: string,
+  message: string
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(
+    `${api}/admin/minds/${mindId}/parenting/sessions/${sessionId}/chat/stream`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message }),
+    }
+  );
+}
+
+export async function triggerParentingReading(
+  mindId: string,
+  sessionId: string
+): Promise<{ proposalCount: number; runId: string } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/trigger-reading`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function getParentingProposals(
+  mindId: string,
+  sessionId: string
+): Promise<SyncProposal[]> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/proposals`,
+  });
+  return res.success ? res.data : [];
+}
+
+export async function updateParentingProposal(
+  mindId: string,
+  sessionId: string,
+  proposalId: string,
+  status: "approved" | "rejected" | "pending"
+): Promise<boolean> {
+  const res = await apiPatch({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/proposals/${proposalId}`,
+    passedData: { status },
+  });
+  return !!res.success;
+}
+
+export async function startParentingCompile(
+  mindId: string,
+  sessionId: string
+): Promise<{ runId: string; autoCompleted?: boolean } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/compile`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function getParentingCompileStatus(
+  mindId: string,
+  sessionId: string
+): Promise<any> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/compile-status`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function deleteParentingSession(
+  mindId: string,
+  sessionId: string
+): Promise<boolean> {
+  const res = await apiDelete({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}`,
+  });
+  return !!res.success;
+}
+
+export async function abandonParentingSession(
+  mindId: string,
+  sessionId: string
+): Promise<boolean> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/abandon`,
+  });
+  return !!res.success;
 }

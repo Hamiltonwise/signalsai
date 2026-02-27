@@ -6,6 +6,8 @@ import type { EditDebugInfo } from "../../api/websites";
 import ChatPanel from "./ChatPanel";
 import DebugPanel from "./DebugPanel";
 import MediaBrowser from "./MediaBrowser";
+import VersionHistoryTab from "./VersionHistoryTab";
+import type { PageVersion } from "./VersionHistoryTab";
 import type { MediaItem } from "./MediaBrowser";
 import type { ChatMessage } from "./ChatPanel";
 
@@ -25,6 +27,22 @@ interface EditorSidebarProps {
   /** Triggered from iframe label action icons — opens the corresponding sidebar quick action. */
   externalAction?: QuickActionType | null;
   onExternalActionHandled?: () => void;
+  /** Hide the Debug tab (default: true). */
+  showDebug?: boolean;
+  /** Show the History tab (default: false). */
+  showHistory?: boolean;
+  /** Page ID for version history. */
+  historyPageId?: string | null;
+  /** Callback when user clicks Preview on a version. */
+  onPreviewVersion?: (version: PageVersion) => void;
+  /** Callback when user clicks Restore on a version. */
+  onRestoreVersion?: (versionId: string) => Promise<void>;
+  /** Whether the editor is in version preview mode. */
+  isPreviewingVersion?: boolean;
+  /** ID of the version being previewed. */
+  previewVersionId?: string | null;
+  /** Callback to exit preview mode. */
+  onExitPreview?: () => void;
 }
 
 export default function EditorSidebar({
@@ -38,8 +56,16 @@ export default function EditorSidebar({
   projectId,
   externalAction,
   onExternalActionHandled,
+  showDebug = true,
+  showHistory = false,
+  historyPageId,
+  onPreviewVersion,
+  onRestoreVersion,
+  isPreviewingVersion = false,
+  previewVersionId,
+  onExitPreview,
 }: EditorSidebarProps) {
-  const [tab, setTab] = useState<"chat" | "debug">("chat");
+  const [tab, setTab] = useState<"chat" | "debug" | "history">("chat");
   const [activeAction, setActiveAction] = useState<"text" | "link" | "media" | null>(null);
   const [actionInput, setActionInput] = useState("");
   const actionInputRef = useRef<HTMLInputElement>(null);
@@ -141,16 +167,30 @@ export default function EditorSidebar({
           >
             Chat
           </button>
-          <button
-            onClick={() => setTab("debug")}
-            className={`pb-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
-              tab === "debug"
-                ? "text-alloro-orange border-alloro-orange"
-                : "text-gray-400 border-transparent hover:text-gray-600"
-            }`}
-          >
-            Debug
-          </button>
+          {showDebug && (
+            <button
+              onClick={() => setTab("debug")}
+              className={`pb-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
+                tab === "debug"
+                  ? "text-alloro-orange border-alloro-orange"
+                  : "text-gray-400 border-transparent hover:text-gray-600"
+              }`}
+            >
+              Debug
+            </button>
+          )}
+          {showHistory && (
+            <button
+              onClick={() => setTab("history")}
+              className={`pb-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors ${
+                tab === "history"
+                  ? "text-alloro-orange border-alloro-orange"
+                  : "text-gray-400 border-transparent hover:text-gray-600"
+              }`}
+            >
+              History
+            </button>
+          )}
         </div>
       </div>
 
@@ -303,7 +343,7 @@ export default function EditorSidebar({
             messages={chatMessages}
             onSend={onSendEdit}
             isLoading={isEditing}
-            disabled={false}
+            disabled={isPreviewingVersion}
             projectId={projectId}
           />
         ) : (
@@ -318,6 +358,15 @@ export default function EditorSidebar({
             </div>
           </div>
         )
+      ) : tab === "history" ? (
+        <VersionHistoryTab
+          pageId={historyPageId || null}
+          onPreview={onPreviewVersion || (() => {})}
+          onRestore={onRestoreVersion || (async () => {})}
+          isPreviewMode={isPreviewingVersion}
+          previewVersionId={previewVersionId || null}
+          onExitPreview={onExitPreview || (() => {})}
+        />
       ) : (
         <DebugPanel debugInfo={debugInfo} selectedInfo={selectedInfo} systemPrompt={systemPrompt} />
       )}

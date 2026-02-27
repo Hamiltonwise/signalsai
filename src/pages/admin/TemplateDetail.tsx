@@ -41,6 +41,7 @@ import {
   Badge,
   TabBar,
 } from "../../components/ui/DesignSystem";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 /**
  * Template Detail Page
@@ -49,6 +50,7 @@ import {
 export default function TemplateDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
@@ -279,9 +281,10 @@ export default function TemplateDetail() {
     setEditingPageName(false);
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = async () => {
     if (hasUnsavedChanges) {
-      if (!confirm("You have unsaved changes. Discard them?")) return;
+      const ok = await confirm({ title: "You have unsaved changes. Discard them?", confirmLabel: "Discard", variant: "default" });
+      if (!ok) return;
     }
     setSelectedPageId(null);
     setHasUnsavedChanges(false);
@@ -358,7 +361,8 @@ export default function TemplateDetail() {
 
   const handleDeletePage = async (pageId: string) => {
     if (!id) return;
-    if (!confirm("Delete this template page? This cannot be undone.")) return;
+    const ok = await confirm({ title: "Delete this template page?", message: "This cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       setDeletingPageId(pageId);

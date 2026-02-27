@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, Bell, Lock, CreditCard } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { LocationTransitionOverlay } from "./LocationTransitionOverlay";
+import { SidebarProvider, useSidebar } from "./Admin/SidebarContext";
 import { useAuth } from "../hooks/useAuth";
 import { useSession } from "../contexts/sessionContext";
 
@@ -11,11 +12,20 @@ interface PageWrapperProps {
 }
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
+  return (
+    <SidebarProvider defaultCollapsed={false}>
+      <PageWrapperInner>{children}</PageWrapperInner>
+    </SidebarProvider>
+  );
+};
+
+const PageWrapperInner: React.FC<PageWrapperProps> = ({ children }) => {
   const { userProfile, selectedDomain, onboardingCompleted, billingStatus } =
     useAuth();
   const { disconnect } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
+  const { collapsed } = useSidebar();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -83,7 +93,11 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
       />
 
       {/* Main Content Area - responsive padding applied here */}
-      <main className="flex-1 w-full lg:pl-72 pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300">
+      <main
+        className={`flex-1 w-full pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${
+          collapsed ? "lg:pl-[68px]" : "lg:pl-72"
+        }`}
+      >
         {/* Lockout Banner — persistent top bar when account is locked */}
         {isLockedOut && (
           <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between gap-4 shrink-0">

@@ -9,6 +9,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useConfirm } from "../../../ui/ConfirmModal";
 import { ActionButton, StatusPill } from "../../../ui/DesignSystem";
 import {
   triggerDiscovery,
@@ -37,6 +38,7 @@ export function SlideDiscoveryTriage({
   onBatchDeleted,
   onContinue,
 }: SlideDiscoveryTriageProps) {
+  const confirm = useConfirm();
   const [runningDiscovery, setRunningDiscovery] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState(false);
   const [localPosts, setLocalPosts] = useState<DiscoveredPost[]>(posts);
@@ -65,10 +67,11 @@ export function SlideDiscoveryTriage({
 
   const handleDeleteBatch = async () => {
     if (!batch) return;
-    if (!confirm("Delete this batch and all its posts? This cannot be undone.")) return;
+    const ok = await confirm({ title: "Delete this batch?", message: "All posts in this batch will be deleted. This cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
     setDeletingBatch(true);
-    const ok = await deleteDiscoveryBatch(mindId, batch.id);
-    if (ok) {
+    const deleted = await deleteDiscoveryBatch(mindId, batch.id);
+    if (deleted) {
       toast.success("Batch deleted");
       onBatchDeleted();
     } else {

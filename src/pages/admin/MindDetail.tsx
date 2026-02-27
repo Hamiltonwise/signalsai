@@ -8,6 +8,7 @@ import {
   Dna,
   GraduationCap,
   Briefcase,
+  Heart,
 } from "lucide-react";
 import {
   AdminPageHeader,
@@ -18,9 +19,10 @@ import { MindChatTab } from "../../components/Admin/minds/MindChatTab";
 import { MindSettingsTab } from "../../components/Admin/minds/MindSettingsTab";
 import { KnowledgeSyncWizard } from "../../components/Admin/minds/KnowledgeSyncWizard";
 import { MindWorkplaceTab } from "../../components/Admin/minds/MindWorkplaceTab";
+import { MindParentingTab } from "../../components/Admin/minds/MindParentingTab";
 import { getMind, type MindWithVersion } from "../../api/minds";
 
-const TAB_KEYS = ["chat", "settings", "knowledge-sync", "workplace"] as const;
+const TAB_KEYS = ["chat", "settings", "knowledge-sync", "parenting", "workplace"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 function buildTabs(mindName: string): Array<{
@@ -47,6 +49,12 @@ function buildTabs(mindName: string): Array<{
       label: "Agent University",
       description: `Where ${mindName} learns new things`,
       icon: <GraduationCap className="h-4 w-4" />,
+    },
+    {
+      id: "parenting",
+      label: "Agent Parenting",
+      description: `Teach ${mindName} directly through conversation`,
+      icon: <Heart className="h-4 w-4" />,
     },
     {
       id: "workplace",
@@ -164,11 +172,19 @@ export default function MindDetail() {
       {activeTab === "chat" && <MindChatTab mindId={mind.id} />}
 
       {activeTab === "settings" && (
-        <MindSettingsTab mind={mind} onMindUpdated={handleMindUpdated} />
+        <MindSettingsTab
+          mind={mind}
+          onMindUpdated={handleMindUpdated}
+          onMindDeleted={() => navigate("/admin/minds")}
+        />
       )}
 
       {activeTab === "knowledge-sync" && (
         <KnowledgeSyncWizard mindId={mind.id} mindName={mind.name} />
+      )}
+
+      {activeTab === "parenting" && (
+        <MindParentingTab mindId={mind.id} mindName={mind.name} />
       )}
 
       {activeTab === "workplace" && (

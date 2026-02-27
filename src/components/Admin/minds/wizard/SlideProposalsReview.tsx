@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { ActionButton } from "../../../ui/DesignSystem";
-import { SyncStepTimeline } from "./SyncStepTimeline";
+import { CompileAnimation } from "./CompileAnimation";
 import {
   getRunProposals,
   updateProposalStatus,
@@ -27,6 +27,7 @@ interface SlideProposalsReviewProps {
   mindId: string;
   mindName: string;
   scrapeRunId: string;
+  initialCompileRunId?: string | null;
   onBack: () => void;
   onDone: () => void;
 }
@@ -101,6 +102,7 @@ export function SlideProposalsReview({
   mindId,
   mindName,
   scrapeRunId,
+  initialCompileRunId,
   onBack,
   onDone,
 }: SlideProposalsReviewProps) {
@@ -108,7 +110,7 @@ export function SlideProposalsReview({
   const [loading, setLoading] = useState(true);
 
   // Compile state
-  const [, setCompileRunId] = useState<string | null>(null);
+  const [compileRunId, setCompileRunId] = useState<string | null>(null);
   const [compileSteps, setCompileSteps] = useState<SyncStep[]>([]);
   const [compiling, setCompiling] = useState(false);
   const [compileStarting, setCompileStarting] = useState(false);
@@ -119,6 +121,14 @@ export function SlideProposalsReview({
 
   useEffect(() => {
     fetchProposals();
+
+    // Resume compile polling if we were mid-compile on refresh
+    if (initialCompileRunId) {
+      setCompileRunId(initialCompileRunId);
+      setCompiling(true);
+      startCompilePolling(initialCompileRunId);
+    }
+
     return () => stopPolling();
   }, []);
 
@@ -278,13 +288,7 @@ export function SlideProposalsReview({
           )}
         </div>
 
-        {compileSteps.length > 0 ? (
-          <SyncStepTimeline steps={compileSteps} />
-        ) : (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
-          </div>
-        )}
+        <CompileAnimation />
 
         {compileFailed && compileError && (
           <div className="mt-4 rounded-xl bg-red-50 border border-red-100 p-4 flex items-start gap-3">

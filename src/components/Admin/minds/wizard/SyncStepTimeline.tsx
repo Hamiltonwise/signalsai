@@ -157,15 +157,15 @@ export function SyncStepTimeline({ steps, className = "" }: SyncStepTimelineProp
                           ? "#D66853"
                           : state === "failed"
                           ? "#ef4444"
-                          : "#ffffff",
+                          : "var(--step-node-bg, #ffffff)",
                       borderColor:
                         state === "completed"
                           ? "#D66853"
                           : state === "failed"
                           ? "#ef4444"
                           : isExpanded
-                          ? "#D66853"
-                          : "#e2e8f0",
+                          ? "var(--step-node-border-expanded, #D66853)"
+                          : "var(--step-node-border, #e2e8f0)",
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     className={`relative z-10 flex items-center justify-center rounded-full border-2 shadow-sm ${
@@ -203,12 +203,12 @@ export function SyncStepTimeline({ steps, className = "" }: SyncStepTimelineProp
                       scale: state === "running" ? 1.05 : 0.9,
                       color:
                         state === "running"
-                          ? "#1e3a5f"
+                          ? "var(--step-label-running, #1e3a5f)"
                           : state === "completed"
                           ? "#D66853"
                           : state === "failed"
                           ? "#ef4444"
-                          : "#94a3b8",
+                          : "var(--step-label-pending, #94a3b8)",
                       fontWeight: state === "running" ? 700 : 500,
                       y: state === "running" ? 0 : 4,
                     }}

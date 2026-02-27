@@ -627,6 +627,110 @@ export interface ContactFormData {
   captchaToken: string;
 }
 
+// =====================================================================
+// RECIPIENTS
+// =====================================================================
+
+export interface RecipientsResponse {
+  success: boolean;
+  data: {
+    recipients: string[];
+    orgUsers: { name: string; email: string; role: string }[];
+  };
+}
+
+export const fetchRecipients = async (
+  projectId: string,
+): Promise<RecipientsResponse> => {
+  const response = await fetch(`${API_BASE}/${projectId}/recipients`);
+  if (!response.ok) throw new Error("Failed to fetch recipients");
+  return response.json();
+};
+
+export const updateRecipients = async (
+  projectId: string,
+  recipients: string[],
+): Promise<{ success: boolean; data: { recipients: string[] } }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/recipients`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recipients }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update recipients");
+  }
+  return response.json();
+};
+
+// =====================================================================
+// FORM SUBMISSIONS
+// =====================================================================
+
+export interface FormSubmission {
+  id: string;
+  project_id: string;
+  form_name: string;
+  contents: Record<string, string>;
+  recipients_sent_to: string[];
+  submitted_at: string;
+  is_read: boolean;
+}
+
+export interface FormSubmissionsResponse {
+  success: boolean;
+  data: FormSubmission[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  unreadCount: number;
+}
+
+export const fetchFormSubmissions = async (
+  projectId: string,
+  page = 1,
+  limit = 20,
+  read?: boolean,
+): Promise<FormSubmissionsResponse> => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (read !== undefined) params.set("read", String(read));
+  const response = await fetch(`${API_BASE}/${projectId}/form-submissions?${params}`);
+  if (!response.ok) throw new Error("Failed to fetch form submissions");
+  return response.json();
+};
+
+export const fetchFormSubmission = async (
+  projectId: string,
+  submissionId: string,
+): Promise<{ success: boolean; data: FormSubmission }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/form-submissions/${submissionId}`);
+  if (!response.ok) throw new Error("Failed to fetch submission");
+  return response.json();
+};
+
+export const toggleFormSubmissionRead = async (
+  projectId: string,
+  submissionId: string,
+  is_read: boolean,
+): Promise<{ success: boolean }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/form-submissions/${submissionId}/read`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_read }),
+  });
+  if (!response.ok) throw new Error("Failed to update submission");
+  return response.json();
+};
+
+export const deleteFormSubmission = async (
+  projectId: string,
+  submissionId: string,
+): Promise<{ success: boolean }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/form-submissions/${submissionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete submission");
+  return response.json();
+};
+
 /**
  * Submit a contact form from a rendered site
  */

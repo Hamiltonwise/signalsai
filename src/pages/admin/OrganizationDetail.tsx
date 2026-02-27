@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { AdminPageHeader, Badge } from "../../components/ui/DesignSystem";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 import { OrgLocationSelector } from "../../components/Admin/OrgLocationSelector";
 import { OrgTasksTab } from "../../components/Admin/OrgTasksTab";
 import { OrgPmsTab } from "../../components/Admin/OrgPmsTab";
@@ -82,6 +83,7 @@ export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const confirm = useConfirm();
   const activeTab = (searchParams.get("tab") || "tasks") as TabKey;
 
   const [org, setOrg] = useState<AdminOrganizationDetail | null>(null);
@@ -219,9 +221,7 @@ export default function OrganizationDetail() {
 
   const handleRemovePayment = async () => {
     if (!org) return;
-    const confirmed = window.confirm(
-      `Remove payment method for "${org.name}"?\n\nThis will cancel their Stripe subscription and revert them to admin-granted state (no billing).`
-    );
+    const confirmed = await confirm({ title: `Remove payment method for "${org.name}"?`, message: "This will cancel their Stripe subscription and revert them to admin-granted state (no billing).", confirmLabel: "Remove", variant: "danger" });
     if (!confirmed) return;
 
     setIsRemovingPayment(true);

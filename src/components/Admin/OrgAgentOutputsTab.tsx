@@ -28,6 +28,7 @@ import {
 import type { AgentOutput, AgentOutputType } from "../../types/agentOutputs";
 import { AgentOutputDetailModal } from "./AgentOutputDetailModal";
 import { BulkActionBar, ActionButton } from "../ui/DesignSystem";
+import { useConfirm } from "../ui/ConfirmModal";
 
 interface OrgAgentOutputsTabProps {
   organizationId: number;
@@ -59,6 +60,8 @@ export function OrgAgentOutputsTab({
   // Individual action loading
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const confirm = useConfirm();
 
   const pageSize = 50;
 
@@ -155,7 +158,8 @@ export function OrgAgentOutputsTab({
 
   const handleArchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Archive this agent output?")) return;
+    const ok = await confirm({ title: "Archive this agent output?", confirmLabel: "Archive", variant: "danger" });
+    if (!ok) return;
     try {
       setArchivingId(id);
       await archiveAgentOutput(id);
@@ -169,7 +173,8 @@ export function OrgAgentOutputsTab({
 
   const handleUnarchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Restore this agent output?")) return;
+    const ok = await confirm({ title: "Restore this agent output?", confirmLabel: "Restore", variant: "danger" });
+    if (!ok) return;
     try {
       setArchivingId(id);
       await unarchiveAgentOutput(id);
@@ -183,8 +188,8 @@ export function OrgAgentOutputsTab({
 
   const handleDelete = async (id: number) => {
     if (deletingId) return;
-    if (!confirm("Permanently delete this agent output? This cannot be undone."))
-      return;
+    const ok = await confirm({ title: "Permanently delete this agent output?", message: "This cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
     try {
       setDeletingId(id);
       await deleteAgentOutput(id);
@@ -198,7 +203,8 @@ export function OrgAgentOutputsTab({
 
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Archive ${selectedIds.size} output(s)?`)) return;
+    const ok = await confirm({ title: `Archive ${selectedIds.size} output(s)?`, confirmLabel: "Archive", variant: "danger" });
+    if (!ok) return;
     try {
       setBulkLoading(true);
       await bulkArchiveAgentOutputs(Array.from(selectedIds));
@@ -213,7 +219,8 @@ export function OrgAgentOutputsTab({
 
   const handleBulkUnarchive = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Restore ${selectedIds.size} output(s)?`)) return;
+    const ok = await confirm({ title: `Restore ${selectedIds.size} output(s)?`, confirmLabel: "Restore", variant: "danger" });
+    if (!ok) return;
     try {
       setBulkLoading(true);
       await bulkUnarchiveAgentOutputs(Array.from(selectedIds));
@@ -228,12 +235,8 @@ export function OrgAgentOutputsTab({
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Permanently delete ${selectedIds.size} output(s)? This cannot be undone.`
-      )
-    )
-      return;
+    const ok = await confirm({ title: `Permanently delete ${selectedIds.size} output(s)?`, message: "This cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
     try {
       setBulkLoading(true);
       await bulkDeleteAgentOutputs(Array.from(selectedIds));

@@ -25,6 +25,7 @@ import {
   Check,
   AlertCircle,
 } from "lucide-react";
+import { useConfirm } from "../ui/ConfirmModal";
 
 // =====================================================================
 // Types
@@ -98,6 +99,8 @@ export default function MediaTab({ projectId }: { projectId: string }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const confirm = useConfirm();
 
   // =====================================================================
   // API Calls
@@ -195,7 +198,8 @@ export default function MediaTab({ projectId }: { projectId: string }) {
   };
 
   const deleteMedia = async (mediaId: string) => {
-    if (!confirm("Delete this media? This action cannot be undone.")) return;
+    const ok = await confirm({ title: "Delete this media?", message: "This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       const response = await fetch(

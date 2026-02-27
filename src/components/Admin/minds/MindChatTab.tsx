@@ -12,6 +12,7 @@ import {
   Layers,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useConfirm } from "../../ui/ConfirmModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -123,6 +124,7 @@ function CompactionBubble({ data }: { data: CompactionMessage }) {
 }
 
 export function MindChatTab({ mindId }: MindChatTabProps) {
+  const confirm = useConfirm();
   const [conversations, setConversations] = useState<MindConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MindMessage[]>([]);
@@ -385,9 +387,10 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                   </p>
                 </div>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm("Delete this conversation?")) {
+                    const ok = await confirm({ title: "Delete this conversation?", confirmLabel: "Delete", variant: "danger" });
+                    if (ok) {
                       handleDeleteConversation(conv.id);
                     }
                   }}

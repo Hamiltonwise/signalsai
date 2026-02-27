@@ -52,8 +52,11 @@ import MediaTab from "../../components/Admin/MediaTab";
 import CodeManagerTab from "../../components/Admin/CodeManagerTab";
 import ColorPicker from "../../components/Admin/ColorPicker";
 import ConnectDomainModal from "../../components/Admin/ConnectDomainModal";
+import RecipientsConfig from "../../components/Admin/RecipientsConfig";
+import FormSubmissionsTab from "../../components/Admin/FormSubmissionsTab";
 import { fetchProjectCodeSnippets } from "../../api/codeSnippets";
 import type { CodeSnippet } from "../../api/codeSnippets";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 // Status step type with icon
 interface StatusStep {
@@ -137,6 +140,7 @@ function groupPagesByPath(pages: WebsitePage[]) {
 export default function WebsiteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [website, setWebsite] = useState<WebsiteProjectWithPages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +187,7 @@ export default function WebsiteDetail() {
 
   // Detail tab: pages vs layouts vs media vs code-manager
   const [detailTab, setDetailTab] = useState<
-    "pages" | "layouts" | "media" | "code-manager"
+    "pages" | "layouts" | "media" | "code-manager" | "form-submissions"
   >("pages");
 
   // Code snippets state
@@ -274,7 +278,8 @@ export default function WebsiteDetail() {
   };
 
   const handleUnlink = async () => {
-    if (!confirm("Unlink this website from the organization?")) return;
+    const ok = await confirm({ title: "Unlink this website from the organization?", confirmLabel: "Unlink", variant: "danger" });
+    if (!ok) return;
     setSelectedOrgId(null);
     await handleLinkOrganization();
   };
@@ -554,12 +559,8 @@ export default function WebsiteDetail() {
 
   const handleDelete = async () => {
     if (!id || isDeleting) return;
-    if (
-      !confirm(
-        "Are you sure you want to DELETE this website project? This will also delete all its pages. This action cannot be undone.",
-      )
-    )
-      return;
+    const ok = await confirm({ title: "Delete this website project?", message: "This will also delete all its pages. This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
     try {
       setIsDeleting(true);
       await deleteWebsite(id);
@@ -586,7 +587,8 @@ export default function WebsiteDetail() {
       alert("Cannot delete the only version of a page.");
       return;
     }
-    if (!confirm(`Delete version ${page.version} of "${page.path}"?`)) return;
+    const okVersion = await confirm({ title: `Delete version ${page.version} of "${page.path}"?`, confirmLabel: "Delete", variant: "danger" });
+    if (!okVersion) return;
 
     try {
       setDeletingPageId(pageId);
@@ -613,12 +615,8 @@ export default function WebsiteDetail() {
 
   const handleDeletePage = async (path: string, versionCount: number) => {
     if (!id) return;
-    if (
-      !confirm(
-        `Delete page "${path}" and all ${versionCount} version${versionCount !== 1 ? "s" : ""}? This cannot be undone.`,
-      )
-    )
-      return;
+    const okPage = await confirm({ title: `Delete page "${path}"?`, message: `This will delete all ${versionCount} version${versionCount !== 1 ? "s" : ""}. This cannot be undone.`, confirmLabel: "Delete", variant: "danger" });
+    if (!okPage) return;
 
     try {
       setDeletingPagePath(path);
@@ -1490,9 +1488,9 @@ export default function WebsiteDetail() {
         </motion.div>
       )}
 
-      {/* Tab bar: Pages | Layouts | Code Manager | Media */}
+      {/* Tab bar: Pages | Layouts | Code Manager | Media | Form Submissions */}
       <div className="flex items-center gap-1 mb-4">
-        {(["pages", "layouts", "code-manager", "media"] as const).map((tab) => (
+        {(["pages", "layouts", "code-manager", "media", "form-submissions"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setDetailTab(tab)}
@@ -1502,7 +1500,7 @@ export default function WebsiteDetail() {
                 : "text-gray-400 hover:text-gray-600"
             }`}
           >
-            {tab}
+            {tab === "form-submissions" ? "Form Submissions" : tab}
           </button>
         ))}
       </div>
@@ -1777,6 +1775,25 @@ export default function WebsiteDetail() {
           transition={{ delay: 0.2 }}
         >
           <MediaTab projectId={id!} />
+        </motion.div>
+      )}
+
+      {/* Form Submissions Section */}
+      {detailTab === "form-submissions" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-6"
+        >
+          {/* Recipients config */}
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Recipients</h3>
+            <RecipientsConfig projectId={id!} />
+          </div>
+
+          {/* Submissions table */}
+          <FormSubmissionsTab projectId={id!} isAdmin />
         </motion.div>
       )}
 

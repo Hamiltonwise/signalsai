@@ -42,6 +42,7 @@ import {
   expandCollapse,
   chevronVariants,
 } from "../../lib/animations";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 // GBP Location from the API
 interface GbpLocation {
@@ -445,6 +446,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
 };
 
 export function PracticeRanking() {
+  const confirm = useConfirm();
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [jobs, setJobs] = useState<RankingJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -870,13 +872,8 @@ export function PracticeRanking() {
   const deleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (
-      !confirm(
-        "Are you sure you want to delete this analysis? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({ title: "Delete this analysis?", message: "This action cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     setDeletingJob(jobId);
     try {
@@ -923,15 +920,8 @@ export function PracticeRanking() {
     const batch = groupedBatches.find((b) => b.batchId === batchId);
     const locationCount = batch?.totalLocations || 0;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete this entire batch? This will delete ${locationCount} analysis record${
-          locationCount !== 1 ? "s" : ""
-        }. This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({ title: "Delete entire batch?", message: `This will delete ${locationCount} analysis record${locationCount !== 1 ? "s" : ""}. This action cannot be undone.`, confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     setDeletingBatch(batchId);
     try {

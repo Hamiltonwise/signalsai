@@ -29,6 +29,7 @@ import {
   Badge,
   ActionButton,
 } from "../../components/ui/DesignSystem";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 
 /**
  * Websites List Page
@@ -36,6 +37,7 @@ import {
  */
 export default function WebsitesList() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [websites, setWebsites] = useState<WebsiteProject[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,12 +119,8 @@ export default function WebsitesList() {
   const handleDelete = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (deletingId) return;
-    if (
-      !confirm(
-        "Are you sure you want to DELETE this website project? This will also delete all its pages."
-      )
-    )
-      return;
+    const ok = await confirm({ title: "Delete website project?", message: "This will also delete all its pages.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       setDeletingId(id);
@@ -142,12 +140,8 @@ export default function WebsitesList() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (
-      !confirm(
-        `Are you sure you want to DELETE ${selectedIds.size} website(s)? This will also delete all their pages.`
-      )
-    )
-      return;
+    const ok = await confirm({ title: `Delete ${selectedIds.size} website(s)?`, message: "This will also delete all their pages.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     try {
       setBulkOperationLoading(true);

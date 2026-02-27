@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton, StatusPill } from "../../ui/DesignSystem";
 import {
   getDiscoveryBatch,
@@ -39,6 +40,8 @@ interface MindKnowledgeSyncTabProps {
 }
 
 export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSyncTabProps) {
+  const confirm = useConfirm();
+
   // Discovery state
   const [batch, setBatch] = useState<DiscoveryBatch | null>(null);
   const [posts, setPosts] = useState<DiscoveredPost[]>([]);
@@ -150,10 +153,11 @@ export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSy
 
   const handleDeleteBatch = async () => {
     if (!batch) return;
-    if (!confirm("Delete this batch and all its posts? This cannot be undone.")) return;
+    const ok = await confirm({ title: "Delete this batch?", message: "All posts in this batch will be deleted. This cannot be undone.", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
     setDeletingBatch(true);
-    const ok = await deleteDiscoveryBatch(mindId, batch.id);
-    if (ok) {
+    const deleted = await deleteDiscoveryBatch(mindId, batch.id);
+    if (deleted) {
       toast.success("Batch deleted");
       fetchDiscovery();
       refreshStatus();

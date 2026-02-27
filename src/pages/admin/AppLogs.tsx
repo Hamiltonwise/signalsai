@@ -7,6 +7,7 @@ import {
   EmptyState,
   ActionButton,
 } from "../../components/ui/DesignSystem";
+import { useConfirm } from "../../components/ui/ConfirmModal";
 import { fadeInUp } from "../../lib/animations";
 
 interface LogsData {
@@ -58,6 +59,7 @@ type LogType = (typeof LOG_TABS)[number]["id"];
  * Fetches latest 500 lines every 2 seconds
  */
 export default function AppLogs() {
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState<LogType>("agent-run");
   const [logs, setLogs] = useState<string[]>([]);
   const [totalLines, setTotalLines] = useState(0);
@@ -95,11 +97,8 @@ export default function AppLogs() {
   const handleClearLogs = async () => {
     const tabLabel =
       LOG_TABS.find((t) => t.id === activeTab)?.label || activeTab;
-    if (
-      !window.confirm(`Are you sure you want to clear all ${tabLabel} logs?`)
-    ) {
-      return;
-    }
+    const ok = await confirm({ title: `Clear all ${tabLabel} logs?`, message: "This will permanently remove all log entries.", confirmLabel: "Clear", variant: "danger" });
+    if (!ok) return;
 
     setClearing(true);
     try {

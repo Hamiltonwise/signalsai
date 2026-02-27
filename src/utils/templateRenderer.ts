@@ -19,6 +19,73 @@ export function normalizeSections(raw: unknown): Section[] {
 }
 
 /**
+ * Build the inline form-handler script for a given project.
+ * Mirrors the backend buildFormScript() — kept here because the frontend
+ * cannot import from signalsai-backend.
+ */
+function buildFormScript(projectId: string): string {
+  const apiBase = "https://app.getalloro.com";
+  return `<script data-alloro-form-handler>
+(function(){
+  'use strict';
+  document.addEventListener('DOMContentLoaded',function(){
+    var API='${apiBase}';
+    var PID='${projectId}';
+    var forms=document.querySelectorAll('form:not([data-alloro-ignore])');
+    forms.forEach(function(form){
+      form.addEventListener('submit',function(e){
+        e.preventDefault();
+        var formName=form.getAttribute('data-form-name')||form.getAttribute('name')||'Contact Form';
+        var contents={};
+        var inputs=form.querySelectorAll('input,select,textarea');
+        inputs.forEach(function(el){
+          if(el.tabIndex===-1||el.type==='submit'||el.type==='hidden'||el.type==='button')return;
+          var label=el.getAttribute('data-label')||el.getAttribute('name')||el.getAttribute('placeholder')||'';
+          if(!label)return;
+          if(el.type==='checkbox'){
+            if(el.checked){
+              contents[label]=contents[label]?contents[label]+', '+el.value:el.value;
+            }
+          }else if(el.type==='radio'){
+            if(el.checked){
+              contents[label]=el.value;
+            }
+          }else if(el.tagName==='SELECT'){
+            var opt=el.options[el.selectedIndex];
+            if(opt&&opt.value){
+              contents[label]=opt.textContent.trim();
+            }
+          }else{
+            var v=el.value.trim();
+            if(v)contents[label]=v;
+          }
+        });
+        var btn=form.querySelector('button[type="submit"],input[type="submit"]');
+        var origText=btn?btn.textContent:'';
+        if(btn){btn.disabled=true;btn.textContent='Sending...';}
+        fetch(API+'/api/websites/form-submission',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({projectId:PID,formName:formName,contents:contents})
+        })
+        .then(function(r){if(!r.ok)throw new Error('fail');return r.json();})
+        .then(function(){
+          if(btn){btn.textContent='Sent!';btn.style.backgroundColor='#16a34a';}
+          form.reset();
+          setTimeout(function(){if(btn){btn.disabled=false;btn.textContent=origText;btn.style.backgroundColor='';}},3000);
+        })
+        .catch(function(){
+          if(btn){btn.textContent='Error — Try Again';btn.style.backgroundColor='#dc2626';}
+          setTimeout(function(){if(btn){btn.disabled=false;btn.textContent=origText;btn.style.backgroundColor='';}},3000);
+        });
+      });
+    });
+  });
+})();
+</script>`;
+}
+
+/**
  * Inject code snippets into HTML at specified locations
  */
 function injectCodeSnippets(
@@ -96,6 +163,7 @@ function tagSectionRoot(sectionName: string, html: string): string {
  * @param sectionFilter – optional list of section names to include (omit for all)
  * @param codeSnippets – optional code snippets to inject
  * @param currentPageId – optional page ID for snippet targeting
+ * @param projectId – optional project ID; when provided, the form-handler script is injected
  */
 export function renderPage(
   wrapper: string,
@@ -104,7 +172,8 @@ export function renderPage(
   sections: Section[],
   sectionFilter?: string[],
   codeSnippets?: CodeSnippet[],
-  currentPageId?: string
+  currentPageId?: string,
+  projectId?: string
 ): string {
   const sectionsToRender = sectionFilter
     ? sections.filter((s) => sectionFilter.includes(s.name))
@@ -121,6 +190,12 @@ export function renderPage(
   // Inject code snippets
   if (codeSnippets && codeSnippets.length > 0) {
     finalHtml = injectCodeSnippets(finalHtml, codeSnippets, currentPageId);
+  }
+
+  // Inject form-handler script when a projectId is provided
+  if (projectId) {
+    const formScript = buildFormScript(projectId);
+    finalHtml = finalHtml.replace(/<\/body>/i, `${formScript}\n</body>`);
   }
 
   return finalHtml;

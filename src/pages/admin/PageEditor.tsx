@@ -185,7 +185,11 @@ function PageEditorInner() {
           proj.wrapper || "{{slot}}",
           proj.header || "",
           proj.footer || "",
-          pageSections
+          pageSections,
+          undefined,
+          undefined,
+          undefined,
+          projectId
         );
         setHtmlContent(assembled);
 
@@ -448,7 +452,11 @@ function PageEditorInner() {
       project?.wrapper || "{{slot}}",
       project?.header || "",
       project?.footer || "",
-      previousSections
+      previousSections,
+      undefined,
+      undefined,
+      undefined,
+      projectId
     );
     setHtmlContent(assembled);
     setIsDirty(true);
@@ -537,7 +545,11 @@ function PageEditorInner() {
           project.wrapper || "{{slot}}",
           project.header || "",
           project.footer || "",
-          draftSections
+          draftSections,
+          undefined,
+          undefined,
+          undefined,
+          projectId
         );
         setHtmlContent(assembled);
       }

@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton, EmptyState, StatusPill } from "../../ui/DesignSystem";
 import { SkillDetailPanel } from "./SkillDetailPanel";
 import {
@@ -44,6 +45,7 @@ function SkillCard({
   onSelect: () => void;
   onDelete: () => void;
 }) {
+  const confirm = useConfirm();
   const [copied, setCopied] = useState(false);
   const endpoint = `${API_BASE}/api/minds/${mindSlug}/${skill.slug}`;
 
@@ -54,9 +56,10 @@ function SkillCard({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Delete skill "${skill.name}"?`)) {
+    const ok = await confirm({ title: `Delete skill "${skill.name}"?`, confirmLabel: "Delete", variant: "danger" });
+    if (ok) {
       onDelete();
     }
   };

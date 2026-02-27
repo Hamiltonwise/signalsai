@@ -23,6 +23,7 @@ import {
   expandCollapse,
   chevronVariants,
 } from "../../lib/animations";
+import { useConfirm } from "../ui/ConfirmModal";
 
 interface OrgRankingsTabProps {
   organizationId: number;
@@ -107,6 +108,8 @@ export function OrgRankingsTab({
   );
   const [loadingResults, setLoadingResults] = useState<number | null>(null);
   const [deletingJob, setDeletingJob] = useState<number | null>(null);
+
+  const confirm = useConfirm();
 
   useEffect(() => {
     loadRankings();
@@ -236,7 +239,8 @@ export function OrgRankingsTab({
 
   const deleteJob = async (jobId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this ranking analysis?")) return;
+    const ok = await confirm({ title: "Delete this ranking analysis?", confirmLabel: "Delete", variant: "danger" });
+    if (!ok) return;
 
     setDeletingJob(jobId);
     try {

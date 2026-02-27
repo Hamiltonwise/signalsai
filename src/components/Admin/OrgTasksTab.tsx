@@ -27,6 +27,7 @@ import type { ActionItem } from "../../types/tasks";
 import { TaskDetailsModal } from "../tasks/TaskDetailsModal";
 import { AgentTypePill } from "../tasks/AgentTypePill";
 import { BulkActionBar, ActionButton } from "../ui/DesignSystem";
+import { useConfirm } from "../ui/ConfirmModal";
 
 interface OrgTasksTabProps {
   organizationId: number;
@@ -56,6 +57,8 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
   // Individual action loading
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
+
+  const confirm = useConfirm();
 
   const pageSize = 50;
 
@@ -160,7 +163,8 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
 
   const handleArchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Archive this task?")) return;
+    const ok = await confirm({ title: "Archive this task?", confirmLabel: "Archive", variant: "danger" });
+    if (!ok) return;
     try {
       setArchivingId(id);
       await archiveTask(id);
@@ -174,7 +178,8 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
 
   const handleUnarchive = async (id: number) => {
     if (archivingId) return;
-    if (!confirm("Restore this task?")) return;
+    const ok = await confirm({ title: "Restore this task?", confirmLabel: "Restore", variant: "danger" });
+    if (!ok) return;
     try {
       setArchivingId(id);
       await unarchiveTask(id);
@@ -188,7 +193,8 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
 
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Archive ${selectedIds.size} task(s)?`)) return;
+    const ok = await confirm({ title: `Archive ${selectedIds.size} task(s)?`, confirmLabel: "Archive", variant: "danger" });
+    if (!ok) return;
     try {
       setBulkLoading(true);
       await bulkArchiveTasks(Array.from(selectedIds));
@@ -203,7 +209,8 @@ export function OrgTasksTab({ organizationId, locationId }: OrgTasksTabProps) {
 
   const handleBulkUnarchive = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Restore ${selectedIds.size} task(s)?`)) return;
+    const ok = await confirm({ title: `Restore ${selectedIds.size} task(s)?`, confirmLabel: "Restore", variant: "danger" });
+    if (!ok) return;
     try {
       setBulkLoading(true);
       await bulkUnarchiveTasks(Array.from(selectedIds));

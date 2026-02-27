@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -26,6 +26,8 @@ import {
   Key,
   Copy,
   Check,
+  ChevronDown,
+  Link2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { AdminPageHeader, Badge } from "../../components/ui/DesignSystem";
@@ -49,6 +51,7 @@ import {
   type AdminLocation,
   type AdminUser,
 } from "../../api/admin-organizations";
+import { fetchWebsites, linkWebsiteToOrganization } from "../../api/websites";
 
 const TAB_KEYS = [
   "tasks",
@@ -92,6 +95,15 @@ export default function OrganizationDetail() {
   const [isLockoutLoading, setIsLockoutLoading] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isRemovingPayment, setIsRemovingPayment] = useState(false);
+
+  // Attach Website state
+  const [showAttachDropdown, setShowAttachDropdown] = useState(false);
+  const [unlinkedWebsites, setUnlinkedWebsites] = useState<
+    Array<{ id: string; generated_hostname: string }>
+  >([]);
+  const [loadingWebsites, setLoadingWebsites] = useState(false);
+  const [isAttaching, setIsAttaching] = useState(false);
+  const attachDropdownRef = useRef<HTMLDivElement>(null);
 
   // Set Password Modal
   const [passwordModalUser, setPasswordModalUser] = useState<AdminUser | null>(null);
@@ -161,6 +173,49 @@ export default function OrganizationDetail() {
       setIsCreatingProject(false);
     }
   };
+
+  const loadUnlinkedWebsites = useCallback(async () => {
+    try {
+      setLoadingWebsites(true);
+      const response = await fetchWebsites({ limit: 500 });
+      const unlinked = response.data
+        .filter((w) => !w.organization)
+        .map((w) => ({ id: w.id, generated_hostname: w.generated_hostname }));
+      setUnlinkedWebsites(unlinked);
+    } catch {
+      toast.error("Failed to load websites");
+    } finally {
+      setLoadingWebsites(false);
+    }
+  }, []);
+
+  const handleAttachWebsite = async (websiteId: string) => {
+    setIsAttaching(true);
+    setShowAttachDropdown(false);
+    try {
+      await linkWebsiteToOrganization(websiteId, orgId);
+      toast.success("Website attached to organization");
+      loadData();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to attach website");
+    } finally {
+      setIsAttaching(false);
+    }
+  };
+
+  // Close attach dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        attachDropdownRef.current &&
+        !attachDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowAttachDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleRemovePayment = async () => {
     if (!org) return;
@@ -518,6 +573,65 @@ export default function OrganizationDetail() {
                 "Create Project"
               )}
             </button>
+          )}
+
+          {/* Attach Existing Website — only when no website project exists */}
+          {!org.website && (
+            <div className="relative" ref={attachDropdownRef}>
+              <button
+                onClick={() => {
+                  if (!showAttachDropdown) loadUnlinkedWebsites();
+                  setShowAttachDropdown(!showAttachDropdown);
+                }}
+                disabled={isAttaching}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                {isAttaching ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Attaching...
+                  </>
+                ) : (
+                  "Attach Website"
+                )}
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform ${showAttachDropdown ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {showAttachDropdown && (
+                <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                  {loadingWebsites ? (
+                    <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading websites...
+                    </div>
+                  ) : unlinkedWebsites.length === 0 ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">
+                      No unlinked websites available
+                    </div>
+                  ) : (
+                    <>
+                      <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                        Available Websites
+                      </div>
+                      {unlinkedWebsites.map((site) => (
+                        <button
+                          key={site.id}
+                          onClick={() => handleAttachWebsite(site.id)}
+                          disabled={isAttaching}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 w-full text-left disabled:opacity-50"
+                        >
+                          <Globe className="h-4 w-4" />
+                          {site.generated_hostname}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Remove Payment Method — only when Stripe billing is active */}

@@ -67,6 +67,12 @@ export default function MindDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Full-dark body when on minds page
+  useEffect(() => {
+    document.body.classList.add("minds-page-active");
+    return () => document.body.classList.remove("minds-page-active");
+  }, []);
+
   const fetchMind = useCallback(async () => {
     if (!mindId) return;
     setLoading(true);
@@ -123,7 +129,9 @@ export default function MindDetail() {
   const tabs = buildTabs(mind.name);
 
   return (
-    <div>
+    <div className="minds-theme">
+      <div className="minds-microdots" />
+      <div className="relative z-[1]">
       <AdminPageHeader
         icon={<Brain className="h-6 w-6" />}
         title={mind.name}
@@ -171,6 +179,7 @@ export default function MindDetail() {
           hasPublishedVersion={!!mind.published_version_id}
         />
       )}
+      </div>
     </div>
   );
 }

@@ -114,8 +114,8 @@ export function AdminSidebar({ topOffset }: AdminSidebarProps = {}) {
       >
         <Link
           to={`/admin/${item.key}`}
-          className={`flex w-full items-center rounded-xl py-2.5 text-left text-sm font-semibold transition-all ${
-            collapsed ? "justify-center px-2" : indented ? "gap-3 pl-8 pr-3" : "gap-3 px-3"
+          className={`flex w-full items-center rounded-xl text-left text-sm font-semibold transition-all ${
+            collapsed ? "justify-center px-1.5 py-1.5" : `py-2.5 ${indented ? "gap-3 pl-8 pr-3" : "gap-3 px-3"}`
           } ${
             isActive
               ? "bg-alloro-orange/10 text-alloro-orange border border-alloro-orange/20"
@@ -123,7 +123,7 @@ export function AdminSidebar({ topOffset }: AdminSidebarProps = {}) {
           }`}
         >
           <item.icon
-            className={`h-4 w-4 shrink-0 ${isActive ? "text-alloro-orange" : "text-gray-400"}`}
+            className={`shrink-0 ${collapsed ? "h-4.5 w-4.5" : "h-4 w-4"} ${isActive ? "text-alloro-orange" : "text-gray-400"}`}
           />
           {!collapsed && <span>{item.label}</span>}
         </Link>
@@ -157,71 +157,79 @@ export function AdminSidebar({ topOffset }: AdminSidebarProps = {}) {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 72 : 288 }}
-      transition={{ duration: 0.2, ease: "easeInOut" }}
+      animate={{
+        width: collapsed ? 56 : 288,
+        height: collapsed ? "auto" : `calc(100vh - ${topOffset || "4rem"})`,
+      }}
+      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className="fixed left-0 z-40 flex flex-col p-2"
       style={{
-        top: topOffset || "4rem",
-        height: `calc(100vh - ${topOffset || "4rem"})`,
+        top: collapsed ? "50%" : (topOffset || "4rem"),
+        transform: collapsed ? "translateY(-50%)" : undefined,
       }}
     >
-      <div className="flex flex-col h-full bg-[#212D40] rounded-2xl border border-gray-700 shadow-lg overflow-hidden">
-        <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
+      <div className="flex flex-col h-full bg-[#212D40] rounded-2xl border border-gray-700 shadow-lg overflow-hidden admin-sidebar-scroll">
+        <nav className={`space-y-0.5 overflow-y-auto admin-sidebar-scroll ${
+          collapsed ? "px-1.5 py-2" : "flex-1 space-y-1 px-2 py-4"
+        }`}>
+          {/* Top items — always visible */}
           {TOP_ITEMS.map((item) => renderNavLink(item))}
 
           {/* Agents Group */}
-          <div className="pt-4">
+          <div className={collapsed ? "pt-1" : "pt-4"}>
             {!collapsed ? (
               <div className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                 <Bot className="h-3.5 w-3.5" />
                 <span>Agents</span>
               </div>
             ) : (
-              <div className="flex justify-center py-2">
-                <div className="w-6 border-t border-gray-600" />
+              <div className="flex justify-center py-1">
+                <div className="w-5 border-t border-gray-600/50" />
               </div>
             )}
-            <div className="space-y-1 mt-1">
+            <div className={`${collapsed ? "space-y-0.5 mt-0.5" : "space-y-1 mt-1"}`}>
               {AGENTS_GROUP_ITEMS.map((item) => renderNavLink(item, !collapsed))}
             </div>
           </div>
 
           {/* Done For You Group */}
-          <div className="pt-4">
+          <div className={collapsed ? "pt-1" : "pt-4"}>
             {!collapsed ? (
               <div className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-500">
                 <Briefcase className="h-3.5 w-3.5" />
                 <span>Done For You</span>
               </div>
             ) : (
-              <div className="flex justify-center py-2">
-                <div className="w-6 border-t border-gray-600" />
+              <div className="flex justify-center py-1">
+                <div className="w-5 border-t border-gray-600/50" />
               </div>
             )}
-            <div className="space-y-1 mt-1">
+            <div className={`${collapsed ? "space-y-0.5 mt-0.5" : "space-y-1 mt-1"}`}>
               {DONE_FOR_YOU_ITEMS.map((item) => renderNavLink(item, !collapsed))}
             </div>
           </div>
 
           {/* Bottom items */}
-          <div className="pt-4 space-y-1">
+          <div className={`${collapsed ? "pt-1 space-y-0.5" : "pt-4 space-y-1"}`}>
             {BOTTOM_ITEMS.map((item) => renderNavLink(item))}
           </div>
         </nav>
 
         {/* Footer with collapse toggle */}
-        <div className="px-3 py-3 border-t border-gray-700 bg-[#1a2433]">
+        <div className={`border-t border-gray-700 bg-[#1a2433] ${collapsed ? "px-1.5 py-1.5" : "px-3 py-3"}`}>
           <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
             {!collapsed && (
               <p className="text-xs text-gray-500 font-medium pl-1">Admin Panel v1.0</p>
             )}
             <button
               onClick={toggleCollapsed}
-              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-colors"
+              className={`rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-colors ${
+                collapsed ? "p-1" : "p-1.5"
+              }`}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
+                <PanelLeftOpen className="h-4.5 w-4.5" />
               ) : (
                 <PanelLeftClose className="h-4 w-4" />
               )}

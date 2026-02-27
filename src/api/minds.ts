@@ -206,6 +206,38 @@ export async function sendChatMessage(
   return res.success ? res.data : null;
 }
 
+export async function sendChatMessageStream(
+  mindId: string,
+  message: string,
+  conversationId?: string
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  // Replicate auth header logic from getCommonHeaders
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(`${api}/admin/minds/${mindId}/chat/stream`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ message, conversationId }),
+  });
+}
+
 export async function getConversation(
   mindId: string,
   conversationId: string

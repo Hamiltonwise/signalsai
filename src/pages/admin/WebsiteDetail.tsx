@@ -191,7 +191,7 @@ export default function WebsiteDetail() {
   const [loadingSnippets, setLoadingSnippets] = useState(false);
 
   // Organization linking state
-  const [dfyOrganizations, setDfyOrganizations] = useState<
+  const [availableOrganizations, setAvailableOrganizations] = useState<
     Array<{ id: number; name: string }>
   >([]);
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -225,7 +225,7 @@ export default function WebsiteDetail() {
     }
   }, [id]);
 
-  const loadDFYOrganizations = useCallback(async () => {
+  const loadAvailableOrganizations = useCallback(async () => {
     try {
       setLoadingOrgs(true);
       const token = localStorage.getItem("auth_token");
@@ -234,16 +234,15 @@ export default function WebsiteDetail() {
       });
       const data = await response.json();
 
-      // Filter to DFY orgs without websites (or currently linked org)
+      // Filter to orgs without websites (or currently linked org)
       const availableOrgs = data.organizations
         .filter(
           (org: any) =>
-            org.subscription_tier === "DFY" &&
-            (!org.website || org.id === website?.organization?.id),
+            !org.website || org.id === website?.organization?.id,
         )
         .map((org: any) => ({ id: org.id, name: org.name }));
 
-      setDfyOrganizations(availableOrgs);
+      setAvailableOrganizations(availableOrgs);
     } catch (err) {
       console.error("Failed to load organizations:", err);
       toast.error("Failed to load organizations");
@@ -262,7 +261,7 @@ export default function WebsiteDetail() {
         selectedOrgId ? "Organization linked" : "Organization unlinked",
       );
       await loadWebsite();
-      await loadDFYOrganizations();
+      await loadAvailableOrganizations();
       setSelectedOrgId(null);
     } catch (err) {
       console.error("Failed to link organization:", err);
@@ -296,12 +295,12 @@ export default function WebsiteDetail() {
     };
   }, [id, loadCodeSnippets]);
 
-  // Load DFY organizations when website data changes
+  // Load available organizations when website data changes
   useEffect(() => {
     if (website) {
-      loadDFYOrganizations();
+      loadAvailableOrganizations();
     }
-  }, [website?.organization?.id, loadDFYOrganizations]);
+  }, [website?.organization?.id, loadAvailableOrganizations]);
 
   // Load templates for selector (only when CREATED status)
   useEffect(() => {
@@ -961,16 +960,16 @@ export default function WebsiteDetail() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                             Loading...
                           </div>
-                        ) : dfyOrganizations.length === 0 ? (
+                        ) : availableOrganizations.length === 0 ? (
                           <div className="px-4 py-2 text-sm text-gray-500">
-                            No available DFY organizations
+                            No available organizations
                           </div>
                         ) : (
                           <>
                             <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
                               Link to Organization
                             </div>
-                            {dfyOrganizations.map((org) => (
+                            {availableOrganizations.map((org) => (
                               <button
                                 key={org.id}
                                 onClick={async () => {
@@ -984,7 +983,7 @@ export default function WebsiteDetail() {
                                     );
                                     toast.success("Organization linked");
                                     await loadWebsite();
-                                    await loadDFYOrganizations();
+                                    await loadAvailableOrganizations();
                                   } catch (err) {
                                     toast.error(
                                       err instanceof Error

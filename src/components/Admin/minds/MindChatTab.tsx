@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
   Loader2,
@@ -14,7 +15,7 @@ import { toast } from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  sendChatMessage,
+  sendChatMessageStream,
   getConversation,
   listConversations,
   deleteConversation,
@@ -25,6 +26,52 @@ import {
 
 interface MindChatTabProps {
   mindId: string;
+}
+
+const THINKING_WORDS = [
+  "Thinking",
+  "Pondering",
+  "Analyzing",
+  "Reflecting",
+  "Processing",
+  "Contemplating",
+];
+
+function ThinkingIndicator() {
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((i) => (i + 1) % THINKING_WORDS.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex justify-start">
+      <div className="bg-white/[0.06] rounded-2xl rounded-bl-md px-5 py-3.5 border border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-alloro-orange minds-thinking-dot" />
+            <span className="h-1.5 w-1.5 rounded-full bg-alloro-orange minds-thinking-dot" />
+            <span className="h-1.5 w-1.5 rounded-full bg-alloro-orange minds-thinking-dot" />
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={wordIndex}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.3 }}
+              className="text-xs text-[#a0a0a8] italic tracking-wide"
+            >
+              {THINKING_WORDS[wordIndex]}...
+            </motion.span>
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function parseCompaction(msg: MindMessage): CompactionMessage | null {
@@ -61,12 +108,12 @@ function CompactionBubble({ data }: { data: CompactionMessage }) {
         onClick={() => setExpanded(!expanded)}
         className="group max-w-[90%] text-center"
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-dashed border-purple-200 bg-purple-50/50 px-4 py-1.5 text-xs text-purple-500 hover:bg-purple-50 transition-colors">
+        <div className="inline-flex items-center gap-2 rounded-full border border-dashed border-purple-400/20 bg-purple-500/8 px-4 py-1.5 text-xs text-purple-300 hover:bg-purple-500/12 transition-colors">
           <Layers className="h-3 w-3" />
           <span>Conversation condensed ({data.message_count} messages)</span>
         </div>
         {expanded && (
-          <div className="mt-2 rounded-xl border border-purple-100 bg-purple-50/30 p-4 text-left text-sm text-purple-800 whitespace-pre-wrap">
+          <div className="mt-2 rounded-xl border border-purple-400/15 bg-purple-500/5 p-4 text-left text-sm text-purple-200 whitespace-pre-wrap">
             {data.summary}
           </div>
         )}
@@ -81,6 +128,8 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
   const [messages, setMessages] = useState<MindMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -96,7 +145,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       shouldAutoScroll.current = false;
     }
-  }, [messages.length, isLoading]);
+  }, [messages.length, isLoading, streamingText]);
 
   // Track scroll position to show/hide "scroll to latest" button
   const handleScroll = useCallback(() => {
@@ -165,7 +214,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
 
   const handleSubmit = async () => {
     const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || isStreaming) return;
 
     const userMessage: MindMessage = {
       id: crypto.randomUUID(),
@@ -179,27 +228,80 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setStreamingText("");
 
     try {
-      const result = await sendChatMessage(
+      const response = await sendChatMessageStream(
         mindId,
         trimmed,
         activeConvId || undefined
       );
-      if (result) {
-        if (!activeConvId) {
-          setActiveConvId(result.conversationId);
-          // Refresh conversation list to show new conversation
-          fetchConversations();
+
+      if (!response.ok) {
+        throw new Error("Stream request failed");
+      }
+
+      // Keep isLoading=true (ThinkingIndicator visible) until first text token
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
+      let streamConvId = activeConvId;
+      let hasReceivedText = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+
+            if (parsed.conversationId && !streamConvId) {
+              streamConvId = parsed.conversationId;
+              setActiveConvId(streamConvId);
+              fetchConversations();
+            }
+
+            if (parsed.text) {
+              // Transition from thinking → streaming on first text token
+              if (!hasReceivedText) {
+                hasReceivedText = true;
+                setIsLoading(false);
+                setIsStreaming(true);
+              }
+              accumulated += parsed.text;
+              shouldAutoScroll.current = true;
+              setStreamingText(accumulated);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue; // Partial JSON, skip
+            throw e;
+          }
         }
+      }
+
+      // Stream complete — finalize the assistant message
+      if (accumulated) {
         const assistantMessage: MindMessage = {
           id: crypto.randomUUID(),
-          conversation_id: result.conversationId,
+          conversation_id: streamConvId || "",
           role: "assistant",
-          content: result.reply,
+          content: accumulated,
           created_at: new Date().toISOString(),
         };
-        shouldAutoScroll.current = true;
         setMessages((prev) => [...prev, assistantMessage]);
       }
     } catch {
@@ -213,32 +315,34 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      setStreamingText("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isStreaming) handleSubmit();
     }
   };
 
   return (
-    <div className="flex h-[600px] rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div className="flex h-[600px] rounded-xl liquid-glass overflow-hidden">
       {/* Sidebar */}
       <div
-        className={`border-r border-gray-100 bg-gray-50/50 flex flex-col transition-all duration-200 ${
+        className={`border-r border-white/4 bg-[#0e0e14] flex flex-col transition-all duration-200 ${
           sidebarOpen ? "w-60" : "w-0"
         } overflow-hidden shrink-0`}
       >
         {/* Sidebar header */}
-        <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="p-3 border-b border-white/4 flex items-center justify-between">
+          <span className="text-xs font-semibold text-[#6a6a75] uppercase tracking-wider">
             Chats
           </span>
           <button
             onClick={handleNewChat}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-alloro-orange hover:bg-alloro-orange/10 transition-colors"
+            className="rounded-lg p-1.5 text-[#6a6a75] hover:text-alloro-orange hover:bg-alloro-orange/10 transition-colors"
             title="New chat"
           >
             <Plus className="h-4 w-4" />
@@ -246,13 +350,13 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
         </div>
 
         {/* Conversation list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto minds-chat-scrollbar">
           {loadingConversations ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-gray-300" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#6a6a75]" />
             </div>
           ) : conversations.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6 px-3">
+            <p className="text-xs text-[#6a6a75] text-center py-6 px-3">
               No conversations yet
             </p>
           ) : (
@@ -261,8 +365,8 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                 key={conv.id}
                 className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${
                   activeConvId === conv.id
-                    ? "bg-white border-r-2 border-alloro-orange"
-                    : "hover:bg-gray-100"
+                    ? "bg-white/[0.04] border-r-2 border-alloro-orange"
+                    : "hover:bg-white/[0.03]"
                 }`}
                 onClick={() => selectConversation(conv.id)}
               >
@@ -270,13 +374,13 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                   <p
                     className={`text-sm truncate ${
                       activeConvId === conv.id
-                        ? "text-gray-900 font-medium"
-                        : "text-gray-600"
+                        ? "text-[#eaeaea] font-medium"
+                        : "text-[#a0a0a8]"
                     }`}
                   >
                     {conv.title || "New conversation"}
                   </p>
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-[10px] text-[#6a6a75]">
                     {timeAgo(conv.updated_at)}
                   </p>
                 </div>
@@ -287,7 +391,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                       handleDeleteConversation(conv.id);
                     }
                   }}
-                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-gray-300 hover:text-red-400 transition-all"
+                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-[#6a6a75] hover:text-red-400 transition-all"
                   title="Delete"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -301,13 +405,13 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
       {/* Toggle sidebar */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="w-5 flex items-center justify-center bg-gray-50 hover:bg-gray-100 border-r border-gray-100 transition-colors shrink-0"
+        className="w-5 flex items-center justify-center bg-[#0e0e14] hover:bg-white/[0.03] border-r border-white/4 transition-colors shrink-0"
         title={sidebarOpen ? "Collapse" : "Expand"}
       >
         {sidebarOpen ? (
-          <ChevronLeft className="h-3 w-3 text-gray-400" />
+          <ChevronLeft className="h-3 w-3 text-[#6a6a75]" />
         ) : (
-          <ChevronRight className="h-3 w-3 text-gray-400" />
+          <ChevronRight className="h-3 w-3 text-[#6a6a75]" />
         )}
       </button>
 
@@ -321,13 +425,13 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
         >
           {loadingMessages ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#6a6a75]" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-              <MessageSquare className="h-10 w-10 mb-3 opacity-40" />
-              <p className="text-sm font-medium">Start a conversation</p>
-              <p className="text-xs mt-1">Send a message to begin.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <MessageSquare className="h-10 w-10 mb-3 text-[#2a2a2a]" />
+              <p className="text-sm font-medium text-[#6a6a75]">Start a conversation</p>
+              <p className="text-xs mt-1 text-[#6a6a75]">Send a message to begin.</p>
             </div>
           ) : (
             messages.map((msg) => {
@@ -349,11 +453,11 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm overflow-hidden ${
                       msg.role === "user"
                         ? "bg-alloro-orange text-white rounded-br-md"
-                        : "bg-gray-100 text-gray-800 rounded-bl-md"
+                        : "bg-white/[0.06] text-[#eaeaea] rounded-bl-md border border-white/4"
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="prose prose-sm prose-gray max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-gray-300 prose-th:bg-gray-200 prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-gray-200">
+                      <div className="prose prose-sm prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/4 prose-code:text-alloro-orange prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-white/8 prose-th:bg-white/[0.035] prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-white/6">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
@@ -365,13 +469,14 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
             })
           )}
 
-          {isLoading && (
+          {isLoading && <ThinkingIndicator />}
+
+          {isStreaming && streamingText && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+              <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm bg-white/[0.06] text-[#eaeaea] border border-white/4">
+                <div className="prose prose-sm prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/4 prose-code:text-alloro-orange prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-white/8 prose-th:bg-white/[0.035] prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-white/6">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingText}</ReactMarkdown>
+                  <span className="inline-block w-2 h-4 bg-alloro-orange/70 animate-pulse ml-0.5 align-text-bottom rounded-sm" />
                 </div>
               </div>
             </div>
@@ -385,7 +490,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
           <div className="relative">
             <button
               onClick={scrollToBottom}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-alloro-navy/90 px-4 py-1.5 text-xs font-medium text-white shadow-lg hover:bg-alloro-navy transition-colors backdrop-blur-sm"
+              className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-medium text-[#eaeaea] shadow-lg hover:bg-white/[0.1] transition-colors backdrop-blur-sm border border-white/6"
             >
               <ChevronDown className="h-3.5 w-3.5" />
               Scroll to latest
@@ -394,7 +499,7 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
         )}
 
         {/* Input */}
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-white/4 p-3 bg-[#0e0e14]/50">
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}
@@ -403,8 +508,8 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               rows={1}
-              disabled={isLoading}
-              className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange disabled:opacity-50"
+              disabled={isLoading || isStreaming}
+              className="flex-1 resize-none rounded-xl border border-white/8 bg-[#121218] px-4 py-2.5 text-sm text-[#eaeaea] placeholder-[#6a6a75] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50 disabled:opacity-50"
               style={{ minHeight: "40px", maxHeight: "120px" }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
@@ -414,10 +519,10 @@ export function MindChatTab({ mindId }: MindChatTabProps) {
             />
             <button
               onClick={handleSubmit}
-              disabled={!input.trim() || isLoading}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-alloro-orange text-white transition-all hover:bg-alloro-orange/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!input.trim() || isLoading || isStreaming}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-alloro-orange text-white transition-all hover:bg-alloro-orange/90 hover:shadow-[0_0_20px_rgba(214,104,83,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isLoading || isStreaming ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />

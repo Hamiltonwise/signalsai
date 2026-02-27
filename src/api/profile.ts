@@ -34,7 +34,38 @@ export const updateProfile = async (
   return apiPut({ path: "/profile/update", passedData: data });
 };
 
+// Password management
+
+export interface PasswordStatusResponse {
+  success: boolean;
+  hasPassword: boolean;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
+export const getPasswordStatus = async (): Promise<PasswordStatusResponse> => {
+  return apiGet({ path: "/settings/password-status" });
+};
+
+export const changePassword = async (
+  data: ChangePasswordRequest
+): Promise<ChangePasswordResponse> => {
+  return apiPut({ path: "/settings/password", passedData: data });
+};
+
 export default {
   getProfile,
   updateProfile,
+  getPasswordStatus,
+  changePassword,
 };

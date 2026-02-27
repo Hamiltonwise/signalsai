@@ -13,6 +13,7 @@ import {
   Edit3,
   Check,
   X,
+  User,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useOnboardingWizard } from "../contexts/OnboardingWizardContext";
@@ -21,6 +22,7 @@ import { PropertiesTab } from "../components/settings/PropertiesTab";
 import { MissingScopeBanner } from "../components/settings/MissingScopeBanner";
 import { PMSUploadBanner } from "../components/settings/PMSUploadBanner";
 import { BillingTab } from "../components/settings/BillingTab";
+import { ProfileTab } from "../components/settings/ProfileTab";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
 import { fetchPmsKeyData } from "../api/pms";
 import { getPriorityItem } from "../hooks/useLocalStorage";
@@ -165,7 +167,7 @@ const EditableInfoRow = ({
 export const Settings: React.FC = () => {
   const { userProfile, selectedDomain } = useAuth();
   const { isWizardActive, restartWizard } = useOnboardingWizard();
-  const [activeTab, setActiveTab] = useState<"profile" | "users" | "billing">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "users" | "billing" | "account">("profile");
   const [isLoading, setIsLoading] = useState(true);
   const [_userRole, setUserRole] = useState<UserRole | null>(null);
 
@@ -332,10 +334,30 @@ export const Settings: React.FC = () => {
               <Shield className="w-4 h-4" />
               Billing
             </button>
+            <button
+              onClick={() => setActiveTab("account")}
+              className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all duration-200 flex items-center gap-2 ${
+                activeTab === "account"
+                  ? "bg-alloro-navy text-white shadow-lg"
+                  : "text-slate-400 hover:text-alloro-navy hover:bg-slate-50"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              Account
+            </button>
           </motion.div>
 
           {/* Tab Content */}
-          {activeTab === "billing" ? (
+          {activeTab === "account" ? (
+            <motion.div
+              key="account"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <ProfileTab />
+            </motion.div>
+          ) : activeTab === "billing" ? (
             <motion.div
               key="billing"
               initial={{ opacity: 0, y: 20 }}

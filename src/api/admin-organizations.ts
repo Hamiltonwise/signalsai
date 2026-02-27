@@ -30,6 +30,7 @@ export interface AdminUser {
   email: string;
   role: string;
   joined_at: string;
+  has_password: boolean;
 }
 
 export interface AdminConnection {
@@ -269,5 +270,24 @@ export async function adminStartPilotSession(
   return apiPost({
     path: `/admin/pilot/${userId}`,
     passedData: {},
+  });
+}
+
+/**
+ * Set a temporary password for a user (admin only)
+ */
+export interface AdminSetPasswordResponse {
+  success: boolean;
+  temporaryPassword: string;
+  message: string;
+}
+
+export async function adminSetUserPassword(
+  userId: number,
+  notifyUser: boolean
+): Promise<AdminSetPasswordResponse> {
+  return apiPost({
+    path: `/admin/organizations/users/${userId}/set-password`,
+    passedData: { notifyUser },
   });
 }

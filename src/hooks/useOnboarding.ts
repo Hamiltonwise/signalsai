@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import onboarding from "../api/onboarding";
+import { createCheckoutSession } from "../api/billing";
 
 interface GBPSelection {
   accountId: string;
@@ -7,9 +8,9 @@ interface GBPSelection {
   displayName: string;
 }
 
-export const useOnboarding = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+export const useOnboarding = (initialStep: number = 1) => {
+  const [currentStep, setCurrentStep] = useState(initialStep);
+  const totalSteps = 4;
 
   // Profile state
   const [firstName, setFirstName] = useState("");
@@ -24,6 +25,9 @@ export const useOnboarding = () => {
 
   // GBP state
   const [selectedGbpLocations, setSelectedGbpLocations] = useState<GBPSelection[]>([]);
+
+  // Checkout state (single-product: always DFY)
+  const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -125,6 +129,34 @@ export const useOnboarding = () => {
   }, []);
 
   /**
+   * Step 4: Initiate Stripe Checkout.
+   * Single-product model — always creates a DFY checkout session.
+   * Redirects to Stripe's hosted checkout page.
+   */
+  const initiateCheckout = useCallback(async () => {
+    setIsCheckoutProcessing(true);
+    setError(null);
+
+    try {
+      const response = await createCheckoutSession("DFY", true);
+
+      if (response.success && response.url) {
+        console.log("[Onboarding] Redirecting to Stripe Checkout");
+        window.location.href = response.url;
+      } else {
+        throw new Error(
+          response.error || "Failed to create checkout session"
+        );
+      }
+    } catch (err: any) {
+      console.error("[Onboarding] Checkout error:", err);
+      setError(err.message || "Failed to start checkout");
+      setIsCheckoutProcessing(false);
+    }
+    // Note: no finally — if redirect succeeds, we never return here
+  }, []);
+
+  /**
    * Move to next step
    */
   const nextStep = useCallback(() => {
@@ -197,11 +229,15 @@ export const useOnboarding = () => {
     fetchAvailableGBP,
     saveGbpSelections,
 
+    // Checkout state
+    isCheckoutProcessing,
+
     // Actions
     saveProfileAndCreateOrg,
     nextStep,
     previousStep,
     completeOnboarding,
+    initiateCheckout,
     resetOnboarding,
   };
 };

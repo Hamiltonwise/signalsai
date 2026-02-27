@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOnboarding } from "../../hooks/useOnboarding";
 import { useAuth } from "../../hooks/useAuth";
@@ -6,18 +6,22 @@ import { ProgressIndicator } from "./ProgressIndicator";
 import { Step0UserInfo } from "./Step0_UserInfo";
 import { Step1PracticeInfo } from "./Step1_PracticeInfo";
 import { Step2DomainInfo } from "./Step2_DomainInfo";
-import { Loader2 } from "lucide-react";
+import { Step3PlanChooser } from "./Step3_PlanChooser";
 
 interface OnboardingContainerProps {
   onComplete?: () => void;
 }
 
-export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
-  onComplete,
-}) => {
+export const OnboardingContainer: React.FC<OnboardingContainerProps> = () => {
+  const { hasGoogleConnection, refreshUserProperties, userProfile } = useAuth();
+
+  // Compute initial step: if org already exists (Step 2 was completed), resume at Step 3.
+  // This replaces the old useEffect-based resume logic that caused a race condition
+  // where refreshUserProperties() triggered the effect mid-update, double-advancing steps.
+  const initialStep = userProfile?.organizationId ? 3 : 1;
+
   const {
     currentStep,
-    setCurrentStep,
     totalSteps,
     error,
     isSavingProfile,
@@ -45,20 +49,11 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     saveProfileAndCreateOrg,
     nextStep,
     previousStep,
-    completeOnboarding,
-  } = useOnboarding();
+    initiateCheckout,
+    isCheckoutProcessing,
+  } = useOnboarding(initialStep);
 
-  const { hasGoogleConnection, refreshUserProperties, userProfile } = useAuth();
-  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
   const [autoOpenGbp, setAutoOpenGbp] = useState(false);
-
-  // Resume logic: if org already exists (Step 2 was completed), skip to Step 3
-  useEffect(() => {
-    if (userProfile?.organizationId && currentStep < 3) {
-      console.log("[Onboarding] Org exists, resuming at Step 3");
-      setCurrentStep(3);
-    }
-  }, [userProfile?.organizationId]);
 
   // Called when Google OAuth popup succeeds — refresh auth state then auto-open GBP selector
   const handleGoogleConnected = async () => {
@@ -73,24 +68,6 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
       // Refresh auth so the new organizationId is available for Step 3 API calls
       await refreshUserProperties();
       nextStep();
-    }
-  };
-
-  // Step 3: Mark onboarding complete
-  const handleComplete = async () => {
-    setIsCompletingOnboarding(true);
-    const success = await completeOnboarding();
-    if (success) {
-      // Show preparing message briefly before transitioning
-      setTimeout(() => {
-        if (onComplete) {
-          onComplete();
-        } else {
-          window.location.reload();
-        }
-      }, 2000);
-    } else {
-      setIsCompletingOnboarding(false);
     }
   };
 
@@ -109,40 +86,6 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
       y: -10,
     },
   };
-
-  // Show "Preparing your dashboard" after completion
-  if (isCompletingOnboarding) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] font-body relative overflow-hidden"
-        style={{
-          background: "radial-gradient(ellipse at top, rgba(214, 104, 83, 0.08) 0%, transparent 50%), radial-gradient(ellipse at bottom right, rgba(214, 104, 83, 0.05) 0%, transparent 40%), #F3F4F6"
-        }}
-      >
-        <div className="text-center space-y-8">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6"
-          >
-            <div className="w-20 h-20 mx-auto">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-full h-full rounded-2xl bg-gradient-to-br from-alloro-orange to-[#c45a47] flex items-center justify-center shadow-lg shadow-alloro-orange/30"
-              >
-                <Loader2 className="w-10 h-10 text-white" />
-              </motion.div>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold font-heading text-alloro-navy tracking-tight">
-              Preparing your dashboard...
-            </h1>
-            <p className="text-slate-500">This will only take a moment</p>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -194,7 +137,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
       <div className="absolute top-0 left-0 w-96 h-96 bg-alloro-orange/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-alloro-orange/5 rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
 
-      <div className="max-w-xl w-full relative z-10">
+      <div className={`w-full relative z-10 ${currentStep === 4 ? "max-w-2xl" : "max-w-xl"}`}>
         {/* Main Card */}
         <div className="p-8 rounded-2xl bg-white/80 backdrop-blur-sm border border-alloro-orange/10 shadow-[0_8px_32px_rgba(214,104,83,0.12)]">
           {/* Progress Indicator */}
@@ -260,9 +203,18 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
                   onGoogleConnected={handleGoogleConnected}
                   autoOpenGbp={autoOpenGbp}
                   onAutoOpenGbpHandled={() => setAutoOpenGbp(false)}
-                  onNext={handleComplete}
+                  onNext={nextStep}
                   onBack={previousStep}
-                  isCompleting={isCompletingOnboarding}
+                  isCompleting={false}
+                />
+              )}
+
+              {/* Step 4: Subscribe + Stripe Checkout */}
+              {currentStep === 4 && (
+                <Step3PlanChooser
+                  onSubscribe={initiateCheckout}
+                  onBack={previousStep}
+                  isProcessing={isCheckoutProcessing}
                 />
               )}
             </motion.div>

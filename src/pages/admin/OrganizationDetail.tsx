@@ -20,6 +20,9 @@ import {
   Target,
   Share2,
   Bell,
+  Lock,
+  Unlock,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { AdminPageHeader, Badge } from "../../components/ui/DesignSystem";
@@ -32,9 +35,12 @@ import { OrgNotificationsTab } from "../../components/Admin/OrgNotificationsTab"
 import {
   adminGetOrganization,
   adminGetOrganizationLocations,
-  adminUpdateOrganizationTier,
   adminDeleteOrganization,
   adminStartPilotSession,
+  adminLockoutOrganization,
+  adminUnlockOrganization,
+  adminCreateProject,
+  adminRemovePaymentMethod,
   type AdminOrganizationDetail,
   type AdminLocation,
 } from "../../api/admin-organizations";
@@ -75,10 +81,12 @@ export default function OrganizationDetail() {
   const [selectedLocation, setSelectedLocation] =
     useState<AdminLocation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tierConfirm, setTierConfirm] = useState<"DWY" | "DFY" | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLockoutLoading, setIsLockoutLoading] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isRemovingPayment, setIsRemovingPayment] = useState(false);
 
   const orgId = parseInt(id || "0", 10);
 
@@ -121,22 +129,49 @@ export default function OrganizationDetail() {
     }
   };
 
-  const handleTierChange = async () => {
-    if (!tierConfirm || !org) return;
-    setTierConfirm(null);
-
+  const handleCreateProject = async () => {
+    if (!org) return;
+    setIsCreatingProject(true);
     try {
-      const response = await adminUpdateOrganizationTier(orgId, tierConfirm);
+      const response = await adminCreateProject(orgId);
       if (response.success) {
-        setOrg((prev) =>
-          prev ? { ...prev, subscription_tier: tierConfirm } : null,
-        );
         toast.success(response.message);
+        // Reload data to reflect the new website project
+        loadData();
       } else {
-        toast.error("Failed to update tier");
+        toast.error((response as any).error || "Failed to create project");
       }
-    } catch {
-      toast.error("Failed to update tier");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error || error?.message || "Failed to create project";
+      toast.error(message);
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
+  const handleRemovePayment = async () => {
+    if (!org) return;
+    const confirmed = window.confirm(
+      `Remove payment method for "${org.name}"?\n\nThis will cancel their Stripe subscription and revert them to admin-granted state (no billing).`
+    );
+    if (!confirmed) return;
+
+    setIsRemovingPayment(true);
+    try {
+      const response = await adminRemovePaymentMethod(orgId);
+      if (response.success) {
+        toast.success(response.message);
+        loadData();
+      } else {
+        toast.error((response as any).error || "Failed to remove payment method");
+      }
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error || error?.message || "Failed to remove payment method";
+      toast.error(message);
+    } finally {
+      setIsRemovingPayment(false);
     }
   };
 
@@ -152,6 +187,46 @@ export default function OrganizationDetail() {
       toast.error("Failed to delete organization");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleLockout = async () => {
+    if (!org) return;
+    setIsLockoutLoading(true);
+    try {
+      const response = await adminLockoutOrganization(orgId);
+      if (response.success) {
+        setOrg((prev) =>
+          prev ? { ...prev, subscription_status: "inactive" } : null
+        );
+        toast.success(response.message);
+      } else {
+        toast.error((response as any).error || "Failed to lock out organization");
+      }
+    } catch {
+      toast.error("Failed to lock out organization");
+    } finally {
+      setIsLockoutLoading(false);
+    }
+  };
+
+  const handleUnlock = async () => {
+    if (!org) return;
+    setIsLockoutLoading(true);
+    try {
+      const response = await adminUnlockOrganization(orgId);
+      if (response.success) {
+        setOrg((prev) =>
+          prev ? { ...prev, subscription_status: "active" } : null
+        );
+        toast.success(response.message);
+      } else {
+        toast.error("Failed to unlock organization");
+      }
+    } catch {
+      toast.error("Failed to unlock organization");
+    } finally {
+      setIsLockoutLoading(false);
     }
   };
 
@@ -233,11 +308,7 @@ export default function OrganizationDetail() {
             description={org.domain || "No domain assigned"}
             actionButtons={
               <div className="flex items-center gap-3">
-                <Badge
-                  variant={org.subscription_tier === "DFY" ? "orange" : "gray"}
-                >
-                  {org.subscription_tier || "DWY"}
-                </Badge>
+                <Badge variant="orange">DFY</Badge>
                 <OrgLocationSelector
                   locations={locations}
                   selectedLocation={selectedLocation}
@@ -332,7 +403,7 @@ export default function OrganizationDetail() {
         </div>
       </div>
 
-      {/* Subscription Management */}
+      {/* Subscription & Project Management */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -340,26 +411,99 @@ export default function OrganizationDetail() {
       >
         <div className="flex items-center gap-2 mb-4">
           <Crown className="h-5 w-5 text-alloro-orange" />
-          <h3 className="font-semibold text-gray-900">Subscription Tier</h3>
+          <h3 className="font-semibold text-gray-900">Subscription & Project</h3>
         </div>
-        <div className="flex items-center gap-4">
+
+        {/* Billing Status Row */}
+        <div className="flex items-center gap-4 mb-4">
           <span className="text-sm text-gray-600">
-            Current: <strong>{org.subscription_tier || "DWY"}</strong>
+            Tier: <strong>DFY</strong>
           </span>
-          {(!org.subscription_tier || org.subscription_tier === "DWY") && (
+          {/* Billing status badge */}
+          {org.subscription_status === "inactive" ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-red-50 text-red-700 border border-red-200">
+              <Lock className="h-3 w-3" /> Locked Out
+            </span>
+          ) : org.stripe_customer_id ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-green-50 text-green-700 border border-green-200">
+              ✓ Stripe Active
+            </span>
+          ) : org.subscription_status === "active" ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              ⚠ Admin-Granted (No Billing)
+            </span>
+          ) : null}
+          {/* Website project status */}
+          {org.website ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              <Globe className="h-3 w-3" /> Project: {org.website.generated_hostname}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-gray-50 text-gray-500 border border-gray-200">
+              No Website Project
+            </span>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Create Project — only when no website project exists */}
+          {!org.website && (
             <button
-              onClick={() => setTierConfirm("DFY")}
-              className="px-4 py-2 bg-alloro-orange text-white text-sm rounded-lg hover:bg-alloro-orange/90 transition-colors"
+              onClick={handleCreateProject}
+              disabled={isCreatingProject}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-alloro-orange rounded-lg hover:bg-alloro-orange/90 transition-colors disabled:opacity-50"
             >
-              Upgrade to DFY
+              <Globe className="h-3.5 w-3.5" />
+              {isCreatingProject ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
             </button>
           )}
-          {org.subscription_tier === "DFY" && (
+
+          {/* Remove Payment Method — only when Stripe billing is active */}
+          {org.stripe_customer_id && (
             <button
-              onClick={() => setTierConfirm("DWY")}
-              className="px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+              onClick={handleRemovePayment}
+              disabled={isRemovingPayment}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
             >
-              Downgrade to DWY
+              <CreditCard className="h-3.5 w-3.5" />
+              {isRemovingPayment ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove Payment"
+              )}
+            </button>
+          )}
+
+          {/* Lockout / Unlock Buttons */}
+          {org.subscription_status !== "inactive" && !org.stripe_customer_id && (
+            <button
+              onClick={handleLockout}
+              disabled={isLockoutLoading}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              {isLockoutLoading ? "Locking..." : "Lock Out"}
+            </button>
+          )}
+          {org.subscription_status === "inactive" && (
+            <button
+              onClick={handleUnlock}
+              disabled={isLockoutLoading}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-green-700 border border-green-300 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+            >
+              <Unlock className="h-3.5 w-3.5" />
+              {isLockoutLoading ? "Unlocking..." : "Unlock"}
             </button>
           )}
         </div>
@@ -462,51 +606,6 @@ export default function OrganizationDetail() {
           </button>
         </div>
       </motion.div>
-
-      {/* Tier Confirmation Modal */}
-      {tierConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
-            onClick={() => setTierConfirm(null)}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-          >
-            <h3 className="text-lg font-semibold text-gray-900">
-              {tierConfirm === "DFY" ? "Upgrade" : "Downgrade"} to {tierConfirm}
-              ?
-            </h3>
-            <p className="mt-2 text-sm text-gray-500">
-              {tierConfirm === "DFY"
-                ? `This will upgrade "${org.name}" to DFY and create a website project.`
-                : `This will downgrade "${org.name}" to DWY and set the website project to read-only.`}
-            </p>
-            <div className="mt-5 flex gap-3 justify-end">
-              <button
-                onClick={() => setTierConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTierChange}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
-                  tierConfirm === "DFY"
-                    ? "bg-alloro-orange hover:bg-alloro-orange/90"
-                    : "bg-gray-600 hover:bg-gray-700"
-                }`}
-              >
-                {tierConfirm === "DFY" ? "Upgrade" : "Downgrade"}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (

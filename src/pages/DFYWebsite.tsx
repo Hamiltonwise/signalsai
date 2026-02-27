@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Globe, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { Globe, ExternalLink, AlertCircle, Sparkles, FileText, ChevronDown, Link as LinkIcon } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { apiGet, apiPost, apiDelete } from "../api";
+import ConnectDomainModal from "../components/Admin/ConnectDomainModal";
 
 interface Page {
   id: string;
@@ -15,6 +17,8 @@ interface Project {
   hostname: string;
   status: string;
   is_read_only: boolean;
+  custom_domain: string | null;
+  domain_verified_at: string | null;
   wrapper: string;
   header: string;
   footer: string;
@@ -40,6 +44,7 @@ export function DFYWebsite() {
   const [instruction, setInstruction] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([]);
   const [editing, setEditing] = useState(false);
+  const [showDomainModal, setShowDomainModal] = useState(false);
 
   useEffect(() => {
     fetchWebsite();
@@ -53,8 +58,7 @@ export function DFYWebsite() {
 
   const fetchWebsite = async () => {
     try {
-      const res = await fetch("/api/user/website");
-      const data = await res.json();
+      const data = await apiGet({ path: "/user/website" });
 
       if (data.status === "PREPARING") {
         setStatus("PREPARING");
@@ -117,28 +121,15 @@ export function DFYWebsite() {
         return;
       }
 
-      const res = await fetch(`/api/user/website/pages/${selectedPage.id}/edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await apiPost({
+        path: `/user/website/pages/${selectedPage.id}/edit`,
+        passedData: {
           alloroClass: selectedComponent,
           currentHtml,
           instruction,
           chatHistory,
-        }),
+        },
       });
-
-      const data = await res.json();
-
-      if (res.status === 429) {
-        toast.error(data.message);
-        return;
-      }
-
-      if (!res.ok) {
-        toast.error(data.message || "Edit failed");
-        return;
-      }
 
       // Update chat history
       setChatHistory([
@@ -188,8 +179,28 @@ export function DFYWebsite() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
+      <div className="flex h-screen bg-alloro-bg animate-pulse">
+        <div className="w-64 bg-white border-r border-black/5 p-4 space-y-4">
+          <div className="h-6 w-32 bg-slate-200 rounded" />
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 p-6 space-y-6">
+          <div className="h-8 w-48 bg-slate-200 rounded" />
+          <div className="h-[70vh] bg-slate-100 rounded-2xl" />
+        </div>
+        <div className="w-96 bg-white border-l border-black/5 p-4 space-y-4">
+          <div className="h-6 w-24 bg-slate-200 rounded" />
+          <div className="h-4 w-48 bg-slate-100 rounded" />
+          <div className="mt-8 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${80 - i * 15}%` }} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -225,6 +236,56 @@ export function DFYWebsite() {
     );
   }
 
+  // Empty state — project exists but no pages yet
+  if (status === "READY" && pages.length === 0) {
+    return (
+      <div className="min-h-screen bg-alloro-bg font-body flex items-center justify-center py-16 px-6">
+        <div className="max-w-xl w-full">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-alloro-orange/10 rounded-full mb-4">
+              <Sparkles className="w-4 h-4 text-alloro-orange" />
+              <span className="text-xs font-bold text-alloro-orange uppercase tracking-wider">Almost There</span>
+            </div>
+            <h1 className="text-3xl font-black text-alloro-navy font-heading tracking-tight mb-3">
+              Your Website is Being Built
+            </h1>
+            <p className="text-base text-slate-500 font-medium max-w-md mx-auto">
+              Your project has been created and our team is setting up your pages. You'll be able to edit them here once they're ready.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl border-2 border-alloro-orange/20 shadow-xl shadow-alloro-orange/5 p-8">
+            <div className="flex items-start gap-6">
+              <div className="shrink-0">
+                <div className="w-14 h-14 bg-gradient-to-br from-alloro-orange to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-alloro-orange/30">
+                  <FileText className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-xl font-black text-alloro-navy tracking-tight mb-2">
+                  No Pages Yet
+                </h3>
+                <p className="text-slate-500 font-medium leading-relaxed mb-4">
+                  Pages will appear here once they've been designed and published. You'll receive a notification when your website is ready for editing.
+                </p>
+                {project && (
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <Globe className="w-4 h-4" />
+                    <span>{project.hostname}.sites.getalloro.com</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-slate-400 mt-6">
+            This page will update automatically when pages are available.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Left Sidebar: Pages */}
@@ -234,6 +295,19 @@ export function DFYWebsite() {
             <Globe className="h-5 w-5 text-purple-600" />
             Your Website
           </h2>
+          <button
+            onClick={() => setShowDomainModal(true)}
+            className={`mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+              project?.custom_domain && project?.domain_verified_at
+                ? "bg-green-50 text-green-700 hover:bg-green-100"
+                : project?.custom_domain
+                  ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+            }`}
+          >
+            <LinkIcon className="w-3.5 h-3.5" />
+            {project?.custom_domain || "Connect Domain"}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -386,6 +460,29 @@ export function DFYWebsite() {
           </button>
         </div>
       </div>
+
+      {/* Custom Domain Modal */}
+      {project && (
+        <ConnectDomainModal
+          isOpen={showDomainModal}
+          onClose={() => setShowDomainModal(false)}
+          projectId={project.id}
+          currentDomain={project.custom_domain}
+          domainVerifiedAt={project.domain_verified_at}
+          onDomainChange={fetchWebsite}
+          onConnect={async (domain) => {
+            const res = await apiPost({ path: "/user/website/domain/connect", passedData: { domain } });
+            return { server_ip: res.data.server_ip };
+          }}
+          onVerify={async () => {
+            const res = await apiPost({ path: "/user/website/domain/verify" });
+            return res.data;
+          }}
+          onDisconnect={async () => {
+            await apiDelete({ path: "/user/website/domain/disconnect" });
+          }}
+        />
+      )}
     </div>
   );
 }

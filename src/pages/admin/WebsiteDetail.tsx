@@ -33,6 +33,9 @@ import {
   startPipeline,
   deletePageByPath,
   linkWebsiteToOrganization,
+  connectDomain,
+  verifyDomainAdmin,
+  disconnectDomain,
 } from "../../api/websites";
 import type { WebsiteProjectWithPages, WebsitePage } from "../../api/websites";
 import { toast } from "react-hot-toast";
@@ -48,6 +51,7 @@ import CreatePageModal from "../../components/Admin/CreatePageModal";
 import MediaTab from "../../components/Admin/MediaTab";
 import CodeManagerTab from "../../components/Admin/CodeManagerTab";
 import ColorPicker from "../../components/Admin/ColorPicker";
+import ConnectDomainModal from "../../components/Admin/ConnectDomainModal";
 import { fetchProjectCodeSnippets } from "../../api/codeSnippets";
 import type { CodeSnippet } from "../../api/codeSnippets";
 
@@ -137,6 +141,7 @@ export default function WebsiteDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDomainModal, setShowDomainModal] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
   const [deletingPagePath, setDeletingPagePath] = useState<string | null>(null);
@@ -1007,9 +1012,24 @@ export default function WebsiteDetail() {
               </AnimatePresence>
             </div>
 
+            <button
+              onClick={() => setShowDomainModal(true)}
+              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                (website as any).custom_domain && (website as any).domain_verified_at
+                  ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                  : (website as any).custom_domain
+                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    : "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100"
+              }`}
+            >
+              <Globe className="h-4 w-4" />
+              {(website as any).custom_domain
+                ? (website as any).custom_domain
+                : "Custom Domain"}
+            </button>
             {(isReady || website.status === "HTML_GENERATED") && (
               <a
-                href={`https://${website.generated_hostname}.sites.getalloro.com`}
+                href={`https://${(website as any).custom_domain && (website as any).domain_verified_at ? (website as any).custom_domain : `${website.generated_hostname}.sites.getalloro.com`}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-100"
@@ -1778,6 +1798,32 @@ export default function WebsiteDetail() {
             startPageGenerationPoll();
           }}
           onClose={() => setShowCreatePageModal(false)}
+        />
+      )}
+
+      {/* Custom Domain Modal */}
+      {website && (
+        <ConnectDomainModal
+          isOpen={showDomainModal}
+          onClose={() => setShowDomainModal(false)}
+          projectId={website.id}
+          currentDomain={(website as any).custom_domain || null}
+          domainVerifiedAt={(website as any).domain_verified_at || null}
+          onDomainChange={async () => {
+            const res = await fetchWebsiteDetail(website.id);
+            if (res.success) setWebsite(res.data);
+          }}
+          onConnect={async (domain) => {
+            const res = await connectDomain(website.id, domain);
+            return res.data;
+          }}
+          onVerify={async () => {
+            const res = await verifyDomainAdmin(website.id);
+            return res.data;
+          }}
+          onDisconnect={async () => {
+            await disconnectDomain(website.id);
+          }}
         />
       )}
     </div>

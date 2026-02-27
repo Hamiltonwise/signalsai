@@ -20,6 +20,7 @@ import { fetchClientTasks } from "../api/tasks";
 import { fetchNotifications } from "../api/notifications";
 import { useIsWizardActive } from "../contexts/OnboardingWizardContext";
 import { useLocationContext } from "../contexts/locationContext";
+import { useAuth } from "../hooks/useAuth";
 import { LocationSwitcher } from "./LocationSwitcher";
 import { getPriorityItem } from "../hooks/useLocalStorage";
 
@@ -120,9 +121,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
   const isWizardActive = useIsWizardActive();
   const { selectedLocation } = useLocationContext();
+  const { billingStatus } = useAuth();
   const locationId = selectedLocation?.id ?? null;
+  const isLockedOut = billingStatus?.isLockedOut ?? false;
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
+  const [hasWebsite, setHasWebsite] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [userTaskCount, setUserTaskCount] = useState<number>(0);
   const [unreadNotificationCount, setUnreadNotificationCount] =
@@ -195,10 +198,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => clearInterval(interval);
   }, [loadNotificationCount]);
 
-  // Fetch subscription tier (for DFY Website menu).
+  // Check if org has a website project (determines whether Websites nav shows).
   // Uses direct axios call to silently handle 401/403 (role mismatch in pilot mode).
   useEffect(() => {
-    const fetchOrgTier = async () => {
+    const checkWebsite = async () => {
       const organizationId = userProfile?.organizationId;
       if (!organizationId) return;
 
@@ -209,14 +212,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         const { data } = await axios.get("/api/user/website", { headers });
         if (data && !data.error) {
-          setSubscriptionTier(data.status === "PREPARING" || data.project ? "DFY" : null);
+          setHasWebsite(true);
         }
       } catch {
-        // Silent fail — 401/403 expected for viewer role, just won't show menu item
+        // Silent fail — no website project, or 401/403 for viewer role
       }
     };
 
-    fetchOrgTier();
+    checkWebsite();
   }, [userProfile?.organizationId]);
 
   // Listen for notification updates (when user marks all as read or deletes)
@@ -265,22 +268,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       showDuringOnboarding: false,
     },
   ];
-
-  // DFY Website item (conditional)
-  const dfyNavItems = useMemo(
-    () =>
-      subscriptionTier === "DFY"
-        ? [
-            {
-              label: "Website",
-              icon: <Globe size={18} />,
-              path: "/dfy/website",
-              showDuringOnboarding: false,
-            },
-          ]
-        : [],
-    [subscriptionTier]
-  );
 
   // Execution & Alerts items - dynamic badges and notifications
   const executionNavItems = useMemo(
@@ -430,33 +417,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation - matches newdesign exactly */}
         <nav className="flex-1 overflow-y-auto px-6 space-y-10 scrollbar-thin">
-          {/* Main Operating View */}
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
-              Operations
-              {isWizardActive && (
-                <span className="ml-2 text-alloro-orange">(Tour Active)</span>
-              )}
+          {/* Lockout Banner — shown when account is locked */}
+          {isLockedOut && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Lock size={14} className="text-red-400 shrink-0" />
+                <span className="text-[11px] font-black text-red-300 uppercase tracking-wider">
+                  Account Locked
+                </span>
+              </div>
+              <p className="text-[11px] text-red-300/70 leading-relaxed">
+                Add a payment method in Settings to restore access.
+              </p>
             </div>
-            {filteredMainNav.map(({ label, icon, path }) => (
-              <NavItem
-                key={label}
-                icon={icon}
-                label={label}
-                active={isActive(path)}
-                onClick={() => handleNavigate(path)}
-                isLocked={isWizardActive}
-              />
-            ))}
-          </div>
+          )}
 
-          {/* DFY Website Section */}
-          {onboardingCompleted && dfyNavItems.length > 0 && (
+          {/* Main Operating View — hidden when locked out */}
+          {!isLockedOut && (
             <div className="space-y-1.5">
               <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
-                Done For You
+                Operations
+                {isWizardActive && (
+                  <span className="ml-2 text-alloro-orange">(Tour Active)</span>
+                )}
               </div>
-              {dfyNavItems.map(({ label, icon, path }) => (
+              {filteredMainNav.map(({ label, icon, path }) => (
                 <NavItem
                   key={label}
                   icon={icon}
@@ -469,8 +454,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Execution & Alerts */}
-          {onboardingCompleted && (
+          {/* Websites — shown when org has a website project — hidden when locked out */}
+          {!isLockedOut && onboardingCompleted && hasWebsite && (
+            <div className="space-y-1.5">
+              <NavItem
+                icon={<Globe size={18} />}
+                label="Websites"
+                active={isActive("/dfy/website")}
+                onClick={() => handleNavigate("/dfy/website")}
+                isLocked={isWizardActive}
+              />
+            </div>
+          )}
+
+          {/* Execution & Alerts — hidden when locked out */}
+          {!isLockedOut && onboardingCompleted && (
             <div className="space-y-1.5">
               <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
                 Execution
@@ -493,8 +491,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Support Section */}
-          {onboardingCompleted && (
+          {/* Support Section — hidden when locked out */}
+          {!isLockedOut && onboardingCompleted && (
             <div className="space-y-1.5">
               <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-4 mb-4">
                 Support

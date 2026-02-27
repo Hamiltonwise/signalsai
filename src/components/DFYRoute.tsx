@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { apiGet } from "../api";
 
 interface DFYRouteProps {
   children: React.ReactNode;
@@ -25,23 +25,15 @@ export function DFYRoute({ children }: DFYRouteProps) {
   useEffect(() => {
     const checkTier = async () => {
       try {
-        const res = await fetch("/api/user/website");
-
-        if (res.status === 403) {
-          // Not DFY tier - redirect
-          toast.error("Website feature requires DFY subscription");
-          navigate("/dashboard", { replace: true });
-          return;
-        }
-
-        if (res.ok) {
-          setHasDFY(true);
+        await apiGet({ path: "/user/website" });
+        setHasDFY(true);
+      } catch (error: any) {
+        const status = error?.response?.status;
+        if (status === 403) {
+          toast.error("Website project is not available yet");
         } else {
-          // Other errors (network, server) - redirect to dashboard
-          navigate("/dashboard", { replace: true });
+          console.error("[DFYRoute] Tier check failed:", error);
         }
-      } catch (error) {
-        console.error("[DFYRoute] Tier check failed:", error);
         navigate("/dashboard", { replace: true });
       } finally {
         setChecking(false);
@@ -53,10 +45,30 @@ export function DFYRoute({ children }: DFYRouteProps) {
 
   if (checking) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-3" />
-          <p className="text-sm text-gray-600">Checking access...</p>
+      <div className="flex h-screen bg-alloro-bg animate-pulse">
+        {/* Sidebar skeleton */}
+        <div className="w-64 bg-white border-r border-black/5 p-4 space-y-4">
+          <div className="h-6 w-32 bg-slate-200 rounded" />
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+            ))}
+          </div>
+        </div>
+        {/* Main content skeleton */}
+        <div className="flex-1 p-6 space-y-6">
+          <div className="h-8 w-48 bg-slate-200 rounded" />
+          <div className="h-[70vh] bg-slate-100 rounded-2xl" />
+        </div>
+        {/* Right panel skeleton */}
+        <div className="w-96 bg-white border-l border-black/5 p-4 space-y-4">
+          <div className="h-6 w-24 bg-slate-200 rounded" />
+          <div className="h-4 w-48 bg-slate-100 rounded" />
+          <div className="mt-8 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${80 - i * 15}%` }} />
+            ))}
+          </div>
         </div>
       </div>
     );

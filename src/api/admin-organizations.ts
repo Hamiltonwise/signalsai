@@ -17,6 +17,8 @@ export interface AdminOrganization {
   name: string;
   domain: string | null;
   subscription_tier: "DWY" | "DFY" | null;
+  subscription_status: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
   userCount: number;
   connections: { gbp: boolean };
@@ -48,6 +50,8 @@ export interface AdminOrganizationDetail {
   name: string;
   domain: string | null;
   subscription_tier: "DWY" | "DFY" | null;
+  subscription_status: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
   userCount?: number;
   users: AdminUser[];
@@ -160,6 +164,100 @@ export async function adminGetOrganizationLocations(
   orgId: number
 ): Promise<AdminLocationsResponse> {
   return apiGet({ path: `/admin/organizations/${orgId}/locations` });
+}
+
+/**
+ * Create a new organization with an initial admin user
+ */
+export interface AdminCreateOrgInput {
+  organization: {
+    name: string;
+    domain?: string;
+    address?: string;
+  };
+  user: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  location: {
+    name: string;
+    address?: string;
+  };
+}
+
+export interface AdminCreateOrgResponse {
+  success: boolean;
+  organizationId: number;
+  userId: number;
+  locationId: number;
+  message: string;
+}
+
+export async function adminCreateOrganization(
+  input: AdminCreateOrgInput
+): Promise<AdminCreateOrgResponse> {
+  return apiPost({
+    path: "/admin/organizations",
+    passedData: input,
+  });
+}
+
+/**
+ * Lock out an organization (sets subscription_status to inactive).
+ * Only works for orgs without active Stripe subscription.
+ */
+export async function adminLockoutOrganization(
+  orgId: number
+): Promise<{ success: boolean; message: string }> {
+  return apiPatch({
+    path: `/admin/organizations/${orgId}/lockout`,
+    passedData: {},
+  });
+}
+
+/**
+ * Unlock an organization (sets subscription_status back to active).
+ */
+export async function adminUnlockOrganization(
+  orgId: number
+): Promise<{ success: boolean; message: string }> {
+  return apiPatch({
+    path: `/admin/organizations/${orgId}/unlock`,
+    passedData: {},
+  });
+}
+
+/**
+ * Create a website project for an organization.
+ * Only works if the org doesn't already have a project.
+ */
+export async function adminCreateProject(
+  orgId: number
+): Promise<{
+  success: boolean;
+  message: string;
+  project?: { generated_hostname: string; status: string };
+}> {
+  return apiPost({
+    path: `/admin/organizations/${orgId}/create-project`,
+    passedData: {},
+  });
+}
+
+/**
+ * Remove payment method from an organization.
+ * Cancels the Stripe subscription and clears Stripe IDs.
+ * Reverts org to admin-granted state.
+ */
+export async function adminRemovePaymentMethod(
+  orgId: number
+): Promise<{ success: boolean; message: string }> {
+  return apiPost({
+    path: `/admin/organizations/${orgId}/remove-payment-method`,
+    passedData: {},
+  });
 }
 
 /**

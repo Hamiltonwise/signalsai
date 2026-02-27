@@ -15,10 +15,12 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useOnboardingWizard } from "../contexts/OnboardingWizardContext";
 import { UsersTab } from "../components/settings/UsersTab";
 import { PropertiesTab } from "../components/settings/PropertiesTab";
 import { MissingScopeBanner } from "../components/settings/MissingScopeBanner";
 import { PMSUploadBanner } from "../components/settings/PMSUploadBanner";
+import { BillingTab } from "../components/settings/BillingTab";
 import { getProfile, updateProfile, type ProfileData } from "../api/profile";
 import { fetchPmsKeyData } from "../api/pms";
 import { getPriorityItem } from "../hooks/useLocalStorage";
@@ -162,7 +164,8 @@ const EditableInfoRow = ({
 
 export const Settings: React.FC = () => {
   const { userProfile, selectedDomain } = useAuth();
-  const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
+  const { isWizardActive, restartWizard } = useOnboardingWizard();
+  const [activeTab, setActiveTab] = useState<"profile" | "users" | "billing">("profile");
   const [isLoading, setIsLoading] = useState(true);
   const [_userRole, setUserRole] = useState<UserRole | null>(null);
 
@@ -318,10 +321,30 @@ export const Settings: React.FC = () => {
               <Users className="w-4 h-4" />
               Users & Roles
             </button>
+            <button
+              onClick={() => setActiveTab("billing")}
+              className={`px-6 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all duration-200 flex items-center gap-2 ${
+                activeTab === "billing"
+                  ? "bg-alloro-navy text-white shadow-lg"
+                  : "text-slate-400 hover:text-alloro-navy hover:bg-slate-50"
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              Billing
+            </button>
           </motion.div>
 
           {/* Tab Content */}
-          {activeTab === "users" ? (
+          {activeTab === "billing" ? (
+            <motion.div
+              key="billing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <BillingTab />
+            </motion.div>
+          ) : activeTab === "users" ? (
             <motion.div
               key="users"
               initial={{ opacity: 0, y: 20 }}
@@ -454,6 +477,16 @@ export const Settings: React.FC = () => {
                     </div>
                   </div>
                 </motion.div>
+
+                {/* Restart Product Tour */}
+                {!isWizardActive && (
+                  <button
+                    onClick={restartWizard}
+                    className="w-full text-left px-4 py-3 rounded-2xl border border-dashed border-slate-200 text-sm font-medium text-slate-400 hover:text-alloro-orange hover:border-alloro-orange/30 transition-all"
+                  >
+                    Restart Product Tour
+                  </button>
+                )}
               </section>
 
               {/* Right Column - Locations & Integrations */}

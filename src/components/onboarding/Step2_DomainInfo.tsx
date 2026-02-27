@@ -344,7 +344,7 @@ export const Step2DomainInfo: React.FC<Step2GbpConnectProps> = ({
           ) : (
             <>
               <Rocket className="w-4 h-4" />
-              Get Started
+              Continue
             </>
           )}
         </button>

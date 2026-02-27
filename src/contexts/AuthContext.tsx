@@ -2,10 +2,12 @@ import React, { useState, useEffect, type ReactNode } from "react";
 import {
   AuthContext,
   type AuthContextType,
+  type BillingState,
   type DomainMapping,
   type UserProfile,
 } from "./authContext";
 import onboarding from "../api/onboarding";
+import { getBillingStatus } from "../api/billing";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -40,6 +42,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return cached !== "false"; // Default to true unless explicitly false
   });
   const [hasGoogleConnection, setHasGoogleConnection] = useState<boolean>(false);
+
+  // Billing state
+  const [billingStatus, setBillingStatus] = useState<BillingState | null>(null);
 
   // Load user properties from the onboarding API (JWT provides auth context)
   const loadUserProperties = async () => {
@@ -98,6 +103,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setSelectedDomain(null);
         }
+
+        // Fetch billing status if user has an org (regardless of onboarding state)
+        if (status.organizationId) {
+          try {
+            const billing = await getBillingStatus();
+            if (billing.success !== false) {
+              setBillingStatus({
+                hasStripeSubscription: billing.hasStripeSubscription,
+                isAdminGranted: billing.isAdminGranted,
+                isLockedOut: billing.isLockedOut,
+                subscriptionStatus: billing.subscriptionStatus,
+              });
+            }
+          } catch {
+            // Billing fetch failed — don't block app load
+            console.error("[AuthContext] Failed to fetch billing status");
+          }
+        }
       } else {
         setSelectedDomain(null);
       }
@@ -120,6 +143,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadUserProperties();
   }, []);
 
+  // Listen for 402 ACCOUNT_LOCKED responses from the API layer
+  useEffect(() => {
+    const handleLockedOut = () => {
+      setBillingStatus((prev) =>
+        prev
+          ? { ...prev, isLockedOut: true, subscriptionStatus: "inactive" }
+          : {
+              hasStripeSubscription: false,
+              isAdminGranted: false,
+              isLockedOut: true,
+              subscriptionStatus: "inactive",
+            }
+      );
+    };
+
+    window.addEventListener("billing:locked-out", handleLockedOut);
+    return () =>
+      window.removeEventListener("billing:locked-out", handleLockedOut);
+  }, []);
+
   const handleDomainChange = () => {
     // Domain change is no longer used since we removed hardcoded mappings
     console.warn(
@@ -138,6 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onboardingCompleted,
     hasProperties,
     hasGoogleConnection,
+    billingStatus,
     setOnboardingCompleted,
     setHasProperties,
   };

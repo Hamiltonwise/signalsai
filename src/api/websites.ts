@@ -521,6 +521,71 @@ export const fetchEditorSystemPrompt = async (): Promise<string> => {
 };
 
 // =====================================================================
+// CUSTOM DOMAIN
+// =====================================================================
+
+export interface ConnectDomainResponse {
+  success: boolean;
+  data: { custom_domain: string; server_ip: string };
+}
+
+export interface VerifyDomainResponse {
+  success: boolean;
+  data: { verified: boolean; custom_domain: string; resolved_ips?: string[] };
+}
+
+/** Connect a custom domain to a project (admin) */
+export const connectDomain = async (
+  projectId: string,
+  domain: string,
+): Promise<ConnectDomainResponse> => {
+  const response = await fetch(`${API_BASE}/${projectId}/connect-domain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domain }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to connect domain");
+  }
+
+  return response.json();
+};
+
+/** Verify DNS for a project's custom domain (admin) */
+export const verifyDomainAdmin = async (
+  projectId: string,
+): Promise<VerifyDomainResponse> => {
+  const response = await fetch(`${API_BASE}/${projectId}/verify-domain`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to verify domain");
+  }
+
+  return response.json();
+};
+
+/** Disconnect custom domain from a project (admin) */
+export const disconnectDomain = async (
+  projectId: string,
+): Promise<{ success: boolean }> => {
+  const response = await fetch(`${API_BASE}/${projectId}/disconnect-domain`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to disconnect domain");
+  }
+
+  return response.json();
+};
+
+// =====================================================================
 // ORGANIZATION LINKING
 // =====================================================================
 

@@ -16,6 +16,7 @@ import {
   type WizardPage,
 } from "../components/onboarding-wizard/wizardConfig";
 import { getPriorityItem } from "../hooks/useLocalStorage";
+import { useAuth } from "../hooks/useAuth";
 
 interface OnboardingWizardContextType {
   /** Whether the wizard is currently active */
@@ -63,6 +64,7 @@ const OnboardingWizardContext = createContext<
 export function OnboardingWizardProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { onboardingCompleted } = useAuth();
 
   const [isWizardActive, setIsWizardActive] = useState(false);
   const [isLoadingWizardStatus, setIsLoadingWizardStatus] = useState(true);
@@ -78,8 +80,16 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
   const totalSteps = WIZARD_STEPS.length;
   const progress = totalSteps > 0 ? ((currentStepIndex + 1) / totalSteps) * 100 : 0;
 
-  // Check wizard status on mount
+  // Check wizard status — only when main onboarding is confirmed complete.
+  // Without this guard, the wizard would auto-start while the user is still
+  // in the onboarding flow (org exists but onboarding_completed is false).
   useEffect(() => {
+    // Don't check until we know main onboarding is done
+    if (onboardingCompleted !== true) {
+      setIsLoadingWizardStatus(false);
+      return;
+    }
+
     const checkWizardStatus = async () => {
       const authToken = getPriorityItem("auth_token") || getPriorityItem("token");
       if (!authToken) {
@@ -105,7 +115,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
     };
 
     checkWizardStatus();
-  }, []);
+  }, [onboardingCompleted]);
 
   // Navigate to correct page when step changes
   useEffect(() => {
@@ -185,14 +195,19 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
     }
   }, [navigate]);
 
-  // Re-check wizard status from API and auto-start if not completed
+  // Re-check wizard status from API and auto-start if not completed.
+  // Guarded: only runs when main onboarding is confirmed complete.
   const recheckWizardStatus = useCallback(async () => {
-    console.log("[WizardContext] recheckWizardStatus called");
+    console.log("[WizardContext] recheckWizardStatus called, onboardingCompleted:", onboardingCompleted);
+
+    if (onboardingCompleted !== true) {
+      console.log("[WizardContext] Main onboarding not complete, skipping wizard check");
+      setIsLoadingWizardStatus(false);
+      return;
+    }
 
     // Verify auth token exists before making API call
     const authToken = getPriorityItem("auth_token") || getPriorityItem("token");
-    console.log("[WizardContext] authToken present:", !!authToken);
-
     if (!authToken) {
       console.log("[WizardContext] No auth token found, skipping wizard check");
       setIsLoadingWizardStatus(false);
@@ -234,7 +249,7 @@ export function OnboardingWizardProvider({ children }: { children: ReactNode }) 
     } finally {
       setIsLoadingWizardStatus(false);
     }
-  }, [navigate]);
+  }, [navigate, onboardingCompleted]);
 
   const shouldBlockNavigation = useCallback(
     (_targetPath: string): boolean => {

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Menu, Bell } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Menu, Bell, Lock, CreditCard } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { LocationTransitionOverlay } from "./LocationTransitionOverlay";
 import { useAuth } from "../hooks/useAuth";
@@ -11,11 +11,23 @@ interface PageWrapperProps {
 }
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
-  const { userProfile, selectedDomain, onboardingCompleted } = useAuth();
+  const { userProfile, selectedDomain, onboardingCompleted, billingStatus } =
+    useAuth();
   const { disconnect } = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isLockedOut = billingStatus?.isLockedOut ?? false;
+  const isOnSettingsPage = location.pathname === "/settings";
+
+  // Redirect locked-out users to /settings (the only page they can access)
+  useEffect(() => {
+    if (isLockedOut && !isOnSettingsPage) {
+      navigate("/settings", { replace: true });
+    }
+  }, [isLockedOut, isOnSettingsPage, navigate]);
 
   return (
     <div className="flex bg-alloro-bg min-h-screen font-body text-alloro-navy relative overflow-x-hidden selection:bg-alloro-orange selection:text-white">
@@ -44,12 +56,14 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/notifications")}
-            className="p-2 text-slate-400 hover:text-alloro-orange transition-colors relative"
-          >
-            <Bell size={20} />
-          </button>
+          {!isLockedOut && (
+            <button
+              onClick={() => navigate("/notifications")}
+              className="p-2 text-slate-400 hover:text-alloro-orange transition-colors relative"
+            >
+              <Bell size={20} />
+            </button>
+          )}
           <button
             onClick={() => navigate("/settings")}
             className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold border border-slate-200"
@@ -70,6 +84,27 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
 
       {/* Main Content Area - responsive padding applied here */}
       <main className="flex-1 w-full lg:pl-72 pt-16 lg:pt-0 min-h-screen flex flex-col transition-all duration-300">
+        {/* Lockout Banner — persistent top bar when account is locked */}
+        {isLockedOut && (
+          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-3">
+              <Lock size={16} className="text-red-600 shrink-0" />
+              <p className="text-sm text-red-800 font-medium">
+                Your account is locked. Add a payment method to restore full
+                access.
+              </p>
+            </div>
+            {!isOnSettingsPage && (
+              <button
+                onClick={() => navigate("/settings")}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shrink-0"
+              >
+                <CreditCard size={14} />
+                Go to Settings
+              </button>
+            )}
+          </div>
+        )}
         {children}
       </main>
 

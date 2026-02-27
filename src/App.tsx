@@ -12,6 +12,8 @@ import { Settings } from "./pages/Settings";
 import { DFYWebsite } from "./pages/DFYWebsite";
 import { Notifications } from "./pages/Notifications";
 import Help from "./pages/Help";
+import OnboardingPaymentSuccess from "./pages/OnboardingPaymentSuccess";
+import OnboardingPaymentCancelled from "./pages/OnboardingPaymentCancelled";
 import { PageWrapper } from "./components/PageWrapper";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { GBPProvider } from "./contexts/GBPContext.tsx";
@@ -112,6 +114,23 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <NewAccountOnboarding />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Onboarding payment return pages — protected, standalone (no PageWrapper) */}
+              <Route
+                path="/onboarding/payment-success"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingPaymentSuccess />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/onboarding/payment-cancelled"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingPaymentCancelled />
                   </ProtectedRoute>
                 }
               />

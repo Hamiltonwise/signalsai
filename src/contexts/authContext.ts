@@ -19,6 +19,14 @@ export interface UserProfile {
   organizationId?: number | null;
 }
 
+// Billing status from GET /api/billing/status
+export interface BillingState {
+  hasStripeSubscription: boolean;
+  isAdminGranted: boolean;
+  isLockedOut: boolean;
+  subscriptionStatus: string;
+}
+
 export interface AuthContextType {
   // Domain State
   domains: DomainMapping[];
@@ -32,6 +40,9 @@ export interface AuthContextType {
   onboardingCompleted: boolean | null;
   hasProperties: boolean;
   hasGoogleConnection: boolean;
+
+  // Billing State
+  billingStatus: BillingState | null;
 
   // Functions
   handleDomainChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;

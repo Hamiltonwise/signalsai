@@ -229,3 +229,19 @@ export async function apiDelete({ path }: { path: string }) {
     };
   }
 }
+
+// ─── Global 402 Interceptor ───
+// Emits a custom event when the billingGateMiddleware returns ACCOUNT_LOCKED.
+// AuthContext listens for this and updates billingStatus so the UI reacts immediately.
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error?.response?.status === 402 &&
+      error?.response?.data?.errorCode === "ACCOUNT_LOCKED"
+    ) {
+      window.dispatchEvent(new CustomEvent("billing:locked-out"));
+    }
+    return Promise.reject(error);
+  }
+);

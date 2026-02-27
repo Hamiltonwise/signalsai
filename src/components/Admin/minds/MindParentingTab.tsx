@@ -5,10 +5,7 @@ import {
   Loader2,
   MessageSquare,
   Clock,
-  CheckCircle,
-  XCircle,
   BookOpen,
-  AlertCircle,
   ChevronRight,
   Trash2,
 } from "lucide-react";

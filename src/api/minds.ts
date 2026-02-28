@@ -936,16 +936,6 @@ export async function sendParentingChatStream(
   );
 }
 
-export async function triggerParentingReading(
-  mindId: string,
-  sessionId: string
-): Promise<{ proposalCount: number; runId: string } | null> {
-  const res = await apiPost({
-    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/trigger-reading`,
-  });
-  return res.success ? res.data : null;
-}
-
 export async function triggerParentingReadingStream(
   mindId: string,
   sessionId: string

@@ -5,7 +5,6 @@ import {
   Loader2,
   MessageSquare,
   Clock,
-  BookOpen,
   ChevronRight,
   Trash2,
 } from "lucide-react";
@@ -14,6 +13,7 @@ import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton } from "../../ui/DesignSystem";
 import { ParentingChat } from "./parenting/ParentingChat";
 import { ParentingProposals } from "./parenting/ParentingProposals";
+import { ParentingReadingView } from "./parenting/ParentingReadingView";
 import { CompileAnimation } from "./wizard/CompileAnimation";
 import {
   createParentingSession,
@@ -22,6 +22,7 @@ import {
   abandonParentingSession,
   deleteParentingSession,
   getParentingCompileStatus,
+  updateParentingSession,
   type ParentingSession,
   type ParentingMessage,
   type SyncProposal,
@@ -89,6 +90,10 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
   const [messages, setMessages] = useState<ParentingMessage[]>([]);
   const [proposals, setProposals] = useState<SyncProposal[]>([]);
   const [loadingSession, setLoadingSession] = useState(false);
+
+  // Inline title editing
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState("");
 
   const fetchSessions = useCallback(async () => {
     setLoadingSessions(true);
@@ -199,6 +204,24 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
     }
   };
 
+  const handleSaveTitle = async (sessionId: string) => {
+    if (!editingTitleValue.trim()) {
+      setEditingTitleId(null);
+      return;
+    }
+    const ok = await updateParentingSession(mindId, sessionId, {
+      title: editingTitleValue.trim(),
+    });
+    if (ok) {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, title: editingTitleValue.trim() } : s
+        )
+      );
+    }
+    setEditingTitleId(null);
+  };
+
   const handleNewMessage = (msg: ParentingMessage) => {
     setMessages((prev) => [...prev, msg]);
   };
@@ -257,11 +280,22 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
             messages={messages}
             onNewMessage={handleNewMessage}
             readOnly={isReadOnly}
-            onTriggerReading={async (proposalCount: number) => {
+            onTriggerReading={() => {
+              setActiveSession({ ...activeSession, status: "reading" });
+            }}
+          />
+        )}
+
+        {/* Reading state */}
+        {showReading && (
+          <ParentingReadingView
+            mindId={mindId}
+            mindName={mindName}
+            sessionId={activeSession.id}
+            onComplete={async (proposalCount) => {
               if (proposalCount === 0) {
                 toast.success("No new knowledge found — session complete!");
               }
-              // Re-fetch session to get updated status, messages, and proposals
               const details = await getParentingSession(mindId, activeSession.id);
               if (details) {
                 setActiveSession(details.session);
@@ -269,26 +303,16 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
                 setProposals(details.proposals || []);
               }
             }}
+            onError={(error) => {
+              toast.error(error || "Reading failed");
+              getParentingSession(mindId, activeSession.id).then((details) => {
+                if (details) {
+                  setActiveSession(details.session);
+                  setMessages(details.messages);
+                }
+              });
+            }}
           />
-        )}
-
-        {/* Reading state */}
-        {showReading && (
-          <div className="liquid-glass rounded-xl p-8">
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <BookOpen className="h-10 w-10 text-alloro-orange mb-4 animate-pulse" />
-              <h3 className="text-base font-semibold text-[#eaeaea] mb-2">
-                {mindName} is studying…
-              </h3>
-              <p className="text-sm text-[#6a6a75] max-w-md">
-                Extracting knowledge from your conversation and comparing it against the current brain.
-                This may take a moment.
-              </p>
-              <div className="mt-6">
-                <Loader2 className="h-5 w-5 animate-spin text-alloro-orange" />
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Proposals view */}
@@ -377,7 +401,7 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
                 className="group liquid-glass rounded-xl p-4 cursor-pointer hover:border-alloro-orange/30 transition-colors border border-transparent"
                 onClick={() => handleOpenSession(session.id)}
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <DarkPill
                     label={STATUS_LABELS[session.status]}
                     status={session.status}
@@ -385,6 +409,41 @@ export function MindParentingTab({ mindId, mindName }: MindParentingTabProps) {
                   <span className="text-[10px] text-[#6a6a75]">
                     {timeAgo(session.created_at)}
                   </span>
+                </div>
+
+                {/* Title — editable inline */}
+                <div className="mb-2 min-h-[1.5rem]">
+                  {editingTitleId === session.id ? (
+                    <input
+                      type="text"
+                      value={editingTitleValue}
+                      onChange={(e) => setEditingTitleValue(e.target.value)}
+                      onBlur={() => handleSaveTitle(session.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveTitle(session.id);
+                        if (e.key === "Escape") setEditingTitleId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                      maxLength={100}
+                      className="w-full bg-transparent border-b border-alloro-orange/40 text-sm font-medium text-[#eaeaea] outline-none placeholder:text-[#6a6a75]"
+                      placeholder="Name this session..."
+                    />
+                  ) : (
+                    <p
+                      className="text-sm font-medium text-[#eaeaea] truncate hover:text-alloro-orange/80 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTitleId(session.id);
+                        setEditingTitleValue(session.title || "");
+                      }}
+                      title={session.title || "Click to name this session"}
+                    >
+                      {session.title || (
+                        <span className="text-[#6a6a75] italic text-xs">Untitled session</span>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-[#6a6a75]">

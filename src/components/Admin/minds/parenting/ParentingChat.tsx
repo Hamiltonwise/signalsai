@@ -11,10 +11,9 @@ import remarkGfm from "remark-gfm";
 import { ActionButton } from "../../../ui/DesignSystem";
 import {
   sendParentingChatStream,
-  triggerParentingReading,
   type ParentingMessage,
 } from "../../../../api/minds";
-import { toast } from "react-hot-toast";
+
 
 const CHAT_FONT = "'Literata', Georgia, serif";
 
@@ -24,7 +23,7 @@ interface ParentingChatProps {
   messages: ParentingMessage[];
   onNewMessage: (msg: ParentingMessage) => void;
   readOnly: boolean;
-  onTriggerReading: (proposalCount: number) => void;
+  onTriggerReading: () => void;
 }
 
 const THINKING_WORDS = [
@@ -88,7 +87,6 @@ export function ParentingChat({
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
-  const [triggeringReading, setTriggeringReading] = useState(false);
   const replySoundRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -248,20 +246,8 @@ export function ParentingChat({
     }
   };
 
-  const handleTriggerReading = async () => {
-    setTriggeringReading(true);
-    try {
-      const result = await triggerParentingReading(mindId, sessionId);
-      if (result) {
-        onTriggerReading(result.proposalCount);
-      } else {
-        toast.error("Failed to trigger reading");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to trigger reading");
-    } finally {
-      setTriggeringReading(false);
-    }
+  const handleTriggerReading = () => {
+    onTriggerReading();
   };
 
   return (
@@ -390,7 +376,6 @@ export function ParentingChat({
                 onClick={handleTriggerReading}
                 variant="secondary"
                 size="sm"
-                loading={triggeringReading}
                 disabled={isLoading || isStreaming || messages.length < 2}
               />
             </div>

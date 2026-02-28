@@ -8,6 +8,10 @@ export interface Mind {
   slug: string;
   personality_prompt: string;
   published_version_id: string | null;
+  available_work_types: string[];
+  available_publish_targets: string[];
+  rejection_categories: string[];
+  portal_key_hash: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -161,7 +165,13 @@ export async function createMind(name: string, personalityPrompt: string): Promi
 
 export async function updateMind(
   mindId: string,
-  updates: { name?: string; personality_prompt?: string }
+  updates: {
+    name?: string;
+    personality_prompt?: string;
+    available_work_types?: string[];
+    available_publish_targets?: string[];
+    rejection_categories?: string[];
+  }
 ): Promise<Mind | null> {
   const res = await apiPut({
     path: `/admin/minds/${mindId}`,
@@ -429,6 +439,30 @@ export async function getMindStatus(mindId: string): Promise<MindStatus> {
 
 // ─── Skills ─────────────────────────────────────────────────────
 
+export type SkillStatus = "draft" | "ready" | "active" | "paused" | "generating" | "failed";
+export type TriggerType = "manual" | "daily" | "weekly" | "day_of_week";
+export type PipelineMode = "review_and_stop" | "review_then_publish" | "auto_pipeline";
+export type WorkCreationType = "text" | "markdown" | "image" | "video" | "pdf" | "docx" | "audio";
+export type PublishTarget =
+  | "post_to_x"
+  | "post_to_instagram"
+  | "post_to_facebook"
+  | "post_to_youtube"
+  | "post_to_gbp"
+  | "internal_only";
+
+export type WorkRunStatus =
+  | "pending"
+  | "running"
+  | "consulting"
+  | "creating"
+  | "awaiting_review"
+  | "approved"
+  | "rejected"
+  | "publishing"
+  | "published"
+  | "failed";
+
 export interface MindSkill {
   id: string;
   mind_id: string;
@@ -436,7 +470,43 @@ export interface MindSkill {
   slug: string;
   definition: string;
   output_schema: object | null;
-  status: "draft" | "ready" | "generating" | "failed";
+  status: SkillStatus;
+  work_creation_type: WorkCreationType | null;
+  output_count: number;
+  trigger_type: TriggerType;
+  trigger_config: { day?: string; time?: string; timezone?: string };
+  pipeline_mode: PipelineMode;
+  work_publish_to: PublishTarget | null;
+  publication_config: object | null;
+  portal_key_hash: string | null;
+  last_run_at: string | null;
+  next_run_at: string | null;
+  org_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SkillWorkRun {
+  id: string;
+  skill_id: string;
+  triggered_by: string;
+  triggered_at: string;
+  status: WorkRunStatus;
+  artifact_type: string | null;
+  artifact_url: string | null;
+  artifact_content: string | null;
+  title: string | null;
+  description: string | null;
+  approved_by_admin_id: string | null;
+  approved_at: string | null;
+  rejection_category: string | null;
+  rejection_reason: string | null;
+  rejected_by_admin_id: string | null;
+  rejected_at: string | null;
+  published_at: string | null;
+  publication_url: string | null;
+  n8n_run_id: string | null;
+  error: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -486,7 +556,19 @@ export async function createSkill(
 export async function updateSkill(
   mindId: string,
   skillId: string,
-  fields: { name?: string; definition?: string; outputSchema?: object | null },
+  fields: {
+    name?: string;
+    definition?: string;
+    outputSchema?: object | null;
+    work_creation_type?: WorkCreationType | null;
+    output_count?: number;
+    trigger_type?: TriggerType;
+    trigger_config?: { day?: string; time?: string; timezone?: string };
+    pipeline_mode?: PipelineMode;
+    work_publish_to?: PublishTarget | null;
+    publication_config?: object | null;
+    status?: SkillStatus;
+  },
 ): Promise<MindSkill | null> {
   const res = await apiPut({
     path: `/admin/minds/${mindId}/skills/${skillId}`,
@@ -548,6 +630,219 @@ export async function suggestSkillDefinition(
   return res.success ? res.data : null;
 }
 
+// ─── Skill Builder ──────────────────────────────────────────────
+
+export interface SkillBuilderMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ResolvedFields {
+  name?: string;
+  definition?: string;
+  work_creation_type?: string;
+  work_publish_to?: string;
+  trigger_type?: string;
+  trigger_config?: { day?: string; time?: string; timezone?: string };
+  pipeline_mode?: string;
+  output_count?: number;
+}
+
+export interface SkillBuilderResponse {
+  reply: string;
+  resolvedFields: ResolvedFields;
+  isComplete: boolean;
+  messages: SkillBuilderMessage[];
+}
+
+export async function skillBuilderChat(
+  mindId: string,
+  message: string,
+  messages: SkillBuilderMessage[],
+  resolvedFields: ResolvedFields,
+): Promise<SkillBuilderResponse | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skill-builder/chat`,
+    passedData: { message, messages, resolvedFields },
+  });
+  return res.success ? res.data : null;
+}
+
+// ─── Work Runs ──────────────────────────────────────────────────
+
+export async function triggerManualRun(
+  mindId: string,
+  skillId: string,
+): Promise<SkillWorkRun | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/run`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function listWorkRuns(
+  mindId: string,
+  skillId: string,
+  limit = 50,
+  offset = 0,
+): Promise<SkillWorkRun[]> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/work-runs?limit=${limit}&offset=${offset}`,
+  });
+  return res.success ? res.data : [];
+}
+
+export async function getWorkRun(
+  mindId: string,
+  skillId: string,
+  workRunId: string,
+): Promise<SkillWorkRun | null> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function approveWorkRun(
+  mindId: string,
+  skillId: string,
+  workRunId: string,
+): Promise<boolean> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}/approve`,
+  });
+  return !!res.success;
+}
+
+export async function rejectWorkRun(
+  mindId: string,
+  skillId: string,
+  workRunId: string,
+  rejectionCategory?: string,
+  rejectionReason?: string,
+): Promise<boolean> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}/reject`,
+    passedData: {
+      rejection_category: rejectionCategory,
+      rejection_reason: rejectionReason,
+    },
+  });
+  return !!res.success;
+}
+
+// ─── Portal Keys ─────────────────────────────────────────────────
+
+export async function generateMindPortalKey(
+  mindId: string,
+): Promise<string | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/portal-key`,
+  });
+  return res.success ? res.data.portal_key : null;
+}
+
+export async function generateSkillPortalKey(
+  mindId: string,
+  skillId: string,
+): Promise<string | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/portal-key`,
+  });
+  return res.success ? res.data.portal_key : null;
+}
+
+// ─── Test Portals ────────────────────────────────────────────────
+
+export async function testMindPortal(
+  mindId: string,
+  query: string,
+): Promise<{ response: string; tokens_used: number } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/test-portal`,
+    passedData: { query },
+  });
+  return res.success ? res.data : null;
+}
+
+export async function testSkillPortal(
+  mindId: string,
+  skillId: string,
+  query: string,
+): Promise<{ response: string; context: { approved_count: number; rejected_count: number } } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/test-portal`,
+    passedData: { query },
+  });
+  return res.success ? res.data : null;
+}
+
+// ─── Platform Credentials ────────────────────────────────────────
+
+export interface PlatformCredential {
+  id: string;
+  mind_id: string;
+  platform: string;
+  credential_type: string;
+  label: string | null;
+  status: string;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listCredentials(
+  mindId: string,
+): Promise<PlatformCredential[]> {
+  const res = await apiGet({ path: `/admin/minds/${mindId}/credentials` });
+  return res.success ? res.data : [];
+}
+
+export async function createCredential(
+  mindId: string,
+  platform: string,
+  credentials: string,
+  label?: string,
+): Promise<PlatformCredential | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/credentials`,
+    passedData: { platform, credentials, label },
+  });
+  return res.success ? res.data : null;
+}
+
+export async function updateCredential(
+  mindId: string,
+  credentialId: string,
+  updates: { label?: string; status?: string },
+): Promise<boolean> {
+  const res = await apiPut({
+    path: `/admin/minds/${mindId}/credentials/${credentialId}`,
+    passedData: updates,
+  });
+  return !!res.success;
+}
+
+export async function deleteCredential(
+  mindId: string,
+  credentialId: string,
+): Promise<boolean> {
+  const res = await apiDelete({
+    path: `/admin/minds/${mindId}/credentials/${credentialId}`,
+  });
+  return !!res.success;
+}
+
+export async function revokeCredential(
+  mindId: string,
+  credentialId: string,
+): Promise<boolean> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/credentials/${credentialId}/revoke`,
+  });
+  return !!res.success;
+}
+
 // ─── Parenting ──────────────────────────────────────────────────
 
 export interface ParentingSession {
@@ -555,6 +850,7 @@ export interface ParentingSession {
   mind_id: string;
   status: "chatting" | "reading" | "proposals" | "compiling" | "completed" | "abandoned";
   result: "learned" | "no_changes" | "all_rejected" | null;
+  title: string | null;
   knowledge_buffer: string;
   sync_run_id: string | null;
   admin_id: string | null;
@@ -648,6 +944,50 @@ export async function triggerParentingReading(
     path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/trigger-reading`,
   });
   return res.success ? res.data : null;
+}
+
+export async function triggerParentingReadingStream(
+  mindId: string,
+  sessionId: string
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(
+    `${api}/admin/minds/${mindId}/parenting/sessions/${sessionId}/trigger-reading/stream`,
+    {
+      method: "POST",
+      headers,
+    }
+  );
+}
+
+export async function updateParentingSession(
+  mindId: string,
+  sessionId: string,
+  data: { title: string }
+): Promise<boolean> {
+  const res = await apiPatch({
+    path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}`,
+    passedData: data,
+  });
+  return !!res.success;
 }
 
 export async function getParentingProposals(

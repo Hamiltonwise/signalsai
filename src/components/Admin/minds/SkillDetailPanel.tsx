@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ArrowLeft,
   Save,
@@ -8,18 +8,24 @@ import {
   Copy,
   Check,
   Eye,
-  Code,
   BarChart3,
   FileText,
   AlertCircle,
   Wand2,
+  Briefcase,
+  Settings,
+  Key,
+  Send,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
 import { ActionButton, StatusPill } from "../../ui/DesignSystem";
+import { WorkRunsTab } from "./WorkRunsTab";
 import {
   updateSkill,
   generateSkillNeuron,
+  generateSkillPortalKey,
+  testSkillPortal,
   getSkill,
   getSkillNeuron,
   getSkillAnalytics,
@@ -27,9 +33,11 @@ import {
   type MindSkill,
   type MindSkillNeuron,
   type SkillAnalytics,
+  type TriggerType,
+  type PipelineMode,
+  type WorkCreationType,
+  type PublishTarget,
 } from "../../../api/minds";
-
-const MonacoEditor = lazy(() => import("@monaco-editor/react"));
 
 interface SkillDetailPanelProps {
   mindId: string;
@@ -38,10 +46,11 @@ interface SkillDetailPanelProps {
   skill: MindSkill;
   analytics: SkillAnalytics | null;
   hasPublishedVersion: boolean;
+  rejectionCategories: string[];
   onBack: () => void;
 }
 
-type DetailTab = "definition" | "schema" | "neuron" | "analytics";
+type DetailTab = "definition" | "schema" | "neuron" | "config" | "work-runs" | "analytics";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || window.location.origin;
@@ -151,14 +160,11 @@ export function SkillDetailPanel({
   skill,
   analytics,
   hasPublishedVersion,
+  rejectionCategories,
   onBack,
 }: SkillDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("definition");
   const [definition, setDefinition] = useState(skill.definition);
-  const [schemaText, setSchemaText] = useState(
-    skill.output_schema ? JSON.stringify(skill.output_schema, null, 2) : "",
-  );
-  const [schemaError, setSchemaError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(
     skill.status === "generating",
@@ -171,6 +177,28 @@ export function SkillDetailPanel({
   // Magic wand state
   const [hint, setHint] = useState("");
   const [suggesting, setSuggesting] = useState(false);
+
+  // Config state
+  const [cfgWorkType, setCfgWorkType] = useState<WorkCreationType | "">(skill.work_creation_type || "");
+  const [cfgOutputCount, setCfgOutputCount] = useState(skill.output_count || 1);
+  const [cfgTriggerType, setCfgTriggerType] = useState<TriggerType>(skill.trigger_type || "manual");
+  const [cfgTriggerDay, setCfgTriggerDay] = useState(skill.trigger_config?.day || "");
+  const [cfgTriggerTime, setCfgTriggerTime] = useState(skill.trigger_config?.time || "09:00");
+  const [cfgTriggerTimezone, setCfgTriggerTimezone] = useState(skill.trigger_config?.timezone || "America/New_York");
+  const [cfgPipelineMode, setCfgPipelineMode] = useState<PipelineMode>(skill.pipeline_mode || "review_and_stop");
+  const [cfgPublishTo, setCfgPublishTo] = useState<PublishTarget | "">(skill.work_publish_to || "");
+  const [cfgStatus, setCfgStatus] = useState<"active" | "paused">(skill.status === "active" ? "active" : "paused");
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [portalKey, setPortalKey] = useState<string | null>(null);
+  const [portalKeyCopied, setPortalKeyCopied] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
+
+  // Test portal state
+  const [testQuery, setTestQuery] = useState("");
+  const [testingPortal, setTestingPortal] = useState(false);
+  const [testPortalResponse, setTestPortalResponse] = useState<{
+    response: string;
+  } | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -236,23 +264,9 @@ export function SkillDetailPanel({
   };
 
   const handleSave = async () => {
-    // Validate schema if provided
-    let parsedSchema: object | null = null;
-    if (schemaText.trim()) {
-      try {
-        parsedSchema = JSON.parse(schemaText);
-        setSchemaError(null);
-      } catch {
-        setSchemaError("Invalid JSON");
-        toast.error("Output schema is not valid JSON");
-        return;
-      }
-    }
-
     setSaving(true);
     const updated = await updateSkill(mindId, skill.id, {
       definition,
-      outputSchema: parsedSchema,
     });
     if (updated) {
       toast.success("Skill saved");
@@ -273,18 +287,8 @@ export function SkillDetailPanel({
     }
 
     // Save first so the backend has the latest definition
-    let parsedSchema: object | null = null;
-    if (schemaText.trim()) {
-      try {
-        parsedSchema = JSON.parse(schemaText);
-      } catch {
-        toast.error("Fix the output schema JSON before generating");
-        return;
-      }
-    }
     await updateSkill(mindId, skill.id, {
       definition,
-      outputSchema: parsedSchema,
     });
 
     setGenerating(true);
@@ -317,16 +321,72 @@ export function SkillDetailPanel({
     const result = await suggestSkillDefinition(mindId, hint.trim());
     if (result) {
       setDefinition(result.definition);
-      if (result.outputSchema) {
-        setSchemaText(JSON.stringify(result.outputSchema, null, 2));
-        setSchemaError(null);
-      }
       setHint("");
       toast.success("Definition generated — review and save");
     } else {
       toast.error("Failed to generate suggestion");
     }
     setSuggesting(false);
+  };
+
+  const handleSaveConfig = async () => {
+    setSavingConfig(true);
+    const triggerConfig: { day?: string; time?: string; timezone?: string } = {};
+    if (cfgTriggerType !== "manual") {
+      triggerConfig.time = cfgTriggerTime;
+      triggerConfig.timezone = cfgTriggerTimezone;
+      if (cfgTriggerType === "weekly" || cfgTriggerType === "day_of_week") {
+        triggerConfig.day = cfgTriggerDay;
+      }
+    }
+
+    const updated = await updateSkill(mindId, skill.id, {
+      work_creation_type: cfgWorkType || null,
+      output_count: cfgOutputCount,
+      trigger_type: cfgTriggerType,
+      trigger_config: triggerConfig,
+      pipeline_mode: cfgPipelineMode,
+      work_publish_to: cfgPublishTo || null,
+      status: cfgStatus,
+    });
+    if (updated) {
+      toast.success("Configuration saved");
+    } else {
+      toast.error("Failed to save configuration");
+    }
+    setSavingConfig(false);
+  };
+
+  const handleTestSkillPortal = async () => {
+    if (!testQuery.trim()) return;
+    setTestingPortal(true);
+    setTestPortalResponse(null);
+    const result = await testSkillPortal(mindId, skill.id, testQuery.trim());
+    if (result) {
+      setTestPortalResponse(result);
+    } else {
+      toast.error("Test portal query failed");
+    }
+    setTestingPortal(false);
+  };
+
+  const handleGeneratePortalKey = async () => {
+    setGeneratingKey(true);
+    const key = await generateSkillPortalKey(mindId, skill.id);
+    if (key) {
+      setPortalKey(key);
+      toast.success("Portal key generated — copy it now, it won't be shown again");
+    } else {
+      toast.error("Failed to generate portal key");
+    }
+    setGeneratingKey(false);
+  };
+
+  const handleCopyPortalKey = () => {
+    if (!portalKey) return;
+    navigator.clipboard.writeText(portalKey);
+    setPortalKeyCopied(true);
+    setTimeout(() => setPortalKeyCopied(false), 1500);
   };
 
   const handleCopyEndpoint = () => {
@@ -337,17 +397,25 @@ export function SkillDetailPanel({
 
   const tabs: Array<{ id: DetailTab; label: string; icon: React.ReactNode }> = [
     { id: "definition", label: "Definition", icon: <FileText className="h-3.5 w-3.5" /> },
-    { id: "schema", label: "Output Schema", icon: <Code className="h-3.5 w-3.5" /> },
     { id: "neuron", label: "Neuron", icon: <Eye className="h-3.5 w-3.5" /> },
+    { id: "config", label: "Configuration", icon: <Settings className="h-3.5 w-3.5" /> },
+    { id: "work-runs", label: "Work Runs", icon: <Briefcase className="h-3.5 w-3.5" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
   ];
 
   const statusColor = (s: string): "orange" | "green" | "gray" | "red" => {
     switch (s) {
-      case "ready": return "green";
-      case "generating": return "orange";
-      case "failed": return "red";
-      default: return "gray";
+      case "ready":
+      case "active":
+        return "green";
+      case "generating":
+        return "orange";
+      case "paused":
+        return "gray";
+      case "failed":
+        return "red";
+      default:
+        return "gray";
     }
   };
 
@@ -517,54 +585,6 @@ export function SkillDetailPanel({
           </div>
         )}
 
-        {/* Schema tab */}
-        {activeTab === "schema" && (
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">
-              Output Schema (JSON)
-            </label>
-            <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-              Define the JSON schema the skill should conform to when responding.
-              Leave empty for free-form responses.
-            </p>
-            {schemaError && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-600">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                {schemaError}
-              </div>
-            )}
-            <Suspense
-              fallback={
-                <div className="flex justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                </div>
-              }
-            >
-              <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <MonacoEditor
-                  height="350px"
-                  language="json"
-                  value={schemaText}
-                  onChange={(val) => {
-                    setSchemaText(val || "");
-                    setSchemaError(null);
-                  }}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    lineNumbers: "on",
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    formatOnPaste: true,
-                    tabSize: 2,
-                    padding: { top: 12, bottom: 12 },
-                  }}
-                />
-              </div>
-            </Suspense>
-          </div>
-        )}
-
         {/* Neuron tab */}
         {activeTab === "neuron" && (
           <div>
@@ -643,6 +663,310 @@ export function SkillDetailPanel({
               </div>
             )}
           </div>
+        )}
+
+        {/* Configuration tab */}
+        {activeTab === "config" && (
+          <div className="space-y-6">
+            {/* Status toggle */}
+            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#eaeaea]">Skill Status</h4>
+                  <p className="text-xs text-[#6a6a75] mt-0.5">
+                    Active skills run on their schedule. Paused skills are dormant.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCfgStatus("paused")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      cfgStatus === "paused"
+                        ? "bg-white/10 text-[#eaeaea]"
+                        : "text-[#6a6a75] hover:text-[#a0a0a8]"
+                    }`}
+                  >
+                    Paused
+                  </button>
+                  <button
+                    onClick={() => setCfgStatus("active")}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      cfgStatus === "active"
+                        ? "bg-green-500/20 text-green-400"
+                        : "text-[#6a6a75] hover:text-[#a0a0a8]"
+                    }`}
+                  >
+                    Active
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Work Creation Type + Output Count */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
+                  Work Creation Type
+                </label>
+                <select
+                  value={cfgWorkType}
+                  onChange={(e) => setCfgWorkType(e.target.value as WorkCreationType | "")}
+                  className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
+                  style={{ backgroundColor: "#1a1a18" }}
+                >
+                  <option value="">Not set</option>
+                  <option value="text">Text</option>
+                  <option value="markdown">Markdown</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                  <option value="pdf">PDF</option>
+                  <option value="docx">DOCX</option>
+                  <option value="audio">Audio</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
+                  Output Count
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={cfgOutputCount}
+                  onChange={(e) => setCfgOutputCount(parseInt(e.target.value) || 1)}
+                  className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
+                  style={{ backgroundColor: "#1a1a18" }}
+                />
+                <p className="text-[10px] text-[#6a6a75] mt-1">How many work items per run</p>
+              </div>
+            </div>
+
+            {/* Trigger */}
+            <div>
+              <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
+                Trigger Type
+              </label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {(["manual", "daily", "weekly", "day_of_week"] as TriggerType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setCfgTriggerType(t)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      cfgTriggerType === t
+                        ? "bg-alloro-navy text-white border-alloro-navy"
+                        : "border-white/10 text-[#a0a0a8] hover:border-white/20"
+                    }`}
+                  >
+                    {t.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+
+              {cfgTriggerType !== "manual" && (
+                <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/8 bg-white/[0.04] p-4">
+                  {(cfgTriggerType === "weekly" || cfgTriggerType === "day_of_week") && (
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#a0a0a8] mb-1">Day</label>
+                      <select
+                        value={cfgTriggerDay}
+                        onChange={(e) => setCfgTriggerDay(e.target.value)}
+                        className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
+                        style={{ backgroundColor: "#1a1a18" }}
+                      >
+                        <option value="">Select</option>
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[10px] font-medium text-[#a0a0a8] mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={cfgTriggerTime}
+                      onChange={(e) => setCfgTriggerTime(e.target.value)}
+                      className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
+                      style={{ backgroundColor: "#1a1a18" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-[#a0a0a8] mb-1">Timezone</label>
+                    <select
+                      value={cfgTriggerTimezone}
+                      onChange={(e) => setCfgTriggerTimezone(e.target.value)}
+                      className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
+                      style={{ backgroundColor: "#1a1a18" }}
+                    >
+                      <option value="America/New_York">Eastern</option>
+                      <option value="America/Chicago">Central</option>
+                      <option value="America/Denver">Mountain</option>
+                      <option value="America/Los_Angeles">Pacific</option>
+                      <option value="UTC">UTC</option>
+                      <option value="Europe/London">London</option>
+                      <option value="Europe/Berlin">Berlin</option>
+                      <option value="Asia/Tokyo">Tokyo</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pipeline Mode */}
+            <div>
+              <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
+                Pipeline Mode
+              </label>
+              <div className="space-y-2">
+                {([
+                  { value: "review_and_stop", label: "Review & Stop", desc: "Work is created, reviewed, then stops. No auto-publish." },
+                  { value: "review_then_publish", label: "Review then Publish", desc: "Work is reviewed. If approved, auto-publishes to the target." },
+                  { value: "auto_pipeline", label: "Auto Pipeline", desc: "Fully automated. Work is created and published without review." },
+                ] as const).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      cfgPipelineMode === opt.value
+                        ? "border-alloro-orange bg-alloro-orange/10"
+                        : "border-white/8 hover:border-white/15"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="pipeline-mode"
+                      value={opt.value}
+                      checked={cfgPipelineMode === opt.value}
+                      onChange={() => setCfgPipelineMode(opt.value)}
+                      className="mt-0.5 accent-alloro-orange"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-[#eaeaea]">{opt.label}</span>
+                      <p className="text-xs text-[#6a6a75] mt-0.5">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Publish Target */}
+            {cfgPipelineMode !== "review_and_stop" && (
+              <div>
+                <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
+                  Publish Target
+                </label>
+                <select
+                  value={cfgPublishTo}
+                  onChange={(e) => setCfgPublishTo(e.target.value as PublishTarget | "")}
+                  className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
+                  style={{ backgroundColor: "#1a1a18" }}
+                >
+                  <option value="">Internal only</option>
+                  <option value="post_to_x">Post to X (Twitter)</option>
+                  <option value="post_to_instagram">Post to Instagram</option>
+                  <option value="post_to_facebook">Post to Facebook</option>
+                  <option value="post_to_youtube">Post to YouTube</option>
+                  <option value="post_to_gbp">Post to Google Business Profile</option>
+                </select>
+              </div>
+            )}
+
+            {/* Portal Key */}
+            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="h-4 w-4 text-[#a0a0a8]" />
+                <h4 className="text-sm font-semibold text-[#eaeaea]">Skill Portal Key</h4>
+              </div>
+              <p className="text-xs text-[#6a6a75] mb-3">
+                Required for external systems (n8n, webhooks) to call this skill's portal endpoint.
+              </p>
+              {portalKey ? (
+                <div className="flex items-center gap-2 rounded-lg border border-white/8 px-3 py-2" style={{ backgroundColor: "#1a1a18" }}>
+                  <code className="text-xs text-[#c2c0b6] truncate flex-1 font-mono">{portalKey}</code>
+                  <button onClick={handleCopyPortalKey} className="shrink-0 text-[#6a6a75] hover:text-alloro-orange transition-colors">
+                    {portalKeyCopied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              ) : (
+                <ActionButton
+                  label={skill.portal_key_hash ? "Rotate Key" : "Generate Key"}
+                  icon={<Key className="h-4 w-4" />}
+                  onClick={handleGeneratePortalKey}
+                  variant="secondary"
+                  size="sm"
+                  loading={generatingKey}
+                />
+              )}
+              {skill.portal_key_hash && !portalKey && (
+                <p className="text-[10px] text-green-400 mt-2">Key is set. Rotate to get a new one.</p>
+              )}
+            </div>
+
+            {/* Test Skill Portal */}
+            {skill.portal_key_hash && (
+              <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Send className="h-4 w-4 text-[#a0a0a8]" />
+                  <h4 className="text-sm font-semibold text-[#eaeaea]">Test Skill Portal</h4>
+                </div>
+                <p className="text-xs text-[#6a6a75] mb-3">
+                  Test the Skill Portal response using JWT auth.
+                </p>
+                <textarea
+                  value={testQuery}
+                  onChange={(e) => setTestQuery(e.target.value)}
+                  rows={3}
+                  placeholder="Ask this skill portal a question..."
+                  className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] placeholder-[#6a6a75] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50 resize-none mb-3"
+                  style={{ backgroundColor: "#1a1a18" }}
+                />
+                <div className="flex justify-end mb-3">
+                  <ActionButton
+                    label="Test"
+                    icon={<Send className="h-4 w-4" />}
+                    onClick={handleTestSkillPortal}
+                    variant="primary"
+                    size="sm"
+                    loading={testingPortal}
+                    disabled={!testQuery.trim()}
+                  />
+                </div>
+                {testPortalResponse && (
+                  <div className="rounded-lg border border-white/8 p-4" style={{ backgroundColor: "#1a1a18" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-medium text-[#a0a0a8] uppercase tracking-wider">Response</span>
+                    </div>
+                    <p className="text-sm text-[#c2c0b6] whitespace-pre-wrap leading-relaxed">
+                      {testPortalResponse.response}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Save */}
+            <div className="flex justify-end">
+              <ActionButton
+                label="Save Configuration"
+                icon={<Save className="h-4 w-4" />}
+                onClick={handleSaveConfig}
+                variant="primary"
+                loading={savingConfig}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Work Runs tab */}
+        {activeTab === "work-runs" && (
+          <WorkRunsTab
+            mindId={mindId}
+            skill={skill}
+            rejectionCategories={rejectionCategories}
+          />
         )}
 
         {/* Analytics tab */}

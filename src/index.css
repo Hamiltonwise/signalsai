@@ -570,7 +570,8 @@ body.minds-page-active .glass-header {
   background: rgba(255, 255, 255, 0.03) !important;
   backdrop-filter: blur(12px);
 }
-.minds-theme .border-b.border-gray-100 {
+.minds-theme .border-b.border-gray-100,
+.minds-theme .border-t.border-gray-100 {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
@@ -591,8 +592,10 @@ body.minds-page-active .glass-header {
 
 /* ── Text overrides ────────────────────────────────────────── */
 .minds-theme h3.text-sm.font-semibold.text-gray-900,
+.minds-theme h3.text-sm.font-bold.text-gray-900,
 .minds-theme h3.text-base.font-bold.text-gray-900,
 .minds-theme h4.text-sm.font-semibold.text-gray-900,
+.minds-theme h4.text-base.font-bold.text-gray-900,
 .minds-theme h3.text-lg.font-semibold.text-gray-900,
 .minds-theme span.text-sm.font-medium.text-gray-800,
 .minds-theme p.text-sm.text-gray-800,
@@ -838,6 +841,175 @@ body.minds-page-active .glass-header {
 .minds-theme .border-purple-100 { border-color: rgba(168, 85, 247, 0.1); }
 .minds-theme .bg-purple-50\/30 { background-color: rgba(168, 85, 247, 0.03); }
 .minds-theme .text-purple-800 { color: #c4b5fd; }
+
+/* ── Workplace component dark overrides ─────────────────── */
+
+/* Chat assistant bubble (SkillBuilderChat) */
+.minds-theme .rounded-2xl.bg-gray-100.text-gray-800 {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--minds-text) !important;
+}
+/* Chat loading bubble */
+.minds-theme .rounded-2xl.bg-gray-100:not(.text-gray-800) {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Sidebar panel (SkillBuilderChat resolved fields) */
+.minds-theme .border-l.border-gray-100.bg-gray-50\/50 {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-color: var(--minds-border-light) !important;
+}
+/* bg-gray-50/50 standalone */
+.minds-theme .bg-gray-50\/50:not(.border-l) {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Broad text-gray-700 (resolved field values, artifact text) */
+.minds-theme .text-gray-700:not(pre) { color: var(--minds-text-secondary) !important; }
+
+/* Broad text-gray-800 catch-all (chat bubbles, credential names) */
+.minds-theme div.text-gray-800,
+.minds-theme .text-sm.text-gray-800 { color: var(--minds-text) !important; }
+
+/* Work run list buttons (WorkRunsTab) */
+.minds-theme button.rounded-xl.border.border-gray-200.bg-white {
+  background: var(--minds-surface) !important;
+  border-color: var(--minds-border) !important;
+}
+.minds-theme button.rounded-xl.border.border-gray-200.bg-white:hover {
+  background: var(--minds-surface-hover) !important;
+  border-color: rgba(214, 104, 83, 0.2) !important;
+}
+
+/* Reject modal backdrop */
+.minds-theme .bg-white.rounded-2xl.shadow-xl {
+  background: #1e1e28 !important;
+  border: 1px solid var(--minds-border);
+}
+
+/* Select/dropdown elements */
+.minds-theme select.rounded-lg.border.border-gray-200,
+.minds-theme select.bg-white {
+  background: var(--minds-surface) !important;
+  color: var(--minds-text) !important;
+  border-color: var(--minds-border) !important;
+}
+
+/* Skill card colored pills */
+.minds-theme .bg-blue-50 { background: rgba(59, 130, 246, 0.1) !important; }
+.minds-theme .text-blue-600 { color: #93c5fd !important; }
+.minds-theme .bg-purple-50 { background: rgba(168, 85, 247, 0.1) !important; }
+.minds-theme .text-purple-600 { color: #c4b5fd !important; }
+.minds-theme .bg-green-50:not(.border):not(.border-green-100):not(.border-green-200) {
+  background: rgba(34, 197, 94, 0.08) !important;
+}
+
+/* Progress bar track */
+.minds-theme .h-1\.5.rounded-full.bg-gray-200 {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Status progression bar (WorkRunsTab) */
+.minds-theme .h-1\.5.rounded-full.bg-gray-200:not(.bg-green-400):not(.bg-alloro-orange) {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Pipeline radio selected state */
+.minds-theme .border-alloro-orange.bg-orange-50\/50 {
+  background: rgba(214, 104, 83, 0.08) !important;
+  border-color: rgba(214, 104, 83, 0.3) !important;
+}
+
+/* Config paused toggle selected */
+.minds-theme button.bg-gray-200.text-gray-900 {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--minds-text) !important;
+}
+
+/* Dashed border loading/empty state */
+.minds-theme .border-dashed.border-gray-200 {
+  border-color: var(--minds-border) !important;
+}
+
+/* Prose (markdown rendering) dark overrides */
+.minds-theme .prose.prose-gray { color: var(--minds-text) !important; }
+.minds-theme .prose.prose-gray h1,
+.minds-theme .prose.prose-gray h2,
+.minds-theme .prose.prose-gray h3,
+.minds-theme .prose.prose-gray h4 { color: var(--minds-text) !important; }
+.minds-theme .prose.prose-gray p { color: var(--minds-text-secondary) !important; }
+.minds-theme .prose.prose-gray li { color: var(--minds-text-secondary) !important; }
+.minds-theme .prose.prose-gray strong { color: var(--minds-text) !important; }
+.minds-theme .prose.prose-gray code {
+  color: #e2a07a !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.minds-theme .prose.prose-gray pre {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: var(--minds-text) !important;
+}
+
+/* Reject category pills (WorkRunsTab) */
+.minds-theme .bg-gray-100.text-gray-600.border.border-gray-200 {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--minds-text-secondary) !important;
+  border-color: var(--minds-border) !important;
+}
+.minds-theme .bg-red-100.text-red-700.border.border-red-200 {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Credential / rejection status pills */
+.minds-theme .bg-red-50.text-red-500 {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #fca5a5 !important;
+}
+.minds-theme .bg-green-50.text-green-600 {
+  background: rgba(34, 197, 94, 0.08) !important;
+  color: #86efac !important;
+}
+.minds-theme .bg-gray-100.text-gray-500:not(.rounded-xl) {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Amber icons (awaiting review) */
+.minds-theme .text-amber-500 { color: #fbbf24 !important; }
+
+/* Test portal response box */
+.minds-theme .rounded-lg.border.border-gray-200.bg-white.p-4 {
+  background: var(--minds-surface) !important;
+  border-color: var(--minds-border) !important;
+}
+
+/* Icon container in work run list */
+.minds-theme .rounded-lg.bg-gray-100.text-gray-500 {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--minds-text-muted) !important;
+}
+
+/* Textarea with rounded-xl (SkillDetailPanel definition) */
+.minds-theme textarea.rounded-xl.border.border-gray-200 {
+  background: var(--minds-surface) !important;
+  border-color: var(--minds-border) !important;
+  color: var(--minds-text) !important;
+}
+.minds-theme textarea.rounded-xl:focus {
+  border-color: #D66853 !important;
+  box-shadow: 0 0 0 1px rgba(214, 104, 83, 0.3) !important;
+}
+
+/* Input/textarea placeholder in dark mode */
+.minds-theme input::placeholder,
+.minds-theme textarea::placeholder {
+  color: var(--minds-text-muted) !important;
+}
+
+/* Monaco editor border */
+.minds-theme .rounded-xl.border.border-gray-200.overflow-hidden {
+  border-color: var(--minds-border) !important;
+}
 
 /* ── Thinking animation ────────────────────────────────────── */
 @keyframes minds-thinking-dot {

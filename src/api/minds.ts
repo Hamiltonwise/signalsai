@@ -668,6 +668,38 @@ export async function skillBuilderChat(
   return res.success ? res.data : null;
 }
 
+export async function sendSkillBuilderChatStream(
+  mindId: string,
+  message: string,
+  messages: SkillBuilderMessage[],
+  resolvedFields: ResolvedFields,
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(`${api}/admin/minds/${mindId}/skill-builder/chat/stream`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ message, messages, resolvedFields }),
+  });
+}
+
 // ─── Work Runs ──────────────────────────────────────────────────
 
 export async function triggerManualRun(
@@ -677,7 +709,7 @@ export async function triggerManualRun(
   const res = await apiPost({
     path: `/admin/minds/${mindId}/skills/${skillId}/run`,
   });
-  return res.success ? res.data : null;
+  return res?.id ? res : null;
 }
 
 export async function listWorkRuns(
@@ -689,7 +721,7 @@ export async function listWorkRuns(
   const res = await apiGet({
     path: `/admin/minds/${mindId}/skills/${skillId}/work-runs?limit=${limit}&offset=${offset}`,
   });
-  return res.success ? res.data : [];
+  return Array.isArray(res) ? res : [];
 }
 
 export async function getWorkRun(
@@ -700,7 +732,7 @@ export async function getWorkRun(
   const res = await apiGet({
     path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}`,
   });
-  return res.success ? res.data : null;
+  return res?.id ? res : null;
 }
 
 export async function approveWorkRun(
@@ -727,6 +759,17 @@ export async function rejectWorkRun(
       rejection_category: rejectionCategory,
       rejection_reason: rejectionReason,
     },
+  });
+  return !!res.success;
+}
+
+export async function deleteWorkRun(
+  mindId: string,
+  skillId: string,
+  workRunId: string,
+): Promise<boolean> {
+  const res = await apiDelete({
+    path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}`,
   });
   return !!res.success;
 }

@@ -97,6 +97,8 @@ export function ParentingProposals({
   const [proposals, setProposals] = useState<SyncProposal[]>(initialProposals);
   const [loading, setLoading] = useState(initialProposals.length === 0);
   const [compileStarting, setCompileStarting] = useState(false);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   useEffect(() => {
     if (initialProposals.length === 0) {
@@ -116,6 +118,7 @@ export function ParentingProposals({
     proposalId: string,
     action: "approved" | "rejected" | "pending"
   ) => {
+    setActioningId(proposalId);
     const ok = await updateParentingProposal(mindId, sessionId, proposalId, action);
     if (ok) {
       const updated = proposals.map((p) =>
@@ -126,9 +129,11 @@ export function ParentingProposals({
     } else {
       toast.error("Failed to update proposal");
     }
+    setActioningId(null);
   };
 
   const handleBulkApprove = async () => {
+    setBulkApproving(true);
     const pending = proposals.filter((p) => p.status === "pending");
     for (const p of pending) {
       await updateParentingProposal(mindId, sessionId, p.id, "approved");
@@ -139,6 +144,7 @@ export function ParentingProposals({
     setProposals(updated);
     onProposalsChange(updated);
     toast.success(`${pending.length} proposals approved`);
+    setBulkApproving(false);
   };
 
   const handleCompile = async () => {
@@ -160,6 +166,7 @@ export function ParentingProposals({
         mind_id: mindId,
         status: "compiling",
         result: null,
+        title: null,
         knowledge_buffer: "",
         sync_run_id: result.runId,
         admin_id: null,
@@ -240,10 +247,11 @@ export function ParentingProposals({
         <div className="mb-4 flex justify-end">
           <button
             onClick={handleBulkApprove}
-            className="flex items-center gap-1.5 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition-colors"
+            disabled={bulkApproving}
+            className="flex items-center gap-1.5 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
           >
-            <Check className="h-3.5 w-3.5" />
-            Approve all {pendingCount} pending
+            {bulkApproving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            {bulkApproving ? "Approving..." : `Approve all ${pendingCount} pending`}
           </button>
         </div>
       )}
@@ -289,16 +297,18 @@ export function ParentingProposals({
                   <>
                     <button
                       onClick={() => handleProposalAction(proposal.id, "approved")}
-                      className="flex items-center gap-1.5 rounded-xl bg-green-500/10 border border-green-500/20 px-3 py-2 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition-colors"
+                      disabled={actioningId === proposal.id}
+                      className="flex items-center gap-1.5 rounded-xl bg-green-500/10 border border-green-500/20 px-3 py-2 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      {actioningId === proposal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       Approve
                     </button>
                     <button
                       onClick={() => handleProposalAction(proposal.id, "rejected")}
-                      className="flex items-center gap-1.5 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-colors"
+                      disabled={actioningId === proposal.id}
+                      className="flex items-center gap-1.5 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      {actioningId === proposal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                       Reject
                     </button>
                   </>
@@ -311,10 +321,11 @@ export function ParentingProposals({
                     </span>
                     <button
                       onClick={() => handleProposalAction(proposal.id, "pending")}
-                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-[#6a6a75] hover:text-[#a0a0a8] hover:bg-white/[0.05] transition-colors"
+                      disabled={actioningId === proposal.id}
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-[#6a6a75] hover:text-[#a0a0a8] hover:bg-white/[0.05] transition-colors disabled:opacity-50"
                       title="Undo"
                     >
-                      <Undo2 className="h-3 w-3" />
+                      {actioningId === proposal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Undo2 className="h-3 w-3" />}
                       Undo
                     </button>
                   </>
@@ -327,10 +338,11 @@ export function ParentingProposals({
                     </span>
                     <button
                       onClick={() => handleProposalAction(proposal.id, "pending")}
-                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-[#6a6a75] hover:text-[#a0a0a8] hover:bg-white/[0.05] transition-colors"
+                      disabled={actioningId === proposal.id}
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-[#6a6a75] hover:text-[#a0a0a8] hover:bg-white/[0.05] transition-colors disabled:opacity-50"
                       title="Undo"
                     >
-                      <Undo2 className="h-3 w-3" />
+                      {actioningId === proposal.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Undo2 className="h-3 w-3" />}
                       Undo
                     </button>
                   </>
@@ -347,7 +359,7 @@ export function ParentingProposals({
       <div className="mt-6 flex items-center justify-between">
         <div />
         <ActionButton
-          label="Compile & Publish"
+          label="Remember"
           icon={<Sparkles className="h-4 w-4" />}
           onClick={handleCompile}
           variant="primary"

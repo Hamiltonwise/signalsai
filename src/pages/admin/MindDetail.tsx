@@ -177,6 +177,7 @@ export default function MindDetail() {
           mindName={mind.name}
           mindSlug={mind.slug}
           hasPublishedVersion={!!mind.published_version_id}
+          rejectionCategories={mind.rejection_categories}
         />
       )}
       </div>

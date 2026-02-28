@@ -18,10 +18,38 @@ export function ParentingReadingView({
   onComplete,
   onError,
 }: ParentingReadingViewProps) {
-  const [narrationText, setNarrationText] = useState("");
-  const [phase, setPhase] = useState<string>("starting");
+  const [_phase, setPhase] = useState<string>("starting");
   const [narrationKey, setNarrationKey] = useState(0);
+  const [idleMessageIdx, setIdleMessageIdx] = useState(0);
+  const [previewMessages, setPreviewMessages] = useState<string[]>([]);
   const hasStarted = useRef(false);
+
+  const FALLBACK_MESSAGES = [
+    "Scanning for new patterns...",
+    "Cross-referencing with what I already know...",
+    "Picking apart the important bits...",
+    "Deciding what's worth remembering...",
+    "Mapping this to my existing knowledge...",
+    "Separating signal from noise...",
+    "Checking if I've seen this before...",
+    "Connecting dots across sources...",
+    "Building a mental model...",
+    "Weighing what matters most...",
+    "Looking for contradictions...",
+    "Absorbing the good stuff...",
+    "Filing away key insights...",
+    "Almost got it...",
+  ];
+
+  const idleMessages = previewMessages.length > 0 ? previewMessages : FALLBACK_MESSAGES;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIdleMessageIdx((i) => (i + 1) % idleMessages.length);
+      setNarrationKey((k) => k + 1);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [idleMessages]);
 
   useEffect(() => {
     if (hasStarted.current) return;
@@ -42,7 +70,6 @@ export function ParentingReadingView({
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        let currentNarration = "";
 
         while (true) {
           if (cancelled) break;
@@ -66,14 +93,13 @@ export function ParentingReadingView({
                 return;
               }
 
-              if (parsed.type === "narration") {
-                currentNarration += parsed.text;
-                setNarrationText(currentNarration);
+              if (parsed.type === "preview_messages") {
+                setPreviewMessages(parsed.messages);
+                setIdleMessageIdx(0);
+                setNarrationKey((k) => k + 1);
               }
 
               if (parsed.type === "phase") {
-                currentNarration = "";
-                setNarrationText("");
                 setNarrationKey((k) => k + 1);
                 setPhase(parsed.phase);
               }
@@ -122,23 +148,9 @@ export function ParentingReadingView({
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
             >
-              {narrationText ? (
-                <p
-                  className="text-sm text-[#6a6a75] italic"
-                  style={{ fontFamily: "'Literata', serif" }}
-                >
-                  "{narrationText}"
-                  <span className="inline-block w-1.5 h-3.5 bg-alloro-orange/70 animate-pulse ml-0.5 align-text-bottom rounded-sm" />
-                </p>
-              ) : (
-                <p className="text-sm text-[#6a6a75]">
-                  {phase === "extracting"
-                    ? "Extracting knowledge..."
-                    : phase === "comparing"
-                      ? "Comparing against existing brain..."
-                      : "Getting ready..."}
-                </p>
-              )}
+              <p className="text-sm text-[#6a6a75]">
+                {idleMessages[idleMessageIdx % idleMessages.length]}
+              </p>
             </motion.div>
           </AnimatePresence>
         </div>

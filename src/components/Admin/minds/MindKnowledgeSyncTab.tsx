@@ -120,7 +120,7 @@ export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSy
           fetchDiscovery();
           refreshStatus();
           if (details.run.status === "completed") {
-            toast.success(`${details.run.type === "scrape_compare" ? "Scrape & Compare" : "Compile & Publish"} completed`);
+            toast.success(`${details.run.type === "scrape_compare" ? "Scrape & Compare" : "Remember"} completed`);
           } else {
             toast.error(`Run failed: ${details.run.error_message || "Unknown error"}`);
           }
@@ -203,13 +203,13 @@ export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSy
     setStartingCompile(true);
     const runId = await startCompilePublish(mindId);
     if (runId) {
-      toast.success("Compile & Publish started");
+      toast.success("Remember started");
       setExpandedRunId(runId);
       startPolling(runId);
       fetchRuns();
       refreshStatus();
     } else {
-      toast.error("Failed to start compile & publish");
+      toast.error("Failed to start remember");
     }
     setStartingCompile(false);
   };
@@ -427,7 +427,7 @@ export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSy
             </div>
             <div className="relative group">
               <ActionButton
-                label="Compile & Publish"
+                label="Remember"
                 icon={<Play className="h-4 w-4" />}
                 onClick={handleStartCompile}
                 variant="primary"
@@ -477,7 +477,7 @@ export function MindKnowledgeSyncTab({ mindId, onStatusChange }: MindKnowledgeSy
                     <span className="text-sm text-gray-800">
                       {run.type === "scrape_compare"
                         ? "Scrape & Compare"
-                        : "Compile & Publish"}
+                        : "Remember"}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-400">

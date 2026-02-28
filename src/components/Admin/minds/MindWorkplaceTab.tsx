@@ -8,11 +8,13 @@ import {
   Check,
   Trash2,
   X,
+  Wand2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useConfirm } from "../../ui/ConfirmModal";
 import { ActionButton, EmptyState, StatusPill } from "../../ui/DesignSystem";
 import { SkillDetailPanel } from "./SkillDetailPanel";
+import { SkillBuilderChat } from "./SkillBuilderChat";
 import {
   listSkills,
   createSkill,
@@ -27,6 +29,7 @@ interface MindWorkplaceTabProps {
   mindName: string;
   mindSlug: string;
   hasPublishedVersion: boolean;
+  rejectionCategories?: string[];
 }
 
 const API_BASE =
@@ -67,9 +70,12 @@ function SkillCard({
   const statusColor = (s: string): "orange" | "green" | "gray" | "red" => {
     switch (s) {
       case "ready":
+      case "active":
         return "green";
       case "generating":
         return "orange";
+      case "paused":
+        return "gray";
       case "failed":
         return "red";
       default:
@@ -112,6 +118,26 @@ function SkillCard({
         {skill.definition || "No definition set"}
       </p>
 
+      {/* Trigger / Pipeline info */}
+      {skill.work_creation_type && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+            {skill.work_creation_type}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+            {skill.trigger_type}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-600">
+            {skill.pipeline_mode.replace(/_/g, " ")}
+          </span>
+          {skill.work_publish_to && skill.work_publish_to !== "internal_only" && (
+            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
+              → {skill.work_publish_to.replace(/^post_to_/, "")}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* API endpoint */}
       <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 mb-3">
         <code className="text-[10px] text-gray-500 truncate flex-1 font-mono">
@@ -151,11 +177,22 @@ function SkillCard({
   );
 }
 
+const DEFAULT_REJECTION_CATEGORIES = [
+  "too_similar",
+  "wrong_tone",
+  "off_brand",
+  "factually_incorrect",
+  "wrong_format",
+  "topic_not_relevant",
+  "too_generic",
+];
+
 export function MindWorkplaceTab({
   mindId,
   mindName,
   mindSlug,
   hasPublishedVersion,
+  rejectionCategories = DEFAULT_REJECTION_CATEGORIES,
 }: MindWorkplaceTabProps) {
   const [skills, setSkills] = useState<MindSkill[]>([]);
   const [analyticsMap, setAnalyticsMap] = useState<
@@ -168,6 +205,7 @@ export function MindWorkplaceTab({
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   const fetchSkills = async () => {
     setLoading(true);
@@ -218,6 +256,22 @@ export function MindWorkplaceTab({
 
   const selectedSkill = skills.find((s) => s.id === selectedSkillId) || null;
 
+  // If skill builder is open, show it
+  if (showBuilder) {
+    return (
+      <SkillBuilderChat
+        mindId={mindId}
+        mindName={mindName}
+        onClose={() => setShowBuilder(false)}
+        onSkillCreated={(skillId) => {
+          setShowBuilder(false);
+          setSelectedSkillId(skillId);
+          fetchSkills();
+        }}
+      />
+    );
+  }
+
   // If a skill is selected, show detail panel
   if (selectedSkill) {
     return (
@@ -228,6 +282,7 @@ export function MindWorkplaceTab({
         skill={selectedSkill}
         analytics={analyticsMap[selectedSkill.id] || null}
         hasPublishedVersion={hasPublishedVersion}
+        rejectionCategories={rejectionCategories}
         onBack={() => {
           setSelectedSkillId(null);
           fetchSkills();
@@ -247,12 +302,20 @@ export function MindWorkplaceTab({
             brain, purpose-built for a task.
           </p>
         </div>
-        <ActionButton
-          label="Create Skill"
-          icon={<Plus className="h-4 w-4" />}
-          onClick={() => setShowCreate(true)}
-          variant="primary"
-        />
+        <div className="flex items-center gap-2">
+          <ActionButton
+            label="Skill Builder"
+            icon={<Wand2 className="h-4 w-4" />}
+            onClick={() => setShowBuilder(true)}
+            variant="secondary"
+          />
+          <ActionButton
+            label="Create Skill"
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => setShowCreate(true)}
+            variant="primary"
+          />
+        </div>
       </div>
 
       {!hasPublishedVersion && (

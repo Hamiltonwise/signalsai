@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Brain,
   Loader2,
   AlertCircle,
   MessageSquare,
@@ -9,11 +8,10 @@ import {
   GraduationCap,
   Briefcase,
   Heart,
+  ChevronLeft,
 } from "lucide-react";
 import {
-  AdminPageHeader,
   TabBar,
-  Badge,
 } from "../../components/ui/DesignSystem";
 import { MindChatTab } from "../../components/Admin/minds/MindChatTab";
 import { MindSettingsTab } from "../../components/Admin/minds/MindSettingsTab";
@@ -140,27 +138,13 @@ export default function MindDetail() {
     <div className="minds-theme">
       <div className="minds-microdots" />
       <div className="relative z-[1]">
-      <AdminPageHeader
-        icon={<Brain className="h-6 w-6" />}
-        title={mind.name}
-        description={
-          <span className="flex items-center gap-2">
-            {mind.published_version ? (
-              <Badge
-                label={`v${mind.published_version.version_number}`}
-                color="green"
-              />
-            ) : (
-              <Badge label="Draft" color="gray" />
-            )}
-          </span>
-        }
-        backButton={{
-          label: "Back to Minds",
-          onClick: () => navigate("/admin/minds"),
-        }}
-      />
-
+      <button
+        onClick={() => navigate("/admin/minds")}
+        className="flex items-center gap-1 text-sm text-[#6a6a75] hover:text-[#eaeaea] transition-colors mb-4"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Minds
+      </button>
       <div className="mb-6">
         <TabBar
           tabs={tabs}
@@ -169,7 +153,7 @@ export default function MindDetail() {
         />
       </div>
 
-      {activeTab === "chat" && <MindChatTab mindId={mind.id} />}
+      {activeTab === "chat" && <MindChatTab mindId={mind.id} mindName={mind.name} />}
 
       {activeTab === "settings" && (
         <MindSettingsTab

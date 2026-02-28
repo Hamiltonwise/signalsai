@@ -259,6 +259,14 @@ export async function listConversations(mindId: string): Promise<MindConversatio
   return res.success ? res.data : [];
 }
 
+export async function renameConversation(mindId: string, conversationId: string, title: string): Promise<boolean> {
+  const res = await apiPatch({
+    path: `/admin/minds/${mindId}/conversations/${conversationId}`,
+    passedData: { title },
+  });
+  return !!res.success;
+}
+
 export async function deleteConversation(mindId: string, conversationId: string): Promise<boolean> {
   const res = await apiDelete({
     path: `/admin/minds/${mindId}/conversations/${conversationId}`,

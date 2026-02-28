@@ -16,6 +16,8 @@ import {
 } from "../../../../api/minds";
 import { toast } from "react-hot-toast";
 
+const CHAT_FONT = "'Literata', Georgia, serif";
+
 interface ParentingChatProps {
   mindId: string;
   sessionId: string;
@@ -72,7 +74,7 @@ function ThinkingIndicator() {
 }
 
 const PROSE_CLASSES =
-  "prose prose-sm prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/4 prose-code:text-alloro-orange prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-white/8 prose-th:bg-white/[0.035] prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-white/6";
+  "prose prose-invert max-w-none overflow-x-auto prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-hr:my-3 prose-blockquote:my-2 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:bg-black/30 prose-pre:border prose-pre:border-white/4 prose-code:text-alloro-orange prose-table:w-full prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:border prose-th:border-white/8 prose-th:bg-white/[0.035] prose-td:px-3 prose-td:py-1.5 prose-td:text-xs prose-td:border prose-td:border-white/6";
 
 export function ParentingChat({
   mindId,
@@ -87,18 +89,24 @@ export function ParentingChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [triggeringReading, setTriggeringReading] = useState(false);
+  const replySoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    replySoundRef.current = new Audio("/blip.mp3");
+    replySoundRef.current.preload = "auto";
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const shouldAutoScroll = useRef(false);
+  const [animatingMsgId, setAnimatingMsgId] = useState<string | null>(null);
+  const followingStream = useRef(true);
 
   useEffect(() => {
-    if (shouldAutoScroll.current) {
+    if (followingStream.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      shouldAutoScroll.current = false;
     }
-  }, [messages.length, isLoading, streamingText]);
+  }, [messages.length, streamingText]);
 
   // Scroll to bottom on initial load
   useEffect(() => {
@@ -111,9 +119,13 @@ export function ParentingChat({
     const threshold = 80;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
     setIsAtBottom(atBottom);
+    if (!atBottom) {
+      followingStream.current = false;
+    }
   }, []);
 
   const scrollToBottom = useCallback(() => {
+    followingStream.current = true;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
@@ -135,11 +147,20 @@ export function ParentingChat({
       created_at: new Date().toISOString(),
     };
 
-    shouldAutoScroll.current = true;
+    followingStream.current = true;
+    setAnimatingMsgId(userMessage.id);
     onNewMessage(userMessage);
     setInput("");
     setIsLoading(true);
     setStreamingText("");
+
+    // Animate textarea back to original height
+    if (inputRef.current) {
+      const textarea = inputRef.current;
+      textarea.style.transition = "height 0.2s ease";
+      textarea.style.height = "44px";
+      setTimeout(() => { textarea.style.transition = ""; }, 200);
+    }
 
     try {
       const response = await sendParentingChatStream(mindId, sessionId, trimmed);
@@ -181,7 +202,6 @@ export function ParentingChat({
                 setIsStreaming(true);
               }
               accumulated += parsed.text;
-              shouldAutoScroll.current = true;
               setStreamingText(accumulated);
             }
           } catch (e) {
@@ -200,6 +220,10 @@ export function ParentingChat({
           created_at: new Date().toISOString(),
         };
         onNewMessage(assistantMessage);
+        if (localStorage.getItem("minds-sound-enabled") === "true" && replySoundRef.current) {
+          replySoundRef.current.currentTime = 0;
+          replySoundRef.current.play().catch(() => {});
+        }
       }
     } catch {
       const errorMessage: ParentingMessage = {
@@ -241,7 +265,7 @@ export function ParentingChat({
   };
 
   return (
-    <div className="flex flex-col h-[600px] rounded-xl liquid-glass overflow-hidden">
+    <div className="flex flex-col h-[600px] rounded-xl overflow-hidden" style={{ backgroundColor: "#262624" }}>
       {/* Messages */}
       <div
         ref={scrollContainerRef}
@@ -250,37 +274,52 @@ export function ParentingChat({
       >
         {messages
           .filter((m) => m.role !== "system")
-          .map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm overflow-hidden ${
-                  msg.role === "user"
-                    ? "bg-alloro-orange text-white rounded-br-md"
-                    : "bg-white/[0.06] text-[#eaeaea] rounded-bl-md border border-white/4"
-                }`}
+          .map((msg) => {
+            const isAnimating = msg.role === "user" && msg.id === animatingMsgId;
+            const Wrapper = isAnimating ? motion.div : "div";
+            const wrapperProps = isAnimating
+              ? {
+                  initial: { opacity: 0, y: 20, scale: 0.97 },
+                  animate: { opacity: 1, y: 0, scale: 1 },
+                  transition: { duration: 0.3, ease: "easeOut" as const },
+                  onAnimationComplete: () => setAnimatingMsgId(null),
+                }
+              : {};
+
+            return (
+              <Wrapper
+                key={msg.id}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                {...wrapperProps}
               >
-                {msg.role === "assistant" ? (
-                  <div className={PROSE_CLASSES}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                )}
-              </div>
-            </div>
-          ))}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 overflow-hidden ${
+                    msg.role === "user"
+                      ? "rounded-br-md"
+                      : "rounded-bl-md border border-white/4"
+                  }`}
+                  style={{ fontFamily: CHAT_FONT, fontSize: "18px", lineHeight: 1.5, color: "#c2c0b6", backgroundColor: msg.role === "user" ? "#141413" : "rgba(255,255,255,0.035)" }}
+                >
+                  {msg.role === "assistant" ? (
+                    <div className={PROSE_CLASSES} style={{ fontFamily: CHAT_FONT, fontSize: "18px", color: "#c2c0b6" }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  )}
+                </div>
+              </Wrapper>
+            );
+          })}
 
         {isLoading && <ThinkingIndicator />}
 
         {isStreaming && streamingText && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm bg-white/[0.06] text-[#eaeaea] border border-white/4">
-              <div className={PROSE_CLASSES}>
+            <div className="max-w-[80%] rounded-2xl rounded-bl-md px-4 py-2.5 border border-white/4" style={{ fontFamily: CHAT_FONT, fontSize: "18px", lineHeight: 1.5, color: "#c2c0b6", backgroundColor: "rgba(255,255,255,0.035)" }}>
+              <div className={PROSE_CLASSES} style={{ fontFamily: CHAT_FONT, fontSize: "18px", color: "#c2c0b6" }}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {streamingText}
                 </ReactMarkdown>
@@ -307,7 +346,7 @@ export function ParentingChat({
       )}
 
       {/* Input area */}
-      <div className="border-t border-white/4 p-3 bg-[#0e0e14]/50">
+      <div className="border-t border-white/4 p-3" style={{ backgroundColor: "#1e1e1c" }}>
         {readOnly ? (
           <div className="text-center py-2">
             <p className="text-xs text-[#6a6a75]">
@@ -324,18 +363,19 @@ export function ParentingChat({
               placeholder="Teach something..."
               rows={1}
               disabled={isLoading || isStreaming}
-              className="flex-1 resize-none rounded-xl border border-white/8 bg-[#121218] px-4 py-2.5 text-sm text-[#eaeaea] placeholder-[#6a6a75] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50 disabled:opacity-50"
-              style={{ minHeight: "40px", maxHeight: "120px" }}
+              className="flex-1 resize-none rounded-xl border border-white/8 px-4 py-2.5 placeholder-[#6a6a75] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50 disabled:opacity-50"
+              style={{ fontFamily: CHAT_FONT, fontSize: "17px", lineHeight: 1.5, minHeight: "44px", maxHeight: "140px", backgroundColor: "#1a1a18", color: "#c2c0b6" }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = "auto";
-                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+                target.style.height = `${Math.min(target.scrollHeight, 140)}px`;
               }}
             />
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading || isStreaming}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-alloro-orange text-white transition-all hover:bg-alloro-orange/90 hover:shadow-[0_0_20px_rgba(214,104,83,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex shrink-0 items-center justify-center rounded-xl bg-alloro-orange text-white transition-all hover:bg-alloro-orange/90 hover:shadow-[0_0_20px_rgba(214,104,83,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ height: "44px", width: "44px" }}
             >
               {isLoading || isStreaming ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -343,15 +383,17 @@ export function ParentingChat({
                 <Send className="h-4 w-4" />
               )}
             </button>
-            <ActionButton
-              label="Ready to Learn"
-              icon={<BookOpen className="h-4 w-4" />}
-              onClick={handleTriggerReading}
-              variant="secondary"
-              size="sm"
-              loading={triggeringReading}
-              disabled={isLoading || isStreaming || messages.length < 2}
-            />
+            <div style={{ height: "44px", display: "flex", alignItems: "stretch" }}>
+              <ActionButton
+                label="Ready to Learn"
+                icon={<BookOpen className="h-4 w-4" />}
+                onClick={handleTriggerReading}
+                variant="secondary"
+                size="sm"
+                loading={triggeringReading}
+                disabled={isLoading || isStreaming || messages.length < 2}
+              />
+            </div>
           </div>
         )}
       </div>

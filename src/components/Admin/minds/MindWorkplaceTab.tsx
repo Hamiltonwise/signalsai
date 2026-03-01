@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
   Wand2,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useConfirm } from "../../ui/ConfirmModal";
@@ -21,6 +22,7 @@ import {
   deleteSkill,
   getSkillAnalytics,
   listPublishChannels,
+  regenerateStaleNeurons,
   type MindSkill,
   type SkillAnalytics,
 } from "../../../api/minds";
@@ -106,6 +108,12 @@ function SkillCard({
         </div>
         <div className="flex items-center gap-2">
           <StatusPill label={skill.status} color={statusColor(skill.status)} />
+          {skill.is_neuron_stale && (
+            <span
+              className="h-2.5 w-2.5 rounded-full bg-amber-400 shrink-0"
+              title="Neuron is stale — brain was updated"
+            />
+          )}
           <button
             onClick={handleDelete}
             className="opacity-0 group-hover:opacity-100 rounded p-1 text-gray-300 hover:text-red-400 transition-all"
@@ -210,6 +218,27 @@ export function MindWorkplaceTab({
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [refreshingStale, setRefreshingStale] = useState(false);
+
+  const staleCount = skills.filter((s) => s.is_neuron_stale).length;
+
+  const handleRefreshStale = async () => {
+    setRefreshingStale(true);
+    try {
+      const result = await regenerateStaleNeurons(mindId);
+      if (result.regeneratedCount > 0) {
+        toast.success(`Refreshed ${result.regeneratedCount} neuron${result.regeneratedCount === 1 ? "" : "s"}`);
+      }
+      if (result.failedCount > 0) {
+        toast.error(`${result.failedCount} failed to refresh`);
+      }
+      fetchSkills();
+    } catch {
+      toast.error("Failed to refresh stale neurons");
+    } finally {
+      setRefreshingStale(false);
+    }
+  };
 
   const fetchSkills = async () => {
     setLoading(true);
@@ -331,6 +360,22 @@ export function MindWorkplaceTab({
           <strong>Heads up:</strong> {mindName} needs a published brain before
           skills can generate neurons. Go to Agent University to publish a
           version first.
+        </div>
+      )}
+
+      {staleCount > 0 && (
+        <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between">
+          <p className="text-sm text-amber-800">
+            <strong>{staleCount} skill{staleCount === 1 ? "" : "s"}</strong> {staleCount === 1 ? "has a" : "have"} stale neuron{staleCount === 1 ? "" : "s"} — brain has been updated since last generation.
+          </p>
+          <ActionButton
+            label="Refresh All"
+            icon={<RotateCcw className="h-4 w-4" />}
+            onClick={handleRefreshStale}
+            variant="primary"
+            size="sm"
+            loading={refreshingStale}
+          />
         </div>
       )}
 

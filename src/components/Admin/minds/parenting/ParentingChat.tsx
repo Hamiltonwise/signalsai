@@ -24,6 +24,7 @@ interface ParentingChatProps {
   onNewMessage: (msg: ParentingMessage) => void;
   readOnly: boolean;
   onTriggerReading: () => void;
+  sendChatStream?: (mindId: string, sessionId: string, message: string) => Promise<Response>;
 }
 
 const THINKING_WORDS = [
@@ -82,6 +83,7 @@ export function ParentingChat({
   onNewMessage,
   readOnly,
   onTriggerReading,
+  sendChatStream,
 }: ParentingChatProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -161,7 +163,8 @@ export function ParentingChat({
     }
 
     try {
-      const response = await sendParentingChatStream(mindId, sessionId, trimmed);
+      const doSend = sendChatStream || sendParentingChatStream;
+      const response = await doSend(mindId, sessionId, trimmed);
 
       if (!response.ok) {
         throw new Error("Stream request failed");

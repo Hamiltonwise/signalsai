@@ -9,6 +9,7 @@ interface ParentingReadingViewProps {
   sessionId: string;
   onComplete: (proposalCount: number) => void;
   onError: (error: string) => void;
+  triggerReadingStream?: (mindId: string, sessionId: string) => Promise<Response>;
 }
 
 export function ParentingReadingView({
@@ -17,6 +18,7 @@ export function ParentingReadingView({
   sessionId,
   onComplete,
   onError,
+  triggerReadingStream,
 }: ParentingReadingViewProps) {
   const [_phase, setPhase] = useState<string>("starting");
   const [narrationKey, setNarrationKey] = useState(0);
@@ -59,7 +61,8 @@ export function ParentingReadingView({
 
     async function runStream() {
       try {
-        const response = await triggerParentingReadingStream(mindId, sessionId);
+        const doTrigger = triggerReadingStream || triggerParentingReadingStream;
+        const response = await doTrigger(mindId, sessionId);
 
         if (!response.ok) {
           const errText = await response.text();

@@ -26,6 +26,9 @@ interface ParentingProposalsProps {
   onProposalsChange: (proposals: SyncProposal[]) => void;
   onSessionUpdate: (session: ParentingSession) => void;
   onComplete: () => void;
+  apiGetProposals?: (mindId: string, sessionId: string) => Promise<SyncProposal[]>;
+  apiUpdateProposal?: (mindId: string, sessionId: string, proposalId: string, status: "approved" | "rejected" | "pending") => Promise<boolean>;
+  apiStartCompile?: (mindId: string, sessionId: string) => Promise<any>;
 }
 
 function ProposalDiff({ proposal }: { proposal: SyncProposal }) {
@@ -93,6 +96,9 @@ export function ParentingProposals({
   onProposalsChange,
   onSessionUpdate,
   onComplete,
+  apiGetProposals,
+  apiUpdateProposal,
+  apiStartCompile,
 }: ParentingProposalsProps) {
   const [proposals, setProposals] = useState<SyncProposal[]>(initialProposals);
   const [loading, setLoading] = useState(initialProposals.length === 0);
@@ -108,7 +114,8 @@ export function ParentingProposals({
 
   const fetchProposals = async () => {
     setLoading(true);
-    const data = await getParentingProposals(mindId, sessionId);
+    const doGet = apiGetProposals || getParentingProposals;
+    const data = await doGet(mindId, sessionId);
     setProposals(data);
     onProposalsChange(data);
     setLoading(false);
@@ -119,7 +126,8 @@ export function ParentingProposals({
     action: "approved" | "rejected" | "pending"
   ) => {
     setActioningId(proposalId);
-    const ok = await updateParentingProposal(mindId, sessionId, proposalId, action);
+    const doUpdate = apiUpdateProposal || updateParentingProposal;
+    const ok = await doUpdate(mindId, sessionId, proposalId, action);
     if (ok) {
       const updated = proposals.map((p) =>
         p.id === proposalId ? { ...p, status: action } : p
@@ -134,9 +142,10 @@ export function ParentingProposals({
 
   const handleBulkApprove = async () => {
     setBulkApproving(true);
+    const doUpdate = apiUpdateProposal || updateParentingProposal;
     const pending = proposals.filter((p) => p.status === "pending");
     for (const p of pending) {
-      await updateParentingProposal(mindId, sessionId, p.id, "approved");
+      await doUpdate(mindId, sessionId, p.id, "approved");
     }
     const updated = proposals.map((p) =>
       p.status === "pending" ? { ...p, status: "approved" as const } : p
@@ -150,7 +159,8 @@ export function ParentingProposals({
   const handleCompile = async () => {
     setCompileStarting(true);
     try {
-      const result = await startParentingCompile(mindId, sessionId);
+      const doCompile = apiStartCompile || startParentingCompile;
+      const result = await doCompile(mindId, sessionId);
       if (!result) {
         toast.error("Failed to start compile");
         return;

@@ -15,11 +15,13 @@ import {
   Briefcase,
   Settings,
   Send,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
 import { ActionButton, StatusPill } from "../../ui/DesignSystem";
 import { WorkRunsTab } from "./WorkRunsTab";
+import { SkillUpgradeTab } from "./SkillUpgradeTab";
 import {
   updateSkill,
   generateSkillNeuron,
@@ -49,7 +51,7 @@ interface SkillDetailPanelProps {
   onBack: () => void;
 }
 
-type DetailTab = "definition" | "schema" | "neuron" | "config" | "work-runs" | "analytics";
+type DetailTab = "definition" | "schema" | "neuron" | "upgrade" | "config" | "work-runs" | "analytics";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || window.location.origin;
@@ -382,6 +384,7 @@ export function SkillDetailPanel({
   const tabs: Array<{ id: DetailTab; label: string; icon: React.ReactNode }> = [
     { id: "definition", label: "Definition", icon: <FileText className="h-3.5 w-3.5" /> },
     { id: "neuron", label: "Neuron", icon: <Eye className="h-3.5 w-3.5" /> },
+    { id: "upgrade", label: "Upgrade", icon: <GraduationCap className="h-3.5 w-3.5" /> },
     { id: "config", label: "Configuration", icon: <Settings className="h-3.5 w-3.5" /> },
     { id: "work-runs", label: "Work Runs", icon: <Briefcase className="h-3.5 w-3.5" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
@@ -557,6 +560,14 @@ export function SkillDetailPanel({
         {/* Neuron tab */}
         {activeTab === "neuron" && (
           <div>
+            {skill.is_neuron_stale && neuron && !generating && (
+              <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-xs text-amber-800">
+                  Neuron is out of date — brain was updated since generation.
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-900">
@@ -575,7 +586,7 @@ export function SkillDetailPanel({
                 )}
                 {neuron && (
                   <ActionButton
-                    label={skillStatus === "ready" ? "Re-learn Skill" : "Generate Neuron"}
+                    label={skill.is_neuron_stale ? "Refresh Neuron" : (skillStatus === "ready" ? "Re-learn Skill" : "Generate Neuron")}
                     icon={
                       generating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -651,6 +662,16 @@ export function SkillDetailPanel({
               </div>
             )}
           </div>
+        )}
+
+        {/* Upgrade tab */}
+        {activeTab === "upgrade" && (
+          <SkillUpgradeTab
+            mindId={mindId}
+            mindName={mindName}
+            skillId={skill.id}
+            skillName={skill.name}
+          />
         )}
 
         {/* Configuration tab */}

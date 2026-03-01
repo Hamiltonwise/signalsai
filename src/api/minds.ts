@@ -480,6 +480,8 @@ export interface MindSkill {
   pipeline_mode: PipelineMode;
   publish_channel_id: string | null;
   portal_key_hash: string | null;
+  has_neuron: boolean;
+  is_neuron_stale: boolean;
   last_run_at: string | null;
   next_run_at: string | null;
   org_id: string | null;
@@ -617,6 +619,17 @@ export async function getSkillAnalytics(
   return res.success
     ? res.data
     : { totalCalls: 0, callsToday: 0, dailyCounts: [] };
+}
+
+export async function regenerateStaleNeurons(
+  mindId: string,
+): Promise<{ regeneratedCount: number; failedCount: number; errors: string[] }> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/regenerate-stale`,
+  });
+  return res.success
+    ? res.data
+    : { regeneratedCount: 0, failedCount: 0, errors: [] };
 }
 
 export async function suggestSkillDefinition(
@@ -1121,6 +1134,218 @@ export async function abandonParentingSession(
 ): Promise<boolean> {
   const res = await apiPost({
     path: `/admin/minds/${mindId}/parenting/sessions/${sessionId}/abandon`,
+  });
+  return !!res.success;
+}
+
+// ─── Skill Upgrade Sessions ─────────────────────────────────────
+
+export interface SkillUpgradeSession {
+  id: string;
+  skill_id: string;
+  mind_id: string;
+  status: "chatting" | "reading" | "proposals" | "compiling" | "completed" | "abandoned";
+  result: "learned" | "no_changes" | "all_rejected" | null;
+  title: string | null;
+  knowledge_buffer: string;
+  sync_run_id: string | null;
+  created_by_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+}
+
+export interface SkillUpgradeMessage {
+  id: string;
+  session_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  created_at: string;
+}
+
+export interface SkillUpgradeSessionDetails {
+  session: SkillUpgradeSession;
+  messages: SkillUpgradeMessage[];
+  proposals: SyncProposal[] | null;
+}
+
+export async function createSkillUpgradeSession(
+  mindId: string,
+  skillId: string
+): Promise<{ session: SkillUpgradeSession; greeting: string } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function listSkillUpgradeSessions(
+  mindId: string,
+  skillId: string
+): Promise<SkillUpgradeSession[]> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions`,
+  });
+  return res.success ? res.data : [];
+}
+
+export async function getSkillUpgradeSession(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<SkillUpgradeSessionDetails | null> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function sendSkillUpgradeChatStream(
+  mindId: string,
+  skillId: string,
+  sessionId: string,
+  message: string
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(
+    `${api}/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/chat/stream`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message }),
+    }
+  );
+}
+
+export async function triggerSkillUpgradeReadingStream(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<Response> {
+  const api = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+
+  const isPilot =
+    typeof window !== "undefined" &&
+    (window.sessionStorage?.getItem("pilot_mode") === "true" ||
+      !!window.sessionStorage?.getItem("token"));
+
+  let jwt: string | null = null;
+  if (isPilot) {
+    jwt = window.sessionStorage.getItem("token");
+  } else {
+    jwt = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (jwt) headers.Authorization = `Bearer ${jwt}`;
+
+  return fetch(
+    `${api}/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/trigger-reading/stream`,
+    {
+      method: "POST",
+      headers,
+    }
+  );
+}
+
+export async function getSkillUpgradeProposals(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<SyncProposal[]> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/proposals`,
+  });
+  return res.success ? res.data : [];
+}
+
+export async function updateSkillUpgradeProposal(
+  mindId: string,
+  skillId: string,
+  sessionId: string,
+  proposalId: string,
+  status: "approved" | "rejected" | "pending"
+): Promise<boolean> {
+  const res = await apiPatch({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/proposals/${proposalId}`,
+    passedData: { status },
+  });
+  return !!res.success;
+}
+
+export async function startSkillUpgradeCompile(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<{ success: boolean } | null> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/compile`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function getSkillUpgradeCompileStatus(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<any> {
+  const res = await apiGet({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/compile-status`,
+  });
+  return res.success ? res.data : null;
+}
+
+export async function deleteSkillUpgradeSession(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<boolean> {
+  const res = await apiDelete({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}`,
+  });
+  return !!res.success;
+}
+
+export async function abandonSkillUpgradeSession(
+  mindId: string,
+  skillId: string,
+  sessionId: string
+): Promise<boolean> {
+  const res = await apiPost({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}/abandon`,
+  });
+  return !!res.success;
+}
+
+export async function updateSkillUpgradeSession(
+  mindId: string,
+  skillId: string,
+  sessionId: string,
+  data: { title: string }
+): Promise<boolean> {
+  const res = await apiPatch({
+    path: `/admin/minds/${mindId}/skills/${skillId}/upgrade/sessions/${sessionId}`,
+    passedData: data,
   });
   return !!res.success;
 }

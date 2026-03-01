@@ -192,11 +192,11 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   color = "blue",
 }) => {
   const colorStyles: Record<string, string> = {
-    orange: "bg-amber-50 text-amber-600 border-amber-100",
-    green: "bg-green-50 text-green-600 border-green-100",
-    red: "bg-red-50 text-red-600 border-red-100",
-    blue: "bg-blue-50 text-blue-600 border-blue-100",
-    gray: "bg-slate-50 text-slate-600 border-slate-200",
+    orange: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+    green: "bg-green-500/15 text-green-400 border-green-500/25",
+    red: "bg-red-500/15 text-red-400 border-red-500/25",
+    blue: "bg-blue-500/15 text-blue-400 border-blue-500/25",
+    gray: "bg-white/[0.06] text-[#a0a0a8] border-white/10",
   };
 
   return (
@@ -903,41 +903,42 @@ export const TabBar: React.FC<TabBarProps> = ({
   activeTab,
   onTabChange,
 }) => (
-  <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-    {tabs.map((tab) => (
-      <motion.button
-        key={tab.id}
-        onClick={() => onTabChange(tab.id)}
-        className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          activeTab === tab.id
-            ? "text-alloro-navy"
-            : "text-gray-500 hover:text-gray-700"
-        }`}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        {activeTab === tab.id && (
-          <motion.div
-            className="absolute inset-0 bg-white rounded-lg shadow-sm"
-            layoutId="activeTab"
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          />
-        )}
-        <span className="relative z-10 flex items-center gap-2">
-          {tab.icon}
-          <span className="flex flex-col items-start">
-            <span>{tab.label}</span>
-            {tab.description && (
-              <span className={`text-[10px] font-normal leading-tight ${
-                activeTab === tab.id ? "text-gray-400" : "text-gray-400/70"
-              }`}>
+  <div className="flex items-stretch gap-1 p-1.5 bg-gray-100 rounded-xl">
+    {tabs.map((tab) => {
+      const isActive = activeTab === tab.id;
+      return (
+        <motion.button
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={`group relative flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+            isActive
+              ? "text-alloro-navy"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {isActive && (
+            <motion.div
+              className="absolute inset-0 bg-white rounded-lg shadow-sm"
+              layoutId="activeTab"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
+          )}
+          <span className="relative z-10 flex flex-col items-center text-center">
+            <span className="flex items-center gap-1.5">
+              {tab.icon}
+              <span>{tab.label}</span>
+            </span>
+            {isActive && tab.description && (
+              <span className="text-[10px] font-normal leading-tight text-gray-400 mt-0.5">
                 {tab.description}
               </span>
             )}
           </span>
-        </span>
-      </motion.button>
-    ))}
+        </motion.button>
+      );
+    })}
   </div>
 );
 

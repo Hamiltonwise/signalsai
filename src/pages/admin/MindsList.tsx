@@ -8,6 +8,7 @@ import {
   AlertCircle,
   X,
   Bot,
+  Radio,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -16,6 +17,7 @@ import {
   EmptyState,
 } from "../../components/ui/DesignSystem";
 import { listMinds, createMind, type Mind } from "../../api/minds";
+import { MindPublishChannelsTab } from "../../components/Admin/minds/MindPublishChannelsTab";
 
 function MindsEntryTransition() {
   // Only show when entering from outside the minds section
@@ -58,6 +60,7 @@ export default function MindsList() {
   const [createName, setCreateName] = useState("");
   const [createPersonality, setCreatePersonality] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showChannels, setShowChannels] = useState(false);
 
   const fetchMinds = async () => {
     setLoading(true);
@@ -110,12 +113,25 @@ export default function MindsList() {
           title="Minds"
           description="Agents that think. A system that improves."
           actionButtons={
-            <ActionButton
-              label="Create Mind"
-              icon={<Plus className="h-4 w-4" />}
-              onClick={() => setShowCreate(true)}
-              variant="primary"
-            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowChannels(!showChannels)}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all liquid-glass ${
+                  showChannels
+                    ? "text-alloro-orange border-alloro-orange/30"
+                    : "text-[#a0a0a8] hover:text-[#eaeaea]"
+                }`}
+              >
+                <Radio className="h-4 w-4" />
+                Publish Channels
+              </button>
+              <ActionButton
+                label="Create Mind"
+                icon={<Plus className="h-4 w-4" />}
+                onClick={() => setShowCreate(true)}
+                variant="primary"
+              />
+            </div>
           }
         />
 
@@ -177,6 +193,17 @@ export default function MindsList() {
                 />
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* Publish Channels section */}
+        {showChannels && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-xl liquid-glass p-6"
+          >
+            <MindPublishChannelsTab />
           </motion.div>
         )}
 

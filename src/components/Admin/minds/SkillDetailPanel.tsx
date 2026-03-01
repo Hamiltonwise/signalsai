@@ -14,7 +14,6 @@ import {
   Wand2,
   Briefcase,
   Settings,
-  Key,
   Send,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -24,19 +23,19 @@ import { WorkRunsTab } from "./WorkRunsTab";
 import {
   updateSkill,
   generateSkillNeuron,
-  generateSkillPortalKey,
   testSkillPortal,
   getSkill,
   getSkillNeuron,
   getSkillAnalytics,
   suggestSkillDefinition,
+  listPublishChannels,
   type MindSkill,
   type MindSkillNeuron,
   type SkillAnalytics,
   type TriggerType,
   type PipelineMode,
   type WorkCreationType,
-  type PublishTarget,
+  type PublishChannel,
 } from "../../../api/minds";
 
 interface SkillDetailPanelProps {
@@ -186,12 +185,10 @@ export function SkillDetailPanel({
   const [cfgTriggerTime, setCfgTriggerTime] = useState(skill.trigger_config?.time || "09:00");
   const [cfgTriggerTimezone, setCfgTriggerTimezone] = useState(skill.trigger_config?.timezone || "America/New_York");
   const [cfgPipelineMode, setCfgPipelineMode] = useState<PipelineMode>(skill.pipeline_mode || "review_and_stop");
-  const [cfgPublishTo, setCfgPublishTo] = useState<PublishTarget | "">(skill.work_publish_to || "");
+  const [cfgPublishChannelId, setCfgPublishChannelId] = useState<string>(skill.publish_channel_id || "");
   const [cfgStatus, setCfgStatus] = useState<"active" | "paused">(skill.status === "active" ? "active" : "paused");
+  const [channels, setChannels] = useState<PublishChannel[]>([]);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [portalKey, setPortalKey] = useState<string | null>(null);
-  const [portalKeyCopied, setPortalKeyCopied] = useState(false);
-  const [generatingKey, setGeneratingKey] = useState(false);
 
   // Test portal state
   const [testQuery, setTestQuery] = useState("");
@@ -248,6 +245,11 @@ export function SkillDetailPanel({
     }
     return () => stopPolling();
   }, [skill.id]);
+
+  // Fetch publish channels for config tab
+  useEffect(() => {
+    listPublishChannels().then(setChannels);
+  }, []);
 
   // Fetch neuron when switching to neuron tab
   useEffect(() => {
@@ -346,7 +348,7 @@ export function SkillDetailPanel({
       trigger_type: cfgTriggerType,
       trigger_config: triggerConfig,
       pipeline_mode: cfgPipelineMode,
-      work_publish_to: cfgPublishTo || null,
+      publish_channel_id: cfgPublishChannelId || null,
       status: cfgStatus,
     });
     if (updated) {
@@ -370,24 +372,6 @@ export function SkillDetailPanel({
     setTestingPortal(false);
   };
 
-  const handleGeneratePortalKey = async () => {
-    setGeneratingKey(true);
-    const key = await generateSkillPortalKey(mindId, skill.id);
-    if (key) {
-      setPortalKey(key);
-      toast.success("Portal key generated — copy it now, it won't be shown again");
-    } else {
-      toast.error("Failed to generate portal key");
-    }
-    setGeneratingKey(false);
-  };
-
-  const handleCopyPortalKey = () => {
-    if (!portalKey) return;
-    navigator.clipboard.writeText(portalKey);
-    setPortalKeyCopied(true);
-    setTimeout(() => setPortalKeyCopied(false), 1500);
-  };
 
   const handleCopyEndpoint = () => {
     navigator.clipboard.writeText(endpoint);
@@ -452,31 +436,6 @@ export function SkillDetailPanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <ActionButton
-              label={skillStatus === "ready" ? "Re-learn Skill" : "Generate Neuron"}
-              icon={
-                generating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )
-              }
-              onClick={handleGenerate}
-              variant="secondary"
-              size="sm"
-              disabled={!canGenerate}
-              loading={generating}
-            />
-            <ActionButton
-              label="Save"
-              icon={<Save className="h-4 w-4" />}
-              onClick={handleSave}
-              variant="primary"
-              size="sm"
-              loading={saving}
-            />
-          </div>
         </div>
 
         {/* Endpoint */}
@@ -582,6 +541,16 @@ export function SkillDetailPanel({
                 A definition is required before generating a neuron.
               </p>
             )}
+            <div className="flex justify-end mt-4">
+              <ActionButton
+                label="Save Definition"
+                icon={<Save className="h-4 w-4" />}
+                onClick={handleSave}
+                variant="primary"
+                size="sm"
+                loading={saving}
+              />
+            </div>
           </div>
         )}
 
@@ -597,12 +566,31 @@ export function SkillDetailPanel({
                   The transmuted brain specialized for this skill. Read-only.
                 </p>
               </div>
-              {neuron && !generating && (
-                <span className="text-[10px] text-gray-400">
-                  Generated{" "}
-                  {new Date(neuron.generated_at).toLocaleDateString()}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {neuron && !generating && (
+                  <span className="text-[10px] text-gray-400">
+                    Generated{" "}
+                    {new Date(neuron.generated_at).toLocaleDateString()}
+                  </span>
+                )}
+                {neuron && (
+                  <ActionButton
+                    label={skillStatus === "ready" ? "Re-learn Skill" : "Generate Neuron"}
+                    icon={
+                      generating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4" />
+                      )
+                    }
+                    onClick={handleGenerate}
+                    variant="secondary"
+                    size="sm"
+                    disabled={!canGenerate}
+                    loading={generating}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Generating state — realtime monitor */}
@@ -712,7 +700,7 @@ export function SkillDetailPanel({
                   value={cfgWorkType}
                   onChange={(e) => setCfgWorkType(e.target.value as WorkCreationType | "")}
                   className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
-                  style={{ backgroundColor: "#1a1a18" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                 >
                   <option value="">Not set</option>
                   <option value="text">Text</option>
@@ -735,7 +723,7 @@ export function SkillDetailPanel({
                   value={cfgOutputCount}
                   onChange={(e) => setCfgOutputCount(parseInt(e.target.value) || 1)}
                   className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
-                  style={{ backgroundColor: "#1a1a18" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                 />
                 <p className="text-[10px] text-[#6a6a75] mt-1">How many work items per run</p>
               </div>
@@ -771,7 +759,7 @@ export function SkillDetailPanel({
                         value={cfgTriggerDay}
                         onChange={(e) => setCfgTriggerDay(e.target.value)}
                         className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
-                        style={{ backgroundColor: "#1a1a18" }}
+                        style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                       >
                         <option value="">Select</option>
                         <option value="monday">Monday</option>
@@ -791,7 +779,7 @@ export function SkillDetailPanel({
                       value={cfgTriggerTime}
                       onChange={(e) => setCfgTriggerTime(e.target.value)}
                       className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
-                      style={{ backgroundColor: "#1a1a18" }}
+                      style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                     />
                   </div>
                   <div>
@@ -800,7 +788,7 @@ export function SkillDetailPanel({
                       value={cfgTriggerTimezone}
                       onChange={(e) => setCfgTriggerTimezone(e.target.value)}
                       className="w-full rounded-lg border border-white/8 px-2 py-1.5 text-xs text-[#c2c0b6] focus:border-alloro-orange focus:outline-none"
-                      style={{ backgroundColor: "#1a1a18" }}
+                      style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                     >
                       <option value="America/New_York">Eastern</option>
                       <option value="America/Chicago">Central</option>
@@ -852,62 +840,35 @@ export function SkillDetailPanel({
               </div>
             </div>
 
-            {/* Publish Target */}
+            {/* Publish Channel */}
             {cfgPipelineMode !== "review_and_stop" && (
               <div>
                 <label className="block text-xs font-semibold text-[#a0a0a8] mb-1.5">
-                  Publish Target
+                  Publish Channel
                 </label>
                 <select
-                  value={cfgPublishTo}
-                  onChange={(e) => setCfgPublishTo(e.target.value as PublishTarget | "")}
+                  value={cfgPublishChannelId}
+                  onChange={(e) => setCfgPublishChannelId(e.target.value)}
                   className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50"
-                  style={{ backgroundColor: "#1a1a18" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                 >
-                  <option value="">Internal only</option>
-                  <option value="post_to_x">Post to X (Twitter)</option>
-                  <option value="post_to_instagram">Post to Instagram</option>
-                  <option value="post_to_facebook">Post to Facebook</option>
-                  <option value="post_to_youtube">Post to YouTube</option>
-                  <option value="post_to_gbp">Post to Google Business Profile</option>
+                  <option value="">No channel (internal only)</option>
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.name}{ch.status === "disabled" ? " (disabled)" : ""}
+                    </option>
+                  ))}
                 </select>
+                {channels.length === 0 && (
+                  <p className="text-[10px] text-[#6a6a75] mt-1">
+                    No channels configured. Add one in the Publish Channels tab.
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Portal Key */}
-            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Key className="h-4 w-4 text-[#a0a0a8]" />
-                <h4 className="text-sm font-semibold text-[#eaeaea]">Skill Portal Key</h4>
-              </div>
-              <p className="text-xs text-[#6a6a75] mb-3">
-                Required for external systems (n8n, webhooks) to call this skill's portal endpoint.
-              </p>
-              {portalKey ? (
-                <div className="flex items-center gap-2 rounded-lg border border-white/8 px-3 py-2" style={{ backgroundColor: "#1a1a18" }}>
-                  <code className="text-xs text-[#c2c0b6] truncate flex-1 font-mono">{portalKey}</code>
-                  <button onClick={handleCopyPortalKey} className="shrink-0 text-[#6a6a75] hover:text-alloro-orange transition-colors">
-                    {portalKeyCopied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-              ) : (
-                <ActionButton
-                  label={skill.portal_key_hash ? "Rotate Key" : "Generate Key"}
-                  icon={<Key className="h-4 w-4" />}
-                  onClick={handleGeneratePortalKey}
-                  variant="secondary"
-                  size="sm"
-                  loading={generatingKey}
-                />
-              )}
-              {skill.portal_key_hash && !portalKey && (
-                <p className="text-[10px] text-green-400 mt-2">Key is set. Rotate to get a new one.</p>
-              )}
-            </div>
-
             {/* Test Skill Portal */}
-            {skill.portal_key_hash && (
-              <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
+            <div className="rounded-xl border border-white/8 bg-white/[0.04] p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <Send className="h-4 w-4 text-[#a0a0a8]" />
                   <h4 className="text-sm font-semibold text-[#eaeaea]">Test Skill Portal</h4>
@@ -921,7 +882,7 @@ export function SkillDetailPanel({
                   rows={3}
                   placeholder="Ask this skill portal a question..."
                   className="w-full rounded-lg border border-white/8 px-3 py-2 text-sm text-[#c2c0b6] placeholder-[#6a6a75] focus:border-alloro-orange focus:outline-none focus:ring-1 focus:ring-alloro-orange/50 resize-none mb-3"
-                  style={{ backgroundColor: "#1a1a18" }}
+                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                 />
                 <div className="flex justify-end mb-3">
                   <ActionButton
@@ -935,7 +896,7 @@ export function SkillDetailPanel({
                   />
                 </div>
                 {testPortalResponse && (
-                  <div className="rounded-lg border border-white/8 p-4" style={{ backgroundColor: "#1a1a18" }}>
+                  <div className="rounded-lg border border-white/8 bg-white/[0.04] p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-medium text-[#a0a0a8] uppercase tracking-wider">Response</span>
                     </div>
@@ -944,8 +905,7 @@ export function SkillDetailPanel({
                     </p>
                   </div>
                 )}
-              </div>
-            )}
+            </div>
 
             {/* Save */}
             <div className="flex justify-end">

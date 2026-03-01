@@ -443,13 +443,15 @@ export type SkillStatus = "draft" | "ready" | "active" | "paused" | "generating"
 export type TriggerType = "manual" | "daily" | "weekly" | "day_of_week";
 export type PipelineMode = "review_and_stop" | "review_then_publish" | "auto_pipeline";
 export type WorkCreationType = "text" | "markdown" | "image" | "video" | "pdf" | "docx" | "audio";
-export type PublishTarget =
-  | "post_to_x"
-  | "post_to_instagram"
-  | "post_to_facebook"
-  | "post_to_youtube"
-  | "post_to_gbp"
-  | "internal_only";
+export interface PublishChannel {
+  id: string;
+  name: string;
+  webhook_url: string;
+  description: string | null;
+  status: "active" | "disabled";
+  created_at: string;
+  updated_at: string;
+}
 
 export type WorkRunStatus =
   | "pending"
@@ -476,8 +478,7 @@ export interface MindSkill {
   trigger_type: TriggerType;
   trigger_config: { day?: string; time?: string; timezone?: string };
   pipeline_mode: PipelineMode;
-  work_publish_to: PublishTarget | null;
-  publication_config: object | null;
+  publish_channel_id: string | null;
   portal_key_hash: string | null;
   last_run_at: string | null;
   next_run_at: string | null;
@@ -565,8 +566,7 @@ export async function updateSkill(
     trigger_type?: TriggerType;
     trigger_config?: { day?: string; time?: string; timezone?: string };
     pipeline_mode?: PipelineMode;
-    work_publish_to?: PublishTarget | null;
-    publication_config?: object | null;
+    publish_channel_id?: string | null;
     status?: SkillStatus;
   },
 ): Promise<MindSkill | null> {
@@ -770,6 +770,45 @@ export async function deleteWorkRun(
 ): Promise<boolean> {
   const res = await apiDelete({
     path: `/admin/minds/${mindId}/skills/${skillId}/work-runs/${workRunId}`,
+  });
+  return !!res.success;
+}
+
+// ─── Publish Channels ────────────────────────────────────────────
+
+export async function listPublishChannels(): Promise<PublishChannel[]> {
+  const res = await apiGet({
+    path: `/admin/minds/publish-channels`,
+  });
+  return Array.isArray(res) ? res : [];
+}
+
+export async function createPublishChannel(
+  data: { name: string; webhook_url: string; description?: string },
+): Promise<PublishChannel | null> {
+  const res = await apiPost({
+    path: `/admin/minds/publish-channels`,
+    passedData: data,
+  });
+  return res?.id ? res : null;
+}
+
+export async function updatePublishChannel(
+  channelId: string,
+  data: { name?: string; webhook_url?: string; description?: string; status?: string },
+): Promise<PublishChannel | null> {
+  const res = await apiPut({
+    path: `/admin/minds/publish-channels/${channelId}`,
+    passedData: data,
+  });
+  return res?.id ? res : null;
+}
+
+export async function deletePublishChannel(
+  channelId: string,
+): Promise<boolean> {
+  const res = await apiDelete({
+    path: `/admin/minds/publish-channels/${channelId}`,
   });
   return !!res.success;
 }

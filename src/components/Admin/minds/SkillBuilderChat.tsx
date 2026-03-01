@@ -244,7 +244,7 @@ export function SkillBuilderChat({
       trigger_type: (resolvedFields.trigger_type as any) || "manual",
       trigger_config: resolvedFields.trigger_config || {},
       pipeline_mode: (resolvedFields.pipeline_mode as any) || "review_and_stop",
-      work_publish_to: (resolvedFields.work_publish_to as any) || null,
+      publish_channel_id: (resolvedFields.work_publish_to as any) || null,
     });
 
     toast.success(`Skill "${resolvedFields.name}" created`);

@@ -20,6 +20,7 @@ import {
   createSkill,
   deleteSkill,
   getSkillAnalytics,
+  listPublishChannels,
   type MindSkill,
   type SkillAnalytics,
 } from "../../../api/minds";
@@ -39,12 +40,14 @@ function SkillCard({
   skill,
   mindSlug,
   analytics,
+  channelName,
   onSelect,
   onDelete,
 }: {
   skill: MindSkill;
   mindSlug: string;
   analytics: SkillAnalytics | null;
+  channelName: string | null;
   onSelect: () => void;
   onDelete: () => void;
 }) {
@@ -130,9 +133,9 @@ function SkillCard({
           <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-600">
             {skill.pipeline_mode.replace(/_/g, " ")}
           </span>
-          {skill.work_publish_to && skill.work_publish_to !== "internal_only" && (
+          {channelName && (
             <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
-              → {skill.work_publish_to.replace(/^post_to_/, "")}
+              → {channelName}
             </span>
           )}
         </div>
@@ -198,6 +201,7 @@ export function MindWorkplaceTab({
   const [analyticsMap, setAnalyticsMap] = useState<
     Record<string, SkillAnalytics>
   >({});
+  const [channelMap, setChannelMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
 
@@ -221,6 +225,10 @@ export function MindWorkplaceTab({
       }),
     );
     setAnalyticsMap(Object.fromEntries(entries));
+
+    // Fetch channels for name resolution
+    const chs = await listPublishChannels();
+    setChannelMap(Object.fromEntries(chs.map((c) => [c.id, c.name])));
   };
 
   useEffect(() => {
@@ -392,6 +400,7 @@ export function MindWorkplaceTab({
               skill={skill}
               mindSlug={mindSlug}
               analytics={analyticsMap[skill.id] || null}
+              channelName={skill.publish_channel_id ? channelMap[skill.publish_channel_id] || null : null}
               onSelect={() => setSelectedSkillId(skill.id)}
               onDelete={() => handleDelete(skill.id)}
             />

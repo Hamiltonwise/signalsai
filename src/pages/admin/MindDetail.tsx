@@ -180,6 +180,7 @@ export default function MindDetail() {
           rejectionCategories={mind.rejection_categories}
         />
       )}
+
       </div>
     </div>
   );

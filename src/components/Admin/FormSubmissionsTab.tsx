@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Eye,
   X,
+  Download,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -24,9 +25,10 @@ interface Props {
   fetchSubmissionsFn?: (projectId: string, page: number, limit: number) => Promise<any>;
   toggleReadFn?: (projectId: string, submissionId: string, is_read: boolean) => Promise<any>;
   deleteSubmissionFn?: (projectId: string, submissionId: string) => Promise<any>;
+  onExport?: () => void;
 }
 
-export default function FormSubmissionsTab({ projectId, isAdmin, fetchSubmissionsFn, toggleReadFn, deleteSubmissionFn }: Props) {
+export default function FormSubmissionsTab({ projectId, isAdmin, fetchSubmissionsFn, toggleReadFn, deleteSubmissionFn, onExport }: Props) {
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -40,6 +42,10 @@ export default function FormSubmissionsTab({ projectId, isAdmin, fetchSubmission
       setLoading(true);
       const fetchFn = fetchSubmissionsFn || fetchFormSubmissions;
       const res = await fetchFn(projectId, page, 20);
+      if (res.error || res.success === false) {
+        toast.error(res.error || res.errorMessage || "Failed to load submissions");
+        return;
+      }
       setSubmissions(res.data || []);
       setTotalPages(res.pagination?.totalPages || 1);
       setTotal(res.pagination?.total || 0);
@@ -115,6 +121,15 @@ export default function FormSubmissionsTab({ projectId, isAdmin, fetchSubmission
             </span>
           )}
         </div>
+        {onExport && total > 0 && (
+          <button
+            onClick={onExport}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition px-3 py-1.5 rounded-lg hover:bg-gray-100"
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -180,18 +195,16 @@ export default function FormSubmissionsTab({ projectId, isAdmin, fetchSubmission
                   >
                     <Eye size={14} />
                   </button>
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(sub.id);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(sub.id);
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}

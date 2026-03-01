@@ -178,6 +178,40 @@ export function DFYWebsite() {
       passedData: { is_read },
     });
 
+  const userDeleteSubmission = async (
+    _projectId: string,
+    submissionId: string,
+  ) =>
+    apiDelete({
+      path: `/user/website/form-submissions/${submissionId}`,
+    });
+
+  const handleExportSubmissions = async () => {
+    try {
+      const token =
+        window.sessionStorage.getItem("token") ||
+        localStorage.getItem("auth_token") ||
+        localStorage.getItem("token");
+      const apiBase = (import.meta as any)?.env?.VITE_API_URL ?? "/api";
+      const response = await fetch(`${apiBase}/user/website/form-submissions/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) {
+        toast.error("Failed to export submissions");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "form-submissions.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export submissions");
+    }
+  };
+
   // Close dropdown on click outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -846,6 +880,8 @@ export function DFYWebsite() {
                 projectId={project.id}
                 fetchSubmissionsFn={userFetchSubmissions}
                 toggleReadFn={userToggleRead}
+                deleteSubmissionFn={userDeleteSubmission}
+                onExport={handleExportSubmissions}
               />
             </>
           )}
